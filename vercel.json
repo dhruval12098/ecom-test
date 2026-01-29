@@ -1,20 +1,6 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
-  "github": {
-    "silent": true
-  },
+  "github": { "silent": true },
   "env": {
     "NEXT_PUBLIC_TEST_DEPLOYMENT": "true"
   }
