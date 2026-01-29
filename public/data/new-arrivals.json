@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "title": "Premium ",
+    "imageUrl": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+    "discountPercentage": "24% Off",
+    "discountColor": "bg-yellow-500"
+  },
+  {
+    "id": 2,
+    "title": "Wild Brown Rice",
+    "imageUrl": "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+    "discountPercentage": "17% Off",
+    "discountColor": "bg-yellow-500"
+  },
+  {
+    "id": 3,
+    "title": "Matcha Green Tea",
+    "imageUrl": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+    "discountPercentage": "28% Off",
+    "discountColor": "bg-yellow-500"
+  },
+  {
+    "id": 4,
+    "title": "Organic Quinoa",
+    "imageUrl": "https://i.pinimg.com/736x/a8/1a/58/a81a58d5ed0008afbdefff9c17e55e60.jpg",
+    "discountPercentage": "33% Off",
+    "discountColor": "bg-yellow-500"
+  },
+  {
+    "id": 5,
+    "title": "Cold Press Oil",
+    "imageUrl": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+    "discountPercentage": "13% Off",
+    "discountColor": "bg-yellow-500"
+  },
+  {
+    "id": 6,
+    "title": "Salted Cashews",
+    "imageUrl": "https://i.pinimg.com/736x/e9/7c/1f/e97c1f341990f45851c56a3c1e9a8010.jpg",
+    "discountPercentage": "21% Off",
+    "discountColor": "bg-yellow-500"
+  }
+]

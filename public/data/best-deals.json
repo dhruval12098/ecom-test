@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1,
+    "title": " Rice",
+    "imageUrl": "https://i.pinimg.com/736x/b4/7d/7c/b47d7c4195d63ce46c236f86fb624e19.jpg",
+    "discountPercentage": "22% Off",
+    "discountColor": "bg-orange-500"
+  },
+  {
+    "id": 2,
+    "title": "Whole Wheat",
+    "imageUrl": "https://i.pinimg.com/736x/13/d5/dd/13d5dd71416b1bba0e2953c971cfc8a4.jpg",
+    "discountPercentage": "16% Off",
+    "discountColor": "bg-orange-500"
+  },
+  {
+    "id": 3,
+    "title": "Green Tea",
+    "imageUrl": "https://i.pinimg.com/736x/22/fb/30/22fb30b84896f7bc007525ea3d1479f5.jpg",
+    "discountPercentage": "27% Off",
+    "discountColor": "bg-orange-500"
+  },
+  {
+    "id": 4,
+    "title": "Mixed Nuts",
+    "imageUrl": "https://i.pinimg.com/1200x/c0/5d/ce/c05dce99a97e95c3050a62b3e212e87d.jpg",
+    "discountPercentage": "32% Off",
+    "discountColor": "bg-orange-500"
+  },
+  {
+    "id": 5,
+    "title": "Olive Oil",
+    "imageUrl": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+    "discountPercentage": "14% Off",
+    "discountColor": "bg-orange-500"
+  },
+  {
+    "id": 6,
+    "title": "Honey",
+    "imageUrl": "https://i.pinimg.com/736x/e9/7c/1f/e97c1f341990f45851c56a3c1e9a8010.jpg",
+    "discountPercentage": "19% Off",
+    "discountColor": "bg-orange-500"
+  }
+]

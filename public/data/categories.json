@@ -1,0 +1,386 @@
+[
+  {
+    "id": 1,
+    "name": "Fruits & Vegetables",
+    "slug": "fruits-vegetables",
+    "description": "Fresh and organic fruits and vegetables",
+    "image": "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+    "subcategories": [
+      {
+        "id": 101,
+        "name": "Fresh Fruits",
+        "slug": "fresh-fruits",
+        "image": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+        "products": [
+          {
+            "id": 1001,
+            "name": "Organic Apples",
+            "price": 120,
+            "originalPrice": 150,
+            "imageUrl": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+            "discountPercentage": "20% Off",
+            "discountColor": "bg-red-500",
+            "description": "Crisp and juicy organic apples, perfect for snacking or baking.",
+            "rating": 4.8,
+            "reviews": 124,
+            "inStock": true,
+            "weight": "1 kg",
+            "origin": "Local Farms",
+            "imageGallery": [
+              "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+              "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+              "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+              "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+              "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg"
+            ]
+          },
+          {
+            "id": 1002,
+            "name": "Bananas",
+            "price": 60,
+            "originalPrice": 80,
+            "imageUrl": "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+            "discountPercentage": "25% Off",
+            "discountColor": "bg-red-500",
+            "description": "Fresh yellow bananas, rich in potassium and vitamins.",
+            "rating": 4.6,
+            "reviews": 89,
+            "inStock": true,
+            "weight": "1 dozen",
+            "origin": "Tropical Regions",
+            "imageGallery": [
+              "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+              "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+              "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+              "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+              "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 102,
+        "name": "Organic Vegetables",
+        "slug": "organic-vegetables",
+        "image": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+        "products": [
+          {
+            "id": 1003,
+            "name": "Organic Tomatoes",
+            "price": 80,
+            "originalPrice": 100,
+            "imageUrl": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+            "discountPercentage": "20% Off",
+            "discountColor": "bg-red-500",
+            "description": "Fresh organic tomatoes, perfect for salads and cooking.",
+            "rating": 4.7,
+            "reviews": 156,
+            "inStock": true,
+            "weight": "1 kg",
+            "origin": "Organic Farms",
+            "imageGallery": [
+              "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+              "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+              "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+              "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+              "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Dairy & Bakery",
+    "slug": "dairy-bakery",
+    "description": "Fresh dairy products and baked goods",
+    "image": "https://i.pinimg.com/736x/a8/1a/58/a81a58d5ed0008afbdefff9c17e55e60.jpg",
+    "subcategories": [
+      {
+        "id": 201,
+        "name": "Milk & Cheese",
+        "slug": "milk-cheese",
+        "image": "https://i.pinimg.com/736x/a8/1a/58/a81a58d5ed0008afbdefff9c17e55e60.jpg",
+        "products": [
+          {
+            "id": 2001,
+            "name": "Organic Milk",
+            "price": 90,
+            "originalPrice": 100,
+            "imageUrl": "https://i.pinimg.com/736x/a8/1a/58/a81a58d5ed0008afbdefff9c17e55e60.jpg",
+            "discountPercentage": "10% Off",
+            "discountColor": "bg-blue-500",
+            "description": "Fresh organic milk from grass-fed cows.",
+            "rating": 4.9,
+            "reviews": 203,
+            "inStock": true,
+            "weight": "1 liter",
+            "origin": "Local Dairy",
+            "imageGallery": [
+              "https://i.pinimg.com/736x/a8/1a/58/a81a58d5ed0008afbdefff9c17e55e60.jpg",
+              "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+              "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+              "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+              "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg"
+            ]
+          }
+        ]
+      },
+      {
+        "id": 202,
+        "name": "Breads & Pastries",
+        "slug": "breads-pastries",
+        "image": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+        "products": [
+          {
+            "id": 2002,
+            "name": "Whole Wheat Bread",
+            "price": 70,
+            "originalPrice": 85,
+            "imageUrl": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+            "discountPercentage": "18% Off",
+            "discountColor": "bg-blue-500",
+            "description": "Freshly baked whole wheat bread, healthy and delicious.",
+            "rating": 4.5,
+            "reviews": 98,
+            "inStock": true,
+            "weight": "500g",
+            "origin": "Local Bakery"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Snacks & Chips",
+    "slug": "snacks-chips",
+    "description": "Crunchy snacks and chips for all tastes",
+    "image": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+    "subcategories": [
+      {
+        "id": 301,
+        "name": "Chips & Crisps",
+        "slug": "chips-crisps",
+        "image": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+        "products": [
+          {
+            "id": 3001,
+            "name": "Potato Chips",
+            "price": 40,
+            "originalPrice": 50,
+            "imageUrl": "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+            "discountPercentage": "20% Off",
+            "discountColor": "bg-green-500",
+            "description": "Crispy and delicious potato chips.",
+            "rating": 4.3,
+            "reviews": 142,
+            "inStock": true,
+            "weight": "150g",
+            "origin": "Snack Factory",
+            "imageGallery": [
+              "https://i.pinimg.com/736x/d6/87/cd/d687cdf990a1cb53d7478b0512a9e89a.jpg",
+              "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+              "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+              "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+              "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Cold Drinks",
+    "slug": "cold-drinks",
+    "description": "Refreshing cold beverages",
+    "image": "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+    "subcategories": [
+      {
+        "id": 401,
+        "name": "Sodas & Colas",
+        "slug": "sodas-colas",
+        "image": "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+        "products": [
+          {
+            "id": 4001,
+            "name": "Cola Drink",
+            "price": 35,
+            "originalPrice": 40,
+            "imageUrl": "https://i.pinimg.com/736x/34/99/ea/3499ea90731f733af9cb38e59487dfe9.jpg",
+            "discountPercentage": "12% Off",
+            "discountColor": "bg-purple-500",
+            "description": "Refreshing cola drink to quench your thirst.",
+            "rating": 4.2,
+            "reviews": 87,
+            "inStock": true,
+            "weight": "300ml",
+            "origin": "Beverage Co."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Beverages",
+    "slug": "beverages",
+    "description": "Hot and cold beverages",
+    "image": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+    "subcategories": [
+      {
+        "id": 501,
+        "name": "Tea & Coffee",
+        "slug": "tea-coffee",
+        "image": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+        "products": [
+          {
+            "id": 5001,
+            "name": "Green Tea",
+            "price": 150,
+            "originalPrice": 180,
+            "imageUrl": "https://i.pinimg.com/1200x/00/e2/f8/00e2f8db772843c81c7bf9857ad17461.jpg",
+            "discountPercentage": "17% Off",
+            "discountColor": "bg-yellow-500",
+            "description": "Premium green tea with antioxidants.",
+            "rating": 4.8,
+            "reviews": 167,
+            "inStock": true,
+            "weight": "100g",
+            "origin": "Tea Gardens"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Home & Kitchen",
+    "slug": "home-kitchen",
+    "description": "Everything for your home and kitchen needs",
+    "image": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+    "subcategories": [
+      {
+        "id": 601,
+        "name": "Kitchen Essentials",
+        "slug": "kitchen-essentials",
+        "image": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+        "products": [
+          {
+            "id": 6001,
+            "name": "Cooking Oil",
+            "price": 120,
+            "originalPrice": 140,
+            "imageUrl": "https://i.pinimg.com/736x/2e/dd/04/2edd042cbb5eed1969adcbe9c4f02ee6.jpg",
+            "discountPercentage": "14% Off",
+            "discountColor": "bg-indigo-500",
+            "description": "Premium quality cooking oil for healthy cooking.",
+            "rating": 4.6,
+            "reviews": 92,
+            "inStock": true,
+            "weight": "1 liter",
+            "origin": "Organic Brand"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Personal Care",
+    "slug": "personal-care",
+    "description": "Health and personal care products",
+    "image": "https://i.pinimg.com/736x/e9/7c/1f/e97c1f341990f45851c56a3c1e9a8010.jpg",
+    "subcategories": [
+      {
+        "id": 701,
+        "name": "Skin Care",
+        "slug": "skin-care",
+        "image": "https://i.pinimg.com/736x/e9/7c/1f/e97c1f341990f45851c56a3c1e9a8010.jpg",
+        "products": [
+          {
+            "id": 7001,
+            "name": "Moisturizer",
+            "price": 250,
+            "originalPrice": 300,
+            "imageUrl": "https://i.pinimg.com/736x/e9/7c/1f/e97c1f341990f45851c56a3c1e9a8010.jpg",
+            "discountPercentage": "17% Off",
+            "discountColor": "bg-pink-500",
+            "description": "Natural moisturizer for healthy skin.",
+            "rating": 4.7,
+            "reviews": 143,
+            "inStock": true,
+            "weight": "100ml",
+            "origin": "Natural Beauty"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Baby Care",
+    "slug": "baby-care",
+    "description": "Essential products for your little ones",
+    "image": "https://i.pinimg.com/736x/be/d2/25/bed22507a3587333adf0260bc55745b5.jpg",
+    "subcategories": [
+      {
+        "id": 801,
+        "name": "Baby Food",
+        "slug": "baby-food",
+        "image": "https://i.pinimg.com/736x/be/d2/25/bed22507a3587333adf0260bc55745b5.jpg",
+        "products": [
+          {
+            "id": 8001,
+            "name": "Baby Cereal",
+            "price": 180,
+            "originalPrice": 200,
+            "imageUrl": "https://i.pinimg.com/736x/be/d2/25/bed22507a3587333adf0260bc55745b5.jpg",
+            "discountPercentage": "10% Off",
+            "discountColor": "bg-teal-500",
+            "description": "Nutritious baby cereal for healthy growth.",
+            "rating": 4.8,
+            "reviews": 112,
+            "inStock": false,
+            "weight": "200g",
+            "origin": "Baby Nutrition"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Pet Supplies",
+    "slug": "pet-supplies",
+    "description": "Everything your pets need",
+    "image": "https://i.pinimg.com/1200x/c0/5d/ce/c05dce99a97e95c3050a62b3e212e87d.jpg",
+    "subcategories": [
+      {
+        "id": 901,
+        "name": "Pet Food",
+        "slug": "pet-food",
+        "image": "https://i.pinimg.com/1200x/c0/5d/ce/c05dce99a97e95c3050a62b3e212e87d.jpg",
+        "products": [
+          {
+            "id": 9001,
+            "name": "Dog Food",
+            "price": 350,
+            "originalPrice": 400,
+            "imageUrl": "https://i.pinimg.com/1200x/c0/5d/ce/c05dce99a97e95c3050a62b3e212e87d.jpg",
+            "discountPercentage": "12% Off",
+            "discountColor": "bg-amber-500",
+            "description": "Premium dog food for healthy pets.",
+            "rating": 4.5,
+            "reviews": 87,
+            "inStock": true,
+            "weight": "1kg",
+            "origin": "Pet Nutrition"
+          }
+        ]
+      }
+    ]
+  }
+]

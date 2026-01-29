@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "title": "Plant-Based Foods",
+    "subtitle": "Discover our curated collection of organic plant-based products for a healthier lifestyle.",
+    "imageUrl": "https://i.pinimg.com/1200x/45/63/32/456332c909f732da36000118c44943ab.jpg",
+    "buttonText": "Shop Now",
+    "cardType": "wide",
+    "position": "left"
+  },
+  {
+    "id": 2,
+    "title": "Organic Teas",
+    "subtitle": "Hand-picked premium teas for wellness.",
+    "imageUrl": "https://i.pinimg.com/1200x/0d/9d/3b/0d9d3be85fc865122385056f87bf3fb1.jpg",
+    "buttonText": "Browse",
+    "cardType": "narrow",
+    "position": "right"
+  },
+  {
+    "id": 3,
+    "title": "Super Seeds",
+    "subtitle": "Nutrient-packed seeds for energy boost.",
+    "imageUrl": "https://i.pinimg.com/736x/be/d2/25/bed22507a3587333adf0260bc55745b5.jpg",
+    "buttonText": "Explore",
+    "cardType": "narrow",
+    "position": "left"
+  },
+  {
+    "id": 4,
+    "title": "Superfoods Collection",
+    "subtitle": "Nutrient-dense superfoods packed with vitamins and antioxidants for optimal health.",
+    "imageUrl": "https://i.pinimg.com/1200x/68/52/49/68524987b8d1a5d63a2e238c3215d214.jpg",
+    "buttonText": "Discover",
+    "cardType": "wide",
+    "position": "right"
+  }
+]
