@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Check, ShoppingCart, Trash2, RotateCcw } from "lucide-react";
 
 interface CartItem {
   id: number;
@@ -19,7 +20,7 @@ interface CartItem {
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
+  addToCart: (item: Omit<CartItem, 'quantity'>, showNotification?: boolean) => void;
   removeFromCart: (id: number) => void;
   updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
@@ -56,7 +57,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems]);
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>) => {
+  const addToCart = (item: Omit<CartItem, 'quantity'>, showNotification: boolean = true) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(cartItem => cartItem.id === item.id);
       
@@ -68,26 +69,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             : cartItem
         );
         
-        // Show toast notification for quantity increase
-        toast.success(`${item.name} quantity increased to ${existingItem.quantity + 1}`, {
-          duration: 2000,
-          icon: '🛒',
-        });
+        // Show toast notification for quantity increase (only if requested)
+        if (showNotification) {
+          toast.success(`${item.name} quantity increased to ${existingItem.quantity + 1}`, {
+            duration: 2000,
+            icon: <ShoppingCart className="h-5 w-5" />,
+          });
+        }
         
         return updatedItems;
       } else {
         // If item doesn't exist, add new item with quantity 1
         const newItem = { ...item, quantity: 1 };
         
-        // Show toast notification for new item added
-        toast.success(`${item.name} added to cart`, {
-          duration: 2000,
-          icon: '✅',
-          action: {
-            label: 'View Cart',
-            onClick: () => window.location.href = '/cart'
-          }
-        });
+        // Show toast notification for new item added (only if requested)
+        if (showNotification) {
+          toast.success(`${item.name} added to cart`, {
+            duration: 2000,
+            icon: <Check className="h-5 w-5" />,
+            action: {
+              label: 'View Cart',
+              onClick: () => window.location.href = '/cart'
+            }
+          });
+        }
         
         return [...prevItems, newItem];
       }
@@ -101,7 +106,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (itemToRemove) {
       toast.info(`${itemToRemove.name} removed from cart`, {
         duration: 2000,
-        icon: '🗑️',
+        icon: <Trash2 className="h-5 w-5" />,
       });
     }
   };
@@ -122,7 +127,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (itemToUpdate && quantity > itemToUpdate.quantity) {
       toast.success(`${itemToUpdate.name} quantity updated to ${quantity}`, {
         duration: 2000,
-        icon: '🔄',
+        icon: <ShoppingCart className="h-5 w-5" />,
       });
     }
   };
@@ -131,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setCartItems([]);
     toast.success('Cart cleared successfully', {
       duration: 2000,
-      icon: '🧹',
+      icon: <RotateCcw className="h-5 w-5" />,
     });
   };
 

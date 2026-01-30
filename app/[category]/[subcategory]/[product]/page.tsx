@@ -160,9 +160,10 @@ export default function ProductDetailsPage() {
       slug: product.slug
     };
     
-    // Add item 'quantity' times
+    // Add all items at once to avoid multiple notifications
     for (let i = 0; i < quantity; i++) {
-      addToCart(cartItem);
+      // Only show notification for the first item
+      addToCart(cartItem, i === 0);
     }
     
     // Reset quantity to 1 after adding
@@ -185,9 +186,10 @@ export default function ProductDetailsPage() {
       slug: product.slug
     };
     
-    // Add item 'quantity' times to cart
+    // Add all items at once to avoid multiple notifications
     for (let i = 0; i < quantity; i++) {
-      addToCart(cartItem);
+      // Only show notification for the first item
+      addToCart(cartItem, i === 0);
     }
     
     // Navigate to checkout
