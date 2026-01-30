@@ -4,6 +4,7 @@ import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import "./globals.css";
 import Footer from "../components/layout/Footer";
 import { CartProvider } from "@/contexts/CartContext";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,6 +26,7 @@ export default function RootLayout({
             <Header />
             {children}
             <Footer />
+            <Toaster />
           </SmoothScrollProvider>
         </CartProvider>
       </body>

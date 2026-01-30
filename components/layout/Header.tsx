@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, ShoppingCart, User, ChevronDown } from 'lucide-react';
+import { MapPin, ShoppingCart, User, ChevronDown, Menu } from 'lucide-react';
 import Link from 'next/link';
 import SearchSuggestions from '@/components/SearchSuggestions';
 import { useCart } from '@/contexts/CartContext';
+import MobileMenu from '@/components/layout/MobileMenu';
 
 interface Product {
   id: number;
@@ -47,6 +48,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const { getTotalItems } = useCart();
   
@@ -103,76 +105,45 @@ export default function Header() {
   };
 
   return (
-    <div className="w-full font-sans">
-      <div className="text-white text-sm text-center py-3" style={{ backgroundColor: '#173A00' }}>
-        Free shipping on orders over €69
-      </div>
-
-      <div className="bg-white border-b">
-        {/* Desktop Layout */}
-        <div className="hidden sm:flex max-w-7xl mx-auto px-4 py-5 items-center gap-10 relative">
-          <div className="flex items-center">
-            <img 
-              src="/brands/fmod.svg" 
-              alt="Fmod Logo" 
-              className="h-15 w-auto"
-              onError={(e) => {
-                // Fallback if logo.png doesn't exist
-                e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <MapPin size={16} />
-            <div>
-              <div className="text-xs text-gray-500">Delivery to</div>
-              <div className="font-semibold">Gujarat, India</div>
-            </div>
-          </div>
-          <div className="flex-1 relative z-40">
-            <SearchSuggestions
-              searchQuery={searchQuery}
-              showSuggestions={showSuggestions}
-              setShowSuggestions={setShowSuggestions}
-              onInputChange={handleSearchChange}
-              categories={categories}
-            />
-          </div>
-          <div className="flex items-center gap-6 ml-auto">
-            <Link href="/cart" className="cursor-pointer hover:text-gray-600 transition-colors relative">
-              <ShoppingCart size={20} />
-              {isClient && getTotalItems() > 0 && (
-                <span className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
-                  {getTotalItems()}
-                </span>
-              )}
-            </Link>
-            <Link href="/account" className="cursor-pointer hover:text-gray-600 transition-colors">
-              <User size={20} />
-            </Link>
-          </div>
+    <>
+      <div className="w-full font-sans">
+        <div className="text-white text-sm text-center py-3" style={{ backgroundColor: '#173A00' }}>
+          Free shipping on orders over €69
         </div>
-        
-        {/* Mobile Layout */}
-        <div className="sm:hidden max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Logo */}
-            <div className="shrink-0">
+
+        <div className="bg-white border-b">
+          {/* Desktop Layout */}
+          <div className="hidden sm:flex max-w-7xl mx-auto px-4 py-5 items-center gap-10 relative">
+            <div className="flex items-center">
               <img 
                 src="/brands/fmod.svg" 
                 alt="Fmod Logo" 
-                className="h-12 w-auto"
+                className="h-15 w-auto"
                 onError={(e) => {
                   // Fallback if logo.png doesn't exist
                   e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
                 }}
               />
             </div>
-            
-            {/* Icons */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <MapPin size={16} />
+              <div>
+                <div className="text-xs text-gray-500">Delivery to</div>
+                <div className="font-semibold">Gujarat, India</div>
+              </div>
+            </div>
+            <div className="flex-1 relative z-40">
+              <SearchSuggestions
+                searchQuery={searchQuery}
+                showSuggestions={showSuggestions}
+                setShowSuggestions={setShowSuggestions}
+                onInputChange={handleSearchChange}
+                categories={categories}
+              />
+            </div>
+            <div className="flex items-center gap-6 ml-auto">
               <Link href="/cart" className="cursor-pointer hover:text-gray-600 transition-colors relative">
-                <ShoppingCart size={24} />
+                <ShoppingCart size={20} />
                 {isClient && getTotalItems() > 0 && (
                   <span className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
                     {getTotalItems()}
@@ -180,99 +151,147 @@ export default function Header() {
                 )}
               </Link>
               <Link href="/account" className="cursor-pointer hover:text-gray-600 transition-colors">
-                <User size={24} />
+                <User size={20} />
               </Link>
+              <button 
+                onClick={() => setMobileMenuOpen(true)} 
+                className="cursor-pointer hover:text-gray-600 transition-colors"
+                aria-label="Open menu"
+              >
+                <Menu size={20} />
+              </button>
             </div>
           </div>
           
-          {/* Full Width Search Bar - Separate Row */}
-          <div className="mt-3 relative z-40">
-            <SearchSuggestions
-              searchQuery={searchQuery}
-              showSuggestions={showSuggestions}
-              setShowSuggestions={setShowSuggestions}
-              onInputChange={handleSearchChange}
-              categories={categories}
-            />
+          {/* Mobile Layout */}
+          <div className="sm:hidden max-w-7xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              {/* Logo */}
+              <div className="shrink-0">
+                <img 
+                  src="/brands/fmod.svg" 
+                  alt="Fmod Logo" 
+                  className="h-12 w-auto"
+                  onError={(e) => {
+                    // Fallback if logo.png doesn't exist
+                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
+                  }}
+                />
+              </div>
+              
+              {/* Icons */}
+              <div className="flex items-center gap-6">
+                <Link href="/cart" className="cursor-pointer hover:text-gray-600 transition-colors relative">
+                  <ShoppingCart size={24} />
+                  {isClient && getTotalItems() > 0 && (
+                    <span className="absolute -top-3 -right-3 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-lg">
+                      {getTotalItems()}
+                    </span>
+                  )}
+                </Link>
+                <Link href="/account" className="cursor-pointer hover:text-gray-600 transition-colors">
+                  <User size={24} />
+                </Link>
+                <button 
+                  onClick={() => setMobileMenuOpen(true)} 
+                  className="cursor-pointer hover:text-gray-600 transition-colors"
+                  aria-label="Open menu"
+                >
+                  <Menu size={24} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Full Width Search Bar - Separate Row */}
+            <div className="mt-3 relative z-40">
+              <SearchSuggestions
+                searchQuery={searchQuery}
+                showSuggestions={showSuggestions}
+                setShowSuggestions={setShowSuggestions}
+                onInputChange={handleSearchChange}
+                categories={categories}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div style={{ backgroundColor: '#266000' }} className="relative">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-6 gap-y-2 text-white text-sm font-medium">
-            {loading ? (
-              <div className="col-span-full text-center py-4">Loading categories...</div>
-            ) : (
-              displayedCategories.map((item) => (
-                <div 
-                  key={item.id}
-                  className="relative"
-                  onMouseEnter={() => handleMouseEnter(item.slug)}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  <Link 
-                    href={`/${item.slug}`}
-                    className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-1 font-medium"
+        <div style={{ backgroundColor: '#266000' }} className="relative">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-6 gap-y-2 text-white text-sm font-medium">
+              {loading ? (
+                <div className="col-span-full text-center py-4">Loading categories...</div>
+              ) : (
+                displayedCategories.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="relative"
+                    onMouseEnter={() => handleMouseEnter(item.slug)}
+                    onMouseLeave={handleMouseLeave}
                   >
-                    <span className="font-bold">{item.name}</span>
-                    <ChevronDown size={12} />
-                  </Link>
-                  
-                  {/* Dropdown Menu */}
-                  {openDropdown === item.slug && item.subcategories.length > 0 && (
-                    <div 
-                      className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
-                      onMouseEnter={() => handleMouseEnter(item.slug)}
-                      onMouseLeave={handleMouseLeave}
+                    <Link 
+                      href={`/${item.slug}`}
+                      className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-1 font-medium"
                     >
-                      <div className="p-3">
-                        <div className="text-gray-900 font-semibold mb-3 border-b pb-2">{item.name}</div>
-                        <div className="grid grid-cols-1 gap-1 max-h-80 overflow-y-auto">
-                          {item.subcategories.map((subcat) => (
-                            <Link
-                              key={subcat.id}
-                              href={`/${item.slug}/${subcat.slug}`}
-                              className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 transition-colors group"
-                            >
-                              {subcat.image && (
-                                <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
-                                  <img 
-                                    src={subcat.image} 
-                                    alt={subcat.name}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                    }}
-                                  />
-                                </div>
-                              )}
-                              <span className="text-gray-700 group-hover:text-green-700 transition-colors">
-                                {subcat.name}
-                              </span>
-                            </Link>
-                          ))}
+                      <span className="font-bold">{item.name}</span>
+                      <ChevronDown size={12} />
+                    </Link>
+                    
+                    {/* Dropdown Menu */}
+                    {openDropdown === item.slug && item.subcategories.length > 0 && (
+                      <div 
+                        className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
+                        onMouseEnter={() => handleMouseEnter(item.slug)}
+                        onMouseLeave={handleMouseLeave}
+                      >
+                        <div className="p-3">
+                          <div className="text-gray-900 font-semibold mb-3 border-b pb-2">{item.name}</div>
+                          <div className="grid grid-cols-1 gap-1 max-h-80 overflow-y-auto">
+                            {item.subcategories.map((subcat) => (
+                              <Link
+                                key={subcat.id}
+                                href={`/${item.slug}/${subcat.slug}`}
+                                className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 transition-colors group"
+                              >
+                                {subcat.image && (
+                                  <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
+                                    <img 
+                                      src={subcat.image} 
+                                      alt={subcat.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                <span className="text-gray-700 group-hover:text-green-700 transition-colors">
+                                  {subcat.name}
+                                </span>
+                              </Link>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {totalRows > 2 && (
+              <div className="mt-3 text-center">
+                <button
+                  onClick={() => setShowAll(!showAll)}
+                  className="text-white text-xs hover:text-gray-300 transition-colors underline"
+                >
+                  {showAll ? 'Show Less' : 'More Categories'}
+                </button>
+              </div>
             )}
           </div>
-          {totalRows > 2 && (
-            <div className="mt-3 text-center">
-              <button
-                onClick={() => setShowAll(!showAll)}
-                className="text-white text-xs hover:text-gray-300 transition-colors underline"
-              >
-                {showAll ? 'Show Less' : 'More Categories'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+    </>
   );
 }

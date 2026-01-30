@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface CartItem {
   id: number;
@@ -61,20 +62,48 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       if (existingItem) {
         // If item exists, increase quantity
-        return prevItems.map(cartItem =>
+        const updatedItems = prevItems.map(cartItem =>
           cartItem.id === item.id
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
+        
+        // Show toast notification for quantity increase
+        toast.success(`${item.name} quantity increased to ${existingItem.quantity + 1}`, {
+          duration: 2000,
+          icon: '🛒',
+        });
+        
+        return updatedItems;
       } else {
         // If item doesn't exist, add new item with quantity 1
-        return [...prevItems, { ...item, quantity: 1 }];
+        const newItem = { ...item, quantity: 1 };
+        
+        // Show toast notification for new item added
+        toast.success(`${item.name} added to cart`, {
+          duration: 2000,
+          icon: '✅',
+          action: {
+            label: 'View Cart',
+            onClick: () => window.location.href = '/cart'
+          }
+        });
+        
+        return [...prevItems, newItem];
       }
     });
   };
 
   const removeFromCart = (id: number) => {
+    const itemToRemove = cartItems.find(item => item.id === id);
     setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+    
+    if (itemToRemove) {
+      toast.info(`${itemToRemove.name} removed from cart`, {
+        duration: 2000,
+        icon: '🗑️',
+      });
+    }
   };
 
   const updateQuantity = (id: number, quantity: number) => {
@@ -83,15 +112,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    const itemToUpdate = cartItems.find(item => item.id === id);
     setCartItems(prevItems =>
       prevItems.map(item =>
         item.id === id ? { ...item, quantity } : item
       )
     );
+    
+    if (itemToUpdate && quantity > itemToUpdate.quantity) {
+      toast.success(`${itemToUpdate.name} quantity updated to ${quantity}`, {
+        duration: 2000,
+        icon: '🔄',
+      });
+    }
   };
 
   const clearCart = () => {
     setCartItems([]);
+    toast.success('Cart cleared successfully', {
+      duration: 2000,
+      icon: '🧹',
+    });
   };
 
   const getTotalItems = () => {
