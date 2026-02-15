@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import SiteChrome from "@/components/layout/SiteChrome";
 import RouteLoader from "@/components/ui/RouteLoader";
 import PageTransition from "@/components/ui/PageTransition";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Tulsi | Indian grocery store",
@@ -29,8 +30,10 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <SmoothScrollProvider>
-              <RouteLoader />
-              <PageTransition />
+              <Suspense fallback={null}>
+                <RouteLoader />
+                <PageTransition />
+              </Suspense>
               <SiteChrome>{children}</SiteChrome>
               <Toaster />
             </SmoothScrollProvider>
