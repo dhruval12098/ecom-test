@@ -53,7 +53,7 @@ const ShopAdvantages = () => {
 
         {/* Right side: Image Box with minimal padding */}
         <div className="flex-1 p-[10px] pr-[10px] pt-[10px] pb-[10px]">
-          <div className="rounded-2xl h-full w-full overflow-hidden min-h-[300px]">
+          <div className="rounded-2xl w-full overflow-hidden bg-gray-100 aspect-[4/3] sm:aspect-auto sm:min-h-[300px]">
             <img 
               src="https://i.pinimg.com/736x/b6/d3/ed/b6d3ed14e86fa601c03ec89e054d8811.jpg" 
               alt="Indian spices and ingredients"

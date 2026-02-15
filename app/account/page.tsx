@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { Package, Heart, MapPin, CreditCard, Settings, Star, ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Package, MapPin, CreditCard, Settings } from "lucide-react";
 import Link from "next/link";
 import ProfileSection from "@/components/account/ProfileSection";
 import MobileTabNavigation from "@/components/account/MobileTabNavigation";
 import DesktopSidebar from "@/components/account/DesktopSidebar";
 import MobileProfileHeader from "@/components/account/MobileProfileHeader";
+import ApiService from "@/lib/api";
+import { formatCurrency } from "@/lib/currency";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Order {
   id: number;
@@ -18,50 +22,201 @@ interface Order {
 
 interface Address {
   id: number;
-  name: string;
+  label?: string | null;
+  full_name: string;
+  phone: string;
   street: string;
+  house?: string | null;
+  apartment?: string | null;
   city: string;
-  state: string;
-  zipCode: string;
-  isDefault: boolean;
-}
-
-interface WishlistItem {
-  id: number;
-  name: string;
-  price: number;
-  originalPrice: number;
-  imageUrl: string;
-  rating: number;
+  region?: string | null;
+  postal_code: string;
+  country: string;
+  is_default: boolean;
 }
 
 export default function AccountPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user: authUser, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [user, setUser] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 9876543210",
+    name: "",
+    email: "",
+    phone: "",
     avatar: "/placeholder-avatar.jpg"
   });
 
-  const [orders] = useState<Order[]>([
-    { id: 1001, date: "Jan 15, 2026", status: "Delivered", total: 1299, items: 3 },
-    { id: 1002, date: "Jan 10, 2026", status: "Shipped", total: 899, items: 2 },
-    { id: 1003, date: "Jan 5, 2026", status: "Processing", total: 549, items: 1 },
-    { id: 1004, date: "Dec 28, 2025", status: "Delivered", total: 2150, items: 5 },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    label: "",
+    full_name: "",
+    phone: "",
+    street: "",
+    house: "",
+    apartment: "",
+    city: "",
+    region: "",
+    postal_code: "",
+    country: "Belgium",
+    is_default: false
+  });
 
-  const [addresses] = useState<Address[]>([
-    { id: 1, name: "Home", street: "123 Main Street, Apartment 4B", city: "Mumbai", state: "Maharashtra", zipCode: "400001", isDefault: true },
-    { id: 2, name: "Office", street: "456 Business Avenue, Floor 12", city: "Mumbai", state: "Maharashtra", zipCode: "400002", isDefault: false },
-  ]);
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.replace("/login");
+    }
+  }, [authLoading, authUser, router]);
 
-  const [wishlist] = useState<WishlistItem[]>([
-    { id: 1, name: "Organic Red Apples", price: 120, originalPrice: 150, imageUrl: "/placeholder-product.jpg", rating: 4.5 },
-    { id: 2, name: "Fresh Carrots (1kg)", price: 80, originalPrice: 100, imageUrl: "/placeholder-product.jpg", rating: 4.2 },
-    { id: 3, name: "Premium Almonds", price: 450, originalPrice: 550, imageUrl: "/placeholder-product.jpg", rating: 4.8 },
-    { id: 4, name: "Organic Honey", price: 350, originalPrice: 400, imageUrl: "/placeholder-product.jpg", rating: 4.6 },
-  ]);
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && ["profile", "orders", "addresses", "payment", "settings"].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (authUser) {
+      setUser((prev) => ({
+        ...prev,
+        email: authUser.email || "",
+        phone: authUser.phone || "",
+        name: prev.name || authUser.email?.split("@")[0] || ""
+      }));
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        if (!authUser) return;
+        const profile = await ApiService.getCustomerProfile(authUser.id);
+        if (profile) {
+          setCustomerId(profile.id || null);
+          setUser((prev) => ({
+            ...prev,
+            name: profile.full_name || prev.name,
+            email: profile.email || prev.email,
+            phone: profile.phone || prev.phone,
+            avatar: profile.avatar_url || prev.avatar
+          }));
+          setAddressForm((prev) => ({
+            ...prev,
+            full_name: profile.full_name || prev.full_name,
+            phone: profile.phone || prev.phone
+          }));
+        }
+      } catch (e) {
+        // keep UI usable if profile fetch fails
+      }
+    };
+    loadProfile();
+  }, [authUser]);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        setOrdersLoading(true);
+        setOrdersError(null);
+        if (!authUser) return;
+        const data = await ApiService.getOrdersByContact({
+          email: user.email || authUser.email,
+          phone: user.phone || authUser.phone
+        });
+        const mapped = data.map((order: any) => ({
+          id: order.order_number || order.id,
+          date: order.created_at ? new Date(order.created_at).toLocaleDateString() : '',
+          status: order.status || 'pending',
+          total: Number(order.total_amount || 0),
+          items: Number(order.items_count || 0)
+        }));
+        setOrders(mapped);
+      } catch (e: any) {
+        setOrdersError(e?.message || 'Failed to load orders');
+      } finally {
+        setOrdersLoading(false);
+      }
+    };
+    loadOrders();
+  }, [authUser]);
+
+  useEffect(() => {
+    const loadAddresses = async () => {
+      try {
+        if (!customerId) return;
+        setAddressesLoading(true);
+        setAddressesError(null);
+        const data = await ApiService.getCustomerAddresses(customerId);
+        setAddresses(data || []);
+      } catch (e: any) {
+        setAddressesError(e?.message || "Failed to load addresses");
+      } finally {
+        setAddressesLoading(false);
+      }
+    };
+    loadAddresses();
+  }, [customerId]);
+
+  const handleAddressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerId) return;
+    try {
+      const created = await ApiService.createCustomerAddress({
+        customerId,
+        ...addressForm,
+        is_default: addressForm.is_default
+      });
+      if (created) {
+        setAddresses((prev) => [created, ...prev]);
+        setShowAddressForm(false);
+        setAddressForm((prev) => ({
+          ...prev,
+          label: "",
+          street: "",
+          house: "",
+          apartment: "",
+          city: "",
+          region: "",
+          postal_code: "",
+          country: "Belgium",
+          is_default: false
+        }));
+      }
+    } catch (e) {
+      // ignore; error already handled in api
+    }
+  };
+
+  const handleDeleteAddress = async (id: number) => {
+    if (!customerId) return;
+    try {
+      await ApiService.deleteCustomerAddress(id, customerId);
+      setAddresses((prev) => prev.filter((a) => a.id !== id));
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleSetDefault = async (id: number) => {
+    if (!customerId) return;
+    try {
+      const updated = await ApiService.setDefaultCustomerAddress(id, customerId);
+      if (updated) {
+        setAddresses((prev) =>
+          prev.map((a) => ({ ...a, is_default: a.id === id }))
+        );
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -80,6 +235,23 @@ export default function AccountPage() {
               <h3 className="text-2xl font-bold text-gray-900 mb-8">Order History</h3>
               
               <div className="space-y-4">
+                {ordersLoading && (
+                  <div className="space-y-4">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6">
+                        <div className="skeleton h-4 w-1/3 mb-3" />
+                        <div className="skeleton h-4 w-1/2 mb-4" />
+                        <div className="skeleton h-8 w-24" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!ordersLoading && ordersError && (
+                  <div className="text-sm text-red-600">{ordersError}</div>
+                )}
+                {!ordersLoading && !ordersError && orders.length === 0 && (
+                  <div className="text-sm text-gray-600">No orders found.</div>
+                )}
                 {orders.map((order) => (
                   <div key={order.id} className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
@@ -106,7 +278,7 @@ export default function AccountPage() {
                       </div>
                       
                       <div className="flex flex-col md:items-end gap-4">
-                        <div className="text-2xl font-bold text-gray-900">₹{order.total.toLocaleString()}</div>
+                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</div>
                         <div className="flex gap-3">
                           <button className="text-[#266000] font-semibold hover:underline text-sm">
                             View Details
@@ -130,121 +302,164 @@ export default function AccountPage() {
             <div className="bg-white border border-black rounded-2xl p-8">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                 <h3 className="text-2xl font-bold text-gray-900">Shipping Addresses</h3>
-                <button className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors">
-                  Add New Address
+                <button
+                  onClick={() => setShowAddressForm((v) => !v)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors"
+                >
+                  {showAddressForm ? "Close" : "Add New Address"}
                 </button>
               </div>
-              
+
+              {showAddressForm && (
+                <form onSubmit={handleAddressSubmit} className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Label (Home/Office)"
+                      value={addressForm.label}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, label: e.target.value }))}
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Full name"
+                      value={addressForm.full_name}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, full_name: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Phone"
+                      value={addressForm.phone}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, phone: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Street"
+                      value={addressForm.street}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, street: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="House"
+                      value={addressForm.house}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, house: e.target.value }))}
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Apartment"
+                      value={addressForm.apartment}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, apartment: e.target.value }))}
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="City"
+                      value={addressForm.city}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Region/State"
+                      value={addressForm.region}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, region: e.target.value }))}
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Postal code"
+                      value={addressForm.postal_code}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, postal_code: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      placeholder="Country"
+                      value={addressForm.country}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, country: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={addressForm.is_default}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, is_default: e.target.checked }))}
+                    />
+                    Set as default
+                  </label>
+                  <button
+                    type="submit"
+                    className="bg-black text-white px-6 py-2 rounded-lg font-semibold"
+                  >
+                    Save Address
+                  </button>
+                </form>
+              )}
+
+              {addressesLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6">
+                      <div className="skeleton h-4 w-1/3 mb-3" />
+                      <div className="skeleton h-4 w-2/3 mb-2" />
+                      <div className="skeleton h-4 w-1/2 mb-2" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!addressesLoading && addressesError && (
+                <div className="text-sm text-red-600">{addressesError}</div>
+              )}
+              {!addressesLoading && !addressesError && addresses.length === 0 && (
+                <div className="text-sm text-gray-600">No addresses yet.</div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {addresses.map((address) => (
                   <div key={address.id} className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
                     <div className="flex items-start justify-between mb-4">
-                      <h4 className="text-lg font-bold text-gray-900">{address.name}</h4>
-                      {address.isDefault && (
+                      <h4 className="text-lg font-bold text-gray-900">{address.label || "Address"}</h4>
+                      {address.is_default && (
                         <span className="inline-block px-3 py-1 bg-white border border-[#266000] text-[#266000] text-xs font-bold rounded-full">
                           Default
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="space-y-1 mb-6">
-                      <p className="text-gray-700">{address.street}</p>
-                      <p className="text-gray-700">{address.city}, {address.state}</p>
-                      <p className="text-gray-700">PIN: {address.zipCode}</p>
+                      <p className="text-gray-700">{address.full_name} · {address.phone}</p>
+                      <p className="text-gray-700">
+                        {address.street}
+                        {address.house ? `, ${address.house}` : ""}
+                        {address.apartment ? `, ${address.apartment}` : ""}
+                      </p>
+                      <p className="text-gray-700">
+                        {address.city}
+                        {address.region ? `, ${address.region}` : ""} {address.postal_code}
+                      </p>
+                      <p className="text-gray-700">{address.country}</p>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                      <button className="text-[#266000] text-sm font-semibold hover:underline">
-                        Edit
-                      </button>
-                      {!address.isDefault && (
-                        <button className="text-gray-900 text-sm font-semibold hover:underline">
+                      {!address.is_default && (
+                        <button
+                          onClick={() => handleSetDefault(address.id)}
+                          className="text-gray-900 text-sm font-semibold hover:underline"
+                        >
                           Set as Default
                         </button>
                       )}
-                      <button className="text-red-600 text-sm font-semibold hover:underline">
+                      <button
+                        onClick={() => handleDeleteAddress(address.id)}
+                        className="text-red-600 text-sm font-semibold hover:underline"
+                      >
                         Delete
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        );
-      
-      case "wishlist":
-        return (
-          <div className="space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-8">My Wishlist</h3>
-              
-              {wishlist.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 rounded-full border-2 border-black flex items-center justify-center mx-auto mb-6">
-                    <Heart className="h-12 w-12 text-gray-400" />
-                  </div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">Your wishlist is empty</h4>
-                  <p className="text-gray-600 mb-6">Save items you love for later</p>
-                  <Link 
-                    href="/"
-                    className="inline-flex items-center bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-xl font-bold transition-colors"
-                  >
-                    <ShoppingBag className="mr-2" size={18} />
-                    Start Shopping
-                  </Link>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {wishlist.map((item) => (
-                    <div key={item.id} className="bg-white border border-gray-300 rounded-2xl p-4 hover:border-[#266000] transition-colors shadow-sm">
-                      <div className="flex gap-4">
-                        <div className="w-24 h-24 rounded-xl border border-black overflow-hidden shrink-0">
-                          <img 
-                            src={item.imageUrl} 
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="96" height="96" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="96" height="96" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="14" text-anchor="middle" dy=".3em" fill="%239ca3af"%3EProduct%3C/text%3E%3C/svg%3E';
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="flex-grow min-w-0">
-                          <h4 className="font-bold text-gray-900 mb-2 truncate">{item.name}</h4>
-                          
-                          <div className="flex items-center mb-3">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                size={14}
-                                className={i < Math.floor(item.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
-                              />
-                            ))}
-                            <span className="text-xs text-gray-600 ml-2">{item.rating}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-xl font-bold text-gray-900">₹{item.price}</span>
-                            {item.originalPrice && (
-                              <span className="text-sm text-gray-500 line-through">₹{item.originalPrice}</span>
-                            )}
-                          </div>
-                          
-                          <div className="flex gap-2">
-                            <button className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg text-sm font-bold transition-colors">
-                              Add to Cart
-                            </button>
-                            <button className="p-2 border border-black rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors">
-                              <Heart size={18} className="text-red-500 fill-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         );
@@ -324,7 +539,7 @@ export default function AccountPage() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <div className="text-2xl font-bold text-[#266000]">₹</div>
+                        <div className="text-2xl font-bold text-[#266000]">€</div>
                       </div>
                       <div>
                         <h4 className="font-bold text-gray-900 mb-2">UPI</h4>

@@ -1,57 +1,36 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import ApiService from "@/lib/api";
+
+type FaqItem = {
+  id: string;
+  question: string;
+  answer: string;
+};
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [faqs, setFaqs] = useState<FaqItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    ApiService.getFaqs(true).then((data) => {
+      if (active) {
+        setFaqs(data || []);
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const toggleAccordion = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
-
-  const faqs = [
-    {
-      question: "How do I place an order?",
-      answer: "You can place an order by browsing our products, adding items to your cart, and proceeding to checkout. You'll need to provide shipping information and payment details to complete your purchase."
-    },
-    {
-      question: "What are your delivery options?",
-      answer: "We offer standard delivery within 3-5 business days and express delivery within 1-2 business days. Delivery options and costs will be displayed during checkout based on your location."
-    },
-    {
-      question: "Can I modify or cancel my order?",
-      answer: "You can modify or cancel your order as long as it hasn't been shipped. Contact our customer support team immediately if you need to make changes to your order."
-    },
-    {
-      question: "What is your return policy?",
-      answer: "We offer a 30-day return policy for unopened and unused products. Items must be in their original packaging. Contact our support team to initiate a return."
-    },
-    {
-      question: "How do I track my order?",
-      answer: "Once your order is shipped, you'll receive a tracking number via email. You can use this number on our website or with the carrier to track your shipment."
-    },
-    {
-      question: "What payment methods do you accept?",
-      answer: "We accept all major credit and debit cards, net banking, UPI, and cash on delivery for eligible orders. Payment options will be displayed during checkout."
-    },
-    {
-      question: "Are your products organic?",
-      answer: "We source many organic products from certified farms. Look for the 'Organic Certified' badge on product listings to identify organic items."
-    },
-    {
-      question: "How do I contact customer support?",
-      answer: "You can reach our customer support team via email at support@freshmart.com, by phone at +91 98765 43210, or through our live chat feature available on our website."
-    },
-    {
-      question: "Do you offer bulk discounts?",
-      answer: "Yes, we offer special pricing for bulk orders. Please contact our sales team at sales@freshmart.com for more information and custom quotes."
-    },
-    {
-      question: "How fresh are your products?",
-      answer: "We prioritize freshness and work with local farmers and suppliers to ensure our products reach you within 24-48 hours of harvest. Most products have a shelf life of 5-7 days upon delivery."
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -111,26 +90,32 @@ export default function FAQPage() {
 
         {/* Accordion */}
         <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <button
-                className="w-full flex justify-between items-center p-6 text-left"
-                onClick={() => toggleAccordion(index)}
-              >
-                <span className="text-lg font-medium text-gray-900">{faq.question}</span>
-                <ChevronDown
-                  className={`h-5 w-5 text-gray-500 transform transition-transform ${
-                    openIndex === index ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {openIndex === index && (
-                <div className="px-6 pb-6 pt-0">
-                  <p className="text-gray-600">{faq.answer}</p>
-                </div>
-              )}
-            </div>
-          ))}
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm p-6 text-gray-600">Loading FAQs...</div>
+          ) : faqs.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-6 text-gray-600">No FAQs available.</div>
+          ) : (
+            faqs.map((faq, index) => (
+              <div key={faq.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <button
+                  className="w-full flex justify-between items-center p-6 text-left"
+                  onClick={() => toggleAccordion(index)}
+                >
+                  <span className="text-lg font-medium text-gray-900">{faq.question}</span>
+                  <ChevronDown
+                    className={`h-5 w-5 text-gray-500 transform transition-transform ${
+                      openIndex === index ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+                {openIndex === index && (
+                  <div className="px-6 pb-6 pt-0">
+                    <p className="text-gray-600">{faq.answer}</p>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Contact Section */}

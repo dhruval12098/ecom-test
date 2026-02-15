@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { ShoppingCart, Check } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
+import { formatCurrency } from "@/lib/currency";
 
 interface Product {
   id: number;
@@ -29,7 +30,7 @@ type ProductCardProps = {
   price?: string;
   originalPrice?: string;
   rating?: number;
-  imageUrl: string;
+  imageUrl?: string;
   discountPercentage?: string;
   discountColor?: string;
   productId?: string | number;
@@ -53,6 +54,12 @@ export default function ProductCard({
   product,
 }: ProductCardProps) {
   const { addToCart, cartItems } = useCart();
+  const parsePrice = (value?: string) => {
+    if (!value) return undefined;
+    const normalized = value.replace(/[^\d.,-]/g, "").replace(",", ".");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
   // Generate product URL if all required slugs are provided
   const productUrl = product && product.category && product.subcategory && product.slug
     ? `/${product.category}/${product.subcategory}/${product.slug}`
@@ -63,11 +70,12 @@ export default function ProductCard({
   // Use product data if provided, otherwise use props
   const displayTitle = product?.name || title;
   const displayWeight = product?.weight || weight;
-  const displayPrice = product ? `₹${product.price}` : price;
-  const displayOriginalPrice = product?.originalPrice ? `₹${product.originalPrice}` : originalPrice;
+  const displayPrice = product ? formatCurrency(Number(product.price)) : price;
+  const displayOriginalPrice = product?.originalPrice ? formatCurrency(Number(product.originalPrice)) : originalPrice;
   const displayRating = product?.rating || rating;
   const displayDiscountPercentage = product?.discountPercentage || discountPercentage;
   const displayDiscountColor = product?.discountColor || discountColor;
+  const displayImageUrl = product?.imageUrl || imageUrl || "";
 
   // Generate product ID for cart lookup
   const productIdForCart = product?.id || (typeof productId === 'string' ? parseInt(productId) : productId as number) || Date.now();
@@ -88,9 +96,9 @@ export default function ProductCard({
     const cartItem = {
       id: productIdForCart,
       name: displayTitle,
-      price: product?.price ? product.price : parseFloat(price.replace('₹', '$')) || 0,
-      originalPrice: product?.originalPrice || (originalPrice ? parseFloat(originalPrice.replace('₹', '$')) : undefined),
-      imageUrl,
+      price: product?.price ?? parsePrice(price) ?? 0,
+      originalPrice: product?.originalPrice ?? parsePrice(originalPrice),
+      imageUrl: displayImageUrl,
       weight: displayWeight,
       inStock: product?.inStock !== undefined ? product.inStock : true,
       category: product?.category || categorySlug,
@@ -101,19 +109,21 @@ export default function ProductCard({
     addToCart(cartItem);
   };
   return (
-    <Link href={productUrl} className="w-60 sm:w-72 h-96 sm:h-[430px] border border-gray-300 rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300">
+    <Link href={productUrl} className="w-52 sm:w-72 h-80 sm:h-[430px] border border-gray-300 rounded-xl sm:rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300">
       
       {/* ===== LABEL ===== */}
       <div className={`absolute top-0 left-0 z-10 ${displayDiscountColor} text-white text-sm px-4 py-1 
-                      rounded-tl-2xl rounded-br-xl`}>
+                      rounded-tl-xl rounded-br-lg`}>
         {displayDiscountPercentage}
       </div>
 
       {/* ===== IMAGE AREA (70% on mobile, 75% on desktop) ===== */}
       <div className="relative h-[70%] sm:h-[75%] w-full">
         <img
-          src={imageUrl}
+          src={displayImageUrl}
           alt={displayTitle}
+          loading="lazy"
+          decoding="async"
           className="object-cover w-full h-full"
           onError={(e) => {
             // Fallback image on error
@@ -128,13 +138,13 @@ export default function ProductCard({
         {/* Title + Rating */}
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-bold text-black text-base sm:text-lg leading-tight">
+            <h3 className="font-bold text-black text-sm sm:text-lg leading-tight">
               {displayTitle}
             </h3>
-            <p className="text-xs sm:text-sm text-gray-600">{displayWeight}</p>
+            <p className="text-[10px] sm:text-sm text-gray-600">{displayWeight}</p>
           </div>
 
-          <div className="flex items-center gap-1 text-sm text-gray-700">
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-700">
             {/* SVG Star */}
             <svg
               className="w-4 h-4 fill-yellow-400"
@@ -150,18 +160,18 @@ export default function ProductCard({
         <div className="h-px w-full bg-gray-300 my-1" />
 
         {/* Price + Cart */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <p className="text-lg sm:text-xl font-bold text-black">{displayPrice}</p>
+            <p className="text-base sm:text-xl font-bold text-black">{displayPrice}</p>
             {displayOriginalPrice && (
-              <p className="text-sm text-gray-500 line-through">{displayOriginalPrice}</p>
+              <p className="text-xs sm:text-sm text-gray-500 line-through">{displayOriginalPrice}</p>
             )}
           </div>
 
           <button 
             onClick={handleAddToCart}
             disabled={isInCart}
-            className={`rounded-lg p-2 transition-all duration-200 flex items-center gap-1 ${
+            className={`rounded-lg px-2.5 py-2 transition-all duration-200 flex items-center gap-1 ${
               isInCart 
                 ? "bg-green-800 border border-green-900 text-white cursor-default" 
                 : "bg-white border border-gray-300 hover:bg-gray-100 hover:shadow-md cursor-pointer"
@@ -170,10 +180,10 @@ export default function ProductCard({
             {isInCart ? (
               <>
                 <ShoppingCart size={16} />
-                <span className="text-xs font-medium">Added</span>
+                <span className="text-[10px] font-medium">Added</span>
               </>
             ) : (
-              <ShoppingCart size={18} />
+              <ShoppingCart size={16} />
             )}
           </button>
         </div>

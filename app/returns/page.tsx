@@ -1,6 +1,6 @@
 export default function ReturnRefundPolicyPage() {
   return (
-    <div className="min-h-screen bg-white py-12">
+    <div className="min-h-screen bg-white py-12 fade-in">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Return & Refund Policy</h1>

@@ -1,6 +1,6 @@
-@import "tailwindcss/preflight";
-@import "tailwindcss/theme";
-@import "tailwindcss/utilities";
+@import "tailwindcss";
+
+
 
 /* rest of your CSS below */
 
@@ -75,34 +75,34 @@ html {
   }
   
   [data-sonner-toast] {
-    min-width: 380px !important;
-    padding: 20px !important;
-    font-size: 16px !important;
+    min-width: 240px !important;
+    padding: 10px !important;
+    font-size: 13px !important;
   }
   
   [data-sonner-toast] [data-icon] {
-    width: 24px !important;
-    height: 24px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   
   [data-sonner-toast] [data-button] {
-    padding: 8px 16px !important;
-    font-size: 14px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
   }
 }
 
-@media (min-width: 1280px) {
-  [data-sonner-toast] {
-    min-width: 420px !important;
-    padding: 24px !important;
-    font-size: 18px !important;
+  @media (min-width: 1280px) {
+    [data-sonner-toast] {
+      min-width: 280px !important;
+      padding: 12px !important;
+      font-size: 14px !important;
+    }
+    
+    [data-sonner-toast] [data-icon] {
+      width: 18px !important;
+      height: 18px !important;
+    }
   }
-  
-  [data-sonner-toast] [data-icon] {
-    width: 28px !important;
-    height: 28px !important;
-  }
-}
 
 /* Hide scrollbar cross-browser */
 .scrollbar-hide::-webkit-scrollbar {
@@ -126,6 +126,126 @@ html {
 
 .animate-loop {
   animation: loop 20s linear infinite;
+}
+
+/* Announcement marquee */
+.announcement-bar {
+  color: #ffffff;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+.announcement-marquee {
+  overflow: hidden;
+}
+
+.announcement-track {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  width: max-content;
+  animation: announcement-scroll var(--marquee-duration, 20s) linear infinite;
+}
+
+.announcement-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5rem;
+  padding-right: 2.5rem;
+}
+
+.announcement-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.announcement-link {
+  color: #ffffff;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+@keyframes announcement-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-track {
+    animation: none;
+  }
+}
+
+/* Skeleton shimmer + subtle fade-in */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 240ms ease-out;
+}
+
+/* Route progress bar */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: #111827;
+  z-index: 99999;
+  transition: width 200ms ease-out, opacity 200ms ease-out;
+  box-shadow: 0 2px 6px rgba(17, 24, 39, 0.25);
+}
+
+/* Page transition overlay */
+.page-transition {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
+  z-index: 99998;
+}
+
+.page-transition--in {
+  opacity: 1;
 }
 .input {
   width: 100%;

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { CheckCircle, Package, Truck, Clock, MapPin, Star, ArrowRight } from "lucide-react";
@@ -157,7 +157,7 @@ export default function OrderConfirmationPage() {
                     </div>
                     
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">₹{item.price * item.quantity}</p>
+                      <p className="font-medium text-gray-900">€{item.price * item.quantity}</p>
                     </div>
                   </div>
                 ))}
@@ -181,22 +181,22 @@ export default function OrderConfirmationPage() {
                 <div className="pt-4 border-t border-gray-100">
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
+                    <span>€{subtotal.toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Shipping</span>
-                    <span>₹{shippingCost.toFixed(2)}</span>
+                    <span>€{shippingCost.toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between mb-2">
                     <span className="text-gray-600">Tax</span>
-                    <span>₹{tax.toFixed(2)}</span>
+                    <span>€{tax.toFixed(2)}</span>
                   </div>
                   
                   <div className="border-t border-gray-200 pt-4 mt-4 flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>₹{total.toFixed(2)}</span>
+                    <span>€{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

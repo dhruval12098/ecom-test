@@ -1,11 +1,52 @@
 // components/Footer.tsx
 'use client';
+import { useEffect, useState } from 'react';
 import { FaFacebookF, FaTwitter, FaPinterestP, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { SiVisa, SiMastercard, SiAmericanexpress, SiPaypal } from 'react-icons/si';
 import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
+import ApiService from '@/lib/api';
 
 const Footer = () => {
+  const [contactInfo, setContactInfo] = useState({
+    visitStoreLines: ["8502 Preston Rd.", "Inglewood, Maine", "98380"],
+    emailLines: ["example@gmail.com"],
+    phoneLines: ["+0123-456-789"]
+  });
+
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const settings = await ApiService.getSettings();
+        if (!settings) return;
+        const addressLines = Array.isArray(settings.address_lines)
+          ? settings.address_lines
+          : settings.address
+            ? String(settings.address).split('\n')
+            : contactInfo.visitStoreLines;
+        const emailLines = Array.isArray(settings.email_lines)
+          ? settings.email_lines
+          : settings.support_email
+            ? [settings.support_email]
+            : contactInfo.emailLines;
+        const phoneLines = Array.isArray(settings.phone_lines)
+          ? settings.phone_lines
+          : settings.support_phone
+            ? [settings.support_phone]
+            : contactInfo.phoneLines;
+        setContactInfo({
+          visitStoreLines: addressLines,
+          emailLines,
+          phoneLines
+        });
+      } catch (error) {
+        console.error('Error fetching contact info:', error);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
+
   return (
     <footer className="bg-[#266000] text-white rounded-t-3xl">
       {/* Main Footer Content */}
@@ -118,12 +159,19 @@ const Footer = () => {
             <div>
               <h3 className="text-xl font-semibold mb-6">Contact Info</h3>
               <ul className="space-y-4 text-gray-300 text-sm">
-                <li>+0123-456-789</li>
-                <li>example@gmail.com</li>
+                {contactInfo.phoneLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+                {contactInfo.emailLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
                 <li className="leading-relaxed">
-                  8502 Preston Rd.<br />
-                  Inglewood, Maine<br />
-                  98380
+                  {contactInfo.visitStoreLines.map((line, idx) => (
+                    <span key={`${line}-${idx}`}>
+                      {line}
+                      {idx < contactInfo.visitStoreLines.length - 1 ? <br /> : null}
+                    </span>
+                  ))}
                 </li>
               </ul>
               

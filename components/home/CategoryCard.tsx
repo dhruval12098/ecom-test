@@ -8,10 +8,10 @@ export default function CategoryCard({ title = "Category", prefix = "Prefix", bg
   
   return (
     <Link href={`/${categorySlug}`} className="w-40 sm:w-52 h-72 sm:h-80 bg-gray-200 rounded-3xl overflow-hidden flex flex-col">
-      {/* Card Image/Color Area - 80% of height */}
+      {/* Card Image/Color Area */}
       <div 
-        className="w-full flex-1 rounded-3xl flex items-center justify-center"
-        style={{ backgroundColor: bgColor, height: '70%' }}
+        className="w-full flex-1 rounded-3xl flex items-center justify-center min-h-[60%]"
+        style={{ backgroundColor: bgColor }}
       >
         {icon ? (
           <div className="text-white scale-125">
@@ -24,10 +24,10 @@ export default function CategoryCard({ title = "Category", prefix = "Prefix", bg
         )}
       </div>
       
-      {/* Card Footer - 20% of height */}
-      <div className="px-4 py-3 text-center" style={{ height: '20%' }}>
-        <h3 className="text-black font-bold text-lg mb-1">{title}</h3>
-        <p className="text-gray-600 font-medium text-base">{prefix}</p>
+      {/* Card Footer */}
+      <div className="px-4 pt-3 pb-4 text-center">
+        <h3 className="text-black font-bold text-lg leading-tight">{title}</h3>
+        <p className="text-gray-600 font-medium text-base leading-tight mt-1">{prefix}</p>
       </div>
     </Link>
   );

@@ -13,9 +13,13 @@ interface CartItem {
   quantity: number;
   weight: string;
   inStock: boolean;
+  variantId?: number | null;
+  variantName?: string | null;
   category?: string;
   subcategory?: string;
   slug?: string;
+  shippingMethod?: string;
+  shipping_method?: string;
 }
 
 interface CartContextType {
@@ -41,7 +45,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
         try {
-          setCartItems(JSON.parse(savedCart));
+          const parsed = JSON.parse(savedCart);
+          if (Array.isArray(parsed)) {
+            const sanitized = parsed.map((item) => ({
+              ...item,
+              price: Number.isFinite(Number(item.price)) ? Number(item.price) : 0,
+              originalPrice: Number.isFinite(Number(item.originalPrice)) ? Number(item.originalPrice) : undefined,
+              quantity: Number.isFinite(Number(item.quantity)) ? Number(item.quantity) : 1,
+              inStock: typeof item.inStock === "boolean" ? item.inStock : true,
+              imageUrl: item.imageUrl || ""
+            }));
+            setCartItems(sanitized);
+          } else {
+            setCartItems([]);
+          }
         } catch (e) {
           console.error('Failed to parse cart from localStorage');
           localStorage.removeItem('cart');
@@ -74,6 +91,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           toast.success(`${item.name} quantity increased to ${existingItem.quantity + 1}`, {
             duration: 2000,
             icon: <ShoppingCart className="h-5 w-5" />,
+            id: `cart-${item.id}`,
           });
         }
         
@@ -87,6 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           toast.success(`${item.name} added to cart`, {
             duration: 2000,
             icon: <Check className="h-5 w-5" />,
+            id: `cart-${item.id}`,
             action: {
               label: 'View Cart',
               onClick: () => window.location.href = '/cart'

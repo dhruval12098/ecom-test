@@ -5,16 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
+import ApiService from "@/lib/api";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -25,16 +29,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setSubmitting(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password
       });
-      if (signInError) {
-        setError(signInError.message);
+
+      if (signUpError) {
+        setError(signUpError.message);
         return;
       }
+
+      const authUserId = data.user?.id;
+      if (authUserId) {
+        await ApiService.upsertCustomer({
+          auth_user_id: authUserId,
+          full_name: fullName,
+          email,
+          phone
+        });
+      } else {
+        setInfo("Account created. Please check your email to confirm.");
+      }
+
       router.replace("/account");
     } finally {
       setSubmitting(false);
@@ -58,9 +77,9 @@ export default function LoginPage() {
             <div className="relative h-full p-8 md:p-12 flex flex-col justify-between">
               <div className="text-white text-4xl md:text-5xl">✽</div>
               <div className="text-white">
-                <p className="text-base md:text-lg mb-3 opacity-90">Welcome to</p>
+                <p className="text-base md:text-lg mb-3 opacity-90">Join</p>
                 <h2 className="text-2xl md:text-3xl font-bold leading-tight">
-                  GRD FOOD<br />Taste Of India
+                  GRD FOOD<br />Your Indian Pantry
                 </h2>
               </div>
             </div>
@@ -71,10 +90,10 @@ export default function LoginPage() {
           <div className="w-full max-w-md">
             <div className="text-black text-4xl mb-4 md:mb-6">✽</div>
             <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 md:mb-3">
-              Login to your account
+              Create your account
             </h1>
             <p className="text-gray-500 mb-6 md:mb-8">
-              Access your orders, addresses, and preferences.
+              Save orders, addresses, and faster checkout.
             </p>
 
             {envMissing && (
@@ -85,8 +104,22 @@ export default function LoginPage() {
             )}
 
             {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
+            {info && <div className="mb-4 text-sm text-green-600">{info}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-black mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black/40 bg-white"
+                  required
+                />
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-black mb-2">
                   Email
@@ -98,6 +131,18 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black/40 bg-white"
                   required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-black mb-2">
+                  Phone (optional)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="+32 4xx xxx xxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black/40 bg-white"
                 />
               </div>
               <div>
@@ -123,33 +168,38 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 border border-gray-300 rounded"
-                  />
-                  Remember me
-                </label>
-                <Link href="/forgot-password" className="text-sm text-gray-500 hover:text-black">
-                  Forgot password?
-                </Link>
-              </div>
+              <label className="flex items-start gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  className="mt-1 w-4 h-4 border border-gray-300 rounded"
+                />
+                <span>
+                  I agree to the{" "}
+                  <Link href="/terms-and-conditions" className="text-black font-semibold">
+                    Terms
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy-policy" className="text-black font-semibold">
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
 
               <button
                 type="submit"
-                disabled={submitting || envMissing}
+                disabled={submitting || envMissing || !agreed}
                 className="w-full py-3 rounded-xl bg-black text-white font-semibold text-sm hover:bg-[#111827] transition-colors disabled:opacity-60"
               >
-                {submitting ? "Logging in..." : "Login"}
+                {submitting ? "Creating..." : "Create account"}
               </button>
             </form>
 
             <div className="flex items-center my-6">
               <div className="flex-1 border-t border-gray-200" />
-              <span className="px-4 text-xs text-gray-400">or sign in with</span>
+              <span className="px-4 text-xs text-gray-400">or sign up with</span>
               <div className="flex-1 border-t border-gray-200" />
             </div>
             <div className="flex items-center gap-3">
@@ -159,9 +209,9 @@ export default function LoginPage() {
             </div>
 
             <p className="text-center text-gray-500 mt-6">
-              Don’t have an account?{" "}
-              <Link href="/signup" className="text-black font-semibold">
-                Create account
+              Already have an account?{" "}
+              <Link href="/login" className="text-black font-semibold">
+                Log in
               </Link>
             </p>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Package, MapPin, Heart, CreditCard, Settings, LogOut } from "lucide-react";
+import { User, Package, MapPin, CreditCard, Settings, LogOut } from "lucide-react";
 
 interface User {
   name: string;
@@ -18,7 +18,6 @@ const menuItems = [
   { id: "profile", label: "Profile", icon: <User size={18} /> },
   { id: "orders", label: "My Orders", icon: <Package size={18} /> },
   { id: "addresses", label: "Addresses", icon: <MapPin size={18} /> },
-  { id: "wishlist", label: "Wishlist", icon: <Heart size={18} /> },
   { id: "payment", label: "Payment Methods", icon: <CreditCard size={18} /> },
   { id: "settings", label: "Settings", icon: <Settings size={18} /> }
 ];

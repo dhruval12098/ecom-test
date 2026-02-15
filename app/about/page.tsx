@@ -1,9 +1,15 @@
 "use client"
 import { useState, useEffect } from "react";
 import { Heart, Leaf, Shield, Truck, MapPin, Mail, Phone } from "lucide-react";
+import ApiService from '@/lib/api';
 
 export default function AboutPage() {
   const [animateNumbers, setAnimateNumbers] = useState(false);
+  const [storyContent, setStoryContent] = useState({
+    description: '',
+    image: ''
+  });
+  const [isLoadingStory, setIsLoadingStory] = useState(true);
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -11,6 +17,100 @@ export default function AboutPage() {
     }, 2000);
     
     return () => clearTimeout(timer);
+  }, []);
+
+  // Load dynamic story content
+  useEffect(() => {
+    const fetchStoryContent = async () => {
+      try {
+        const story = await ApiService.getAboutStory();
+        if (story) {
+          setStoryContent({
+            description: story.description || '',
+            image: story.image_url || '/images/farm-partnership.jpg'
+          });
+        } else {
+          // Fallback to default content
+          setStoryContent({
+            description: `Founded in 2020, FreshMart began with a simple mission: to bring fresh, healthy, and organic products 
+                  directly from local farmers to your kitchen. We believe that everyone deserves access to high-quality 
+                  food that's both nutritious and delicious.
+                  
+                  Starting as a small online platform connecting local producers with consumers, we've grown into a 
+                  trusted marketplace serving thousands of customers across the country. Our commitment to sustainability, 
+                  quality, and community remains at the heart of everything we do.
+                  
+                  Today, we partner with over 500 local farmers and producers, ensuring that our products meet the 
+                  highest standards of freshness and quality while supporting local agriculture and sustainable farming practices.`,
+            image: '/images/farm-partnership.jpg'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching story content:', error);
+        // Fallback to default content on error
+        setStoryContent({
+          description: `Founded in 2020, FreshMart began with a simple mission: to bring fresh, healthy, and organic products 
+                directly from local farmers to your kitchen. We believe that everyone deserves access to high-quality 
+                food that's both nutritious and delicious.
+                
+                Starting as a small online platform connecting local producers with consumers, we've grown into a 
+                trusted marketplace serving thousands of customers across the country. Our commitment to sustainability, 
+                quality, and community remains at the heart of everything we do.
+                
+                Today, we partner with over 500 local farmers and producers, ensuring that our products meet the 
+                highest standards of freshness and quality while supporting local agriculture and sustainable farming practices.`,
+          image: '/images/farm-partnership.jpg'
+        });
+      } finally {
+        setIsLoadingStory(false);
+      }
+    };
+
+    fetchStoryContent();
+  }, []);
+
+  useEffect(() => {
+    const fetchFounders = async () => {
+      try {
+        const data = await ApiService.getFounders();
+        if (Array.isArray(data) && data.length > 0) {
+          setFounders(
+            data.map((f) => ({
+              name: f.name || '',
+              role: f.role || '',
+              image: f.image_url || '/team/sarah.jpg',
+              bio: f.bio || ''
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching founders:', error);
+      }
+    };
+
+    fetchFounders();
+  }, []);
+
+  useEffect(() => {
+    const fetchLeadership = async () => {
+      try {
+        const data = await ApiService.getLeadership();
+        if (Array.isArray(data) && data.length > 0) {
+          setTeam(
+            data.map((l) => ({
+              name: l.name || '',
+              role: l.title || '',
+              image: l.image_url || '/team/priya.jpg',
+              bio: l.description || ''
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching leadership:', error);
+      }
+    };
+
+    fetchLeadership();
   }, []);
   
   useEffect(() => {
@@ -49,7 +149,7 @@ export default function AboutPage() {
     }
   }, [animateNumbers]);
   
-  const founders = [
+  const [founders, setFounders] = useState([
     {
       name: "Sarah Johnson",
       role: "CEO & Founder",
@@ -62,9 +162,9 @@ export default function AboutPage() {
       image: "/team/michael.jpg",
       bio: "Tech visionary with expertise in e-commerce platforms and supply chain optimization."
     }
-  ];
+  ]);
 
-  const team = [
+  const [team, setTeam] = useState([
     {
       name: "Priya Sharma",
       role: "Head of Operations",
@@ -83,10 +183,10 @@ export default function AboutPage() {
       image: "/team/emma.jpg",
       bio: "Dedicated to creating exceptional customer journeys and satisfaction"
     }
-  ];
+  ]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white fade-in">
       {/* Hero Section */}
       <section className="w-full py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -106,35 +206,38 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
-              <div className="space-y-4 text-gray-600 leading-relaxed">
-                <p>
-                  Founded in 2020, FreshMart began with a simple mission: to bring fresh, healthy, and organic products 
-                  directly from local farmers to your kitchen. We believe that everyone deserves access to high-quality 
-                  food that's both nutritious and delicious.
-                </p>
-                <p>
-                  Starting as a small online platform connecting local producers with consumers, we've grown into a 
-                  trusted marketplace serving thousands of customers across the country. Our commitment to sustainability, 
-                  quality, and community remains at the heart of everything we do.
-                </p>
-                <p>
-                  Today, we partner with over 500 local farmers and producers, ensuring that our products meet the 
-                  highest standards of freshness and quality while supporting local agriculture and sustainable farming practices.
-                </p>
-              </div>
+              {isLoadingStory ? (
+                <div className="space-y-4">
+                  <div className="skeleton h-4 w-full" />
+                  <div className="skeleton h-4 w-full" />
+                  <div className="skeleton h-4 w-3/4" />
+                  <div className="skeleton h-4 w-full" />
+                  <div className="skeleton h-4 w-5/6" />
+                </div>
+              ) : (
+                <div className="space-y-4 text-gray-600 leading-relaxed">
+                  {storyContent.description.split('\n\n').map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div className="relative">
-              <div className="aspect-square rounded-2xl overflow-hidden border border-black">
-                <img 
-                  src="/images/farm-partnership.jpg" 
-                  alt="Our Farm Partnership"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="400" height="400" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="400" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="18" text-anchor="middle" dy=".3em" fill="%236b7280"%3EFarm Partnership%3C/text%3E%3C/svg%3E';
-                  }}
-                />
-              </div>
+              {isLoadingStory ? (
+                <div className="aspect-square rounded-2xl skeleton" />
+              ) : (
+                <div className="aspect-square rounded-2xl overflow-hidden border border-black">
+                  <img 
+                    src={storyContent.image || '/images/farm-partnership.jpg'} 
+                    alt="Our Story"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="400" height="400" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="400" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="18" text-anchor="middle" dy=".3em" fill="%236b7280"%3EOur Story%3C/text%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -274,39 +377,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Contact CTA Section */}
-      <section className="w-full py-20 bg-white">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Get in Touch</h2>
-          <p className="text-gray-600 mb-8">
-            Have questions or want to partner with us? We'd love to hear from you.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div className="border border-black rounded-2xl p-6">
-              <MapPin className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-              <h4 className="font-bold text-gray-900 mb-2">Visit Us</h4>
-              <p className="text-gray-600 text-sm">123 Fresh Street, Mumbai, Maharashtra 400001</p>
-            </div>
-            
-            <div className="border border-black rounded-2xl p-6">
-              <Mail className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-              <h4 className="font-bold text-gray-900 mb-2">Email Us</h4>
-              <p className="text-gray-600 text-sm">hello@freshmart.com</p>
-            </div>
-            
-            <div className="border border-black rounded-2xl p-6">
-              <Phone className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-              <h4 className="font-bold text-gray-900 mb-2">Call Us</h4>
-              <p className="text-gray-600 text-sm">+91 1800-123-4567</p>
-            </div>
-          </div>
-          
-          <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-lg font-bold text-base transition-colors">
-            Contact Us
-          </button>
-        </div>
-      </section>
     </div>
   );
 }

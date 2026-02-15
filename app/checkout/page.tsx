@@ -1,16 +1,22 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import ApiService from "@/lib/api";
+import { formatCurrency } from "@/lib/currency";
+import { toast } from "sonner";
 
 type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Payment, 3: Review, 4: Confirmation
 
 export default function CheckoutPage() {
   const { cartItems, clearCart } = useCart();
+  const { user } = useAuth();
   const [step, setStep] = useState<CheckoutStep>(1);
   const [orderNumber, setOrderNumber] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -40,13 +46,57 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState("credit-card");
   const [saveAddress, setSaveAddress] = useState(false);
+  const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [liveMap, setLiveMap] = useState<Record<number, any>>({});
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const shippingCost = subtotal > 500 ? 0 : 50;
+  const displayItems = cartItems.map((item) => {
+    const live = liveMap[item.id];
+    if (!live) return item;
+    const inStock =
+      live.inStock !== undefined
+        ? Boolean(live.inStock)
+        : live.in_stock !== undefined
+          ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
+          : item.inStock ?? true;
+    return {
+      ...item,
+      name: live.name || item.name,
+      price: Number(live.sale_price || live.price || item.price),
+      originalPrice: live.originalPrice
+        ? Number(live.originalPrice)
+        : live.original_price
+          ? Number(live.original_price)
+          : item.originalPrice,
+      imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
+      inStock
+    };
+  });
+
+  const hasFreeShippingItem = displayItems.some((item) => {
+    const live = liveMap[item.id];
+    const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
+    return method === 'free';
+  });
+
+  const shippingCost = (() => {
+    if (hasFreeShippingItem) return 0;
+    if (shippingRates.length === 0) return subtotal > 500 ? 0 : 50;
+    const activeRates = shippingRates.filter((r) => r.active);
+    const freeRate = activeRates.find((r) => r.type === 'free');
+    if (freeRate && freeRate.min_order && subtotal >= Number(freeRate.min_order)) return 0;
+    const basicRates = activeRates.filter((r) => r.type === 'basic');
+    if (basicRates.length > 0) return Number(basicRates[0].price || 0);
+    const customRates = activeRates.filter((r) => r.type === 'custom');
+    if (customRates.length > 0) return Number(customRates[0].price || 0);
+    return 0;
+  })();
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0;
   const tax = (subtotal - discount) * 0.05; // 5% VAT
   const total = subtotal + shippingCost - discount + tax;
@@ -68,35 +118,136 @@ export default function CheckoutPage() {
     }
   };
 
-  const validateStep = (currentStep: number): boolean => {
-    if (currentStep === 1) {
-      const required = ['firstName', 'lastName', 'email', 'phone', 'street', 'postalCode', 'city', 'country'];
-      const isValid = required.every(field => shippingInfo[field as keyof typeof shippingInfo]);
-      return isValid && shippingInfo.termsAccepted;
-    }
-    return true;
+  const applyAddressToForm = (addr: any) => {
+    const fullName = addr.full_name || "";
+    const parts = fullName.trim().split(" ");
+    const firstName = parts.shift() || "";
+    const lastName = parts.join(" ");
+
+    setShippingInfo((prev) => ({
+      ...prev,
+      firstName: firstName || prev.firstName,
+      lastName: lastName || prev.lastName,
+      phone: addr.phone || prev.phone,
+      street: addr.street || "",
+      houseNumber: addr.house || "",
+      apartment: addr.apartment || "",
+      postalCode: addr.postal_code || "",
+      city: addr.city || "",
+      region: addr.region || "",
+      country: addr.country || "",
+    }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const applyProfileToForm = (profile: any) => {
+    if (!profile) return;
+    const fullName = profile.full_name || "";
+    const parts = fullName.trim().split(" ");
+    const firstName = parts.shift() || "";
+    const lastName = parts.join(" ");
+    setShippingInfo((prev) => ({
+      ...prev,
+      firstName: prev.firstName || firstName,
+      lastName: prev.lastName || lastName,
+      email: prev.email || profile.email || "",
+      phone: prev.phone || profile.phone || ""
+    }));
+  };
+
+  const validateStep = (currentStep: number) => {
+    if (currentStep === 1) {
+      const required = ['firstName', 'lastName', 'email', 'phone', 'street', 'postalCode', 'city', 'country'];
+      const missing = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
+      if (!shippingInfo.termsAccepted) {
+        missing.push('termsAccepted');
+      }
+      return { valid: missing.length === 0, missing };
+    }
+    return { valid: true, missing: [] as string[] };
+  };
+
+  const fieldLabels: Record<string, string> = {
+    firstName: "First name",
+    lastName: "Last name",
+    email: "Email",
+    phone: "Phone",
+    street: "Street",
+    postalCode: "Postal code",
+    city: "City",
+    country: "Country",
+    termsAccepted: "Terms acceptance",
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateStep(step)) {
-      alert("Please fill in all required fields and accept the terms.");
+    const validation = validateStep(step);
+    if (!validation.valid) {
+      const missingList = validation.missing.map((f) => fieldLabels[f] || f).join(", ");
+      toast.warning("Missing required fields", {
+        description: `Please fill: ${missingList}`,
+      });
       return;
     }
     
     if (step < 3) {
       setStep((step + 1) as CheckoutStep);
     } else {
-      // Generate order number
-      const orderNum = "ORD-" + Date.now().toString().slice(-8);
-      setOrderNumber(orderNum);
-      setStep(4);
-      
-      // Clear cart after successful order
-      setTimeout(() => {
-        if (clearCart) clearCart();
-      }, 1000);
+      try {
+        setIsSubmitting(true);
+        const payload = {
+          customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
+          customer_email: shippingInfo.email,
+          customer_phone: shippingInfo.phone,
+          address_street: shippingInfo.street,
+          address_house: shippingInfo.houseNumber,
+          address_apartment: shippingInfo.apartment,
+          address_city: shippingInfo.city,
+          address_region: shippingInfo.region,
+          address_postal_code: shippingInfo.postalCode,
+          address_country: shippingInfo.country,
+          subtotal,
+          shipping_fee: shippingCost,
+          tax_amount: tax,
+          discount_amount: discount,
+          total_amount: total,
+          status: 'Pending',
+          items: cartItems.map((item) => ({
+            product_id: item.id,
+            variant_id: item.variantId || null,
+            product_name: item.name,
+            variant_name: item.variantName || item.weight || null,
+            unit_price: item.price,
+            quantity: item.quantity,
+            total_price: item.price * item.quantity
+          })),
+          payment: {
+            method: paymentMethod,
+            status: paymentMethod === 'cod' ? 'Pending' : 'Paid',
+            amount: total
+          }
+        };
+
+        const result = await ApiService.createOrder(payload);
+        const rawOrder = result?.order?.order_code || result?.order?.order_number || "";
+        setOrderNumber(String(rawOrder) || "ORD-" + Date.now().toString().slice(-8));
+        setStep(4);
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('orderContact', JSON.stringify({
+            email: shippingInfo.email,
+            phone: shippingInfo.phone
+          }));
+        }
+
+        setTimeout(() => {
+          if (clearCart) clearCart();
+        }, 1000);
+      } catch (error) {
+        alert("Failed to place order. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -106,10 +257,69 @@ export default function CheckoutPage() {
     "Portugal", "Sweden", "Norway", "Denmark", "Finland"
   ];
 
+
+  useEffect(() => {
+      const loadRates = async () => {
+        try {
+          const data = await ApiService.getShippingRates(true);
+          setShippingRates(Array.isArray(data) ? data : []);
+        } catch (e) {
+          // keep UI stable on failure
+        }
+      };
+      loadRates();
+    }, []);
+
+  useEffect(() => {
+      const loadSavedAddresses = async () => {
+        if (!user?.id) return;
+        try {
+          const profile = await ApiService.getCustomerProfile(user.id);
+          if (!profile?.id) return;
+          applyProfileToForm(profile);
+          const addresses = await ApiService.getCustomerAddresses(profile.id);
+          setSavedAddresses(addresses || []);
+          const defaultAddress = (addresses || []).find((addr: any) => addr.is_default);
+          const chosen = defaultAddress || (addresses || [])[0];
+          if (chosen) {
+            setSelectedAddressId(String(chosen.id));
+            applyAddressToForm(chosen);
+          }
+        } catch (error) {
+          // keep UI stable on failure
+        }
+      };
+
+      loadSavedAddresses();
+    }, [user?.id]);
+
+    useEffect(() => {
+      const loadLiveProducts = async () => {
+        if (cartItems.length === 0) return;
+        try {
+          const ids = cartItems
+            .map((item) => Number(item.id))
+            .filter((id) => Number.isFinite(id) && id > 0);
+          if (ids.length === 0) return;
+          const results = await Promise.all(ids.map((id) => ApiService.getProductById(id)));
+          const map: Record<number, any> = {};
+          results.forEach((p) => {
+            if (p && typeof p.id === "number") {
+              map[p.id] = p;
+            }
+          });
+          setLiveMap(map);
+        } catch (e) {
+          // keep UI stable on failure
+        }
+      };
+      loadLiveProducts();
+    }, [cartItems]);
+
   // Confirmation Screen
   if (step === 4) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white fade-in">
         <section className="w-full py-12 md:py-20">
           <div className="max-w-3xl mx-auto px-4 md:px-6">
             <div className="bg-white border border-black rounded-3xl p-8 md:p-12 text-center">
@@ -139,7 +349,7 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Total Amount</div>
-                    <div className="text-xl font-bold text-gray-900">₹{total.toFixed(2)}</div>
+                    <div className="text-xl font-bold text-gray-900">{formatCurrency(total)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Payment Method</div>
@@ -218,7 +428,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white fade-in">
       {/* Header */}
       <section className="w-full py-8 md:py-12 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -305,21 +515,22 @@ export default function CheckoutPage() {
                         <User className="h-4 w-4 text-[#266000]" />
                         Personal Details
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="firstName" className="block text-sm font-semibold text-gray-900 mb-2">
-                            First Name *
-                          </label>
-                          <input
-                            type="text"
-                            id="firstName"
-                            name="firstName"
-                            value={shippingInfo.firstName}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 border border-black rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
-                            required
-                          />
-                        </div>
+                      {(!user || savedAddresses.length === 0 || selectedAddressId === null) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label htmlFor="firstName" className="block text-sm font-semibold text-gray-900 mb-2">
+                              First Name *
+                            </label>
+                            <input
+                              type="text"
+                              id="firstName"
+                              name="firstName"
+                              value={shippingInfo.firstName}
+                              onChange={handleInputChange}
+                              className="w-full px-4 py-3 border border-black rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
+                              required
+                            />
+                          </div>
                         
                         <div>
                           <label htmlFor="lastName" className="block text-sm font-semibold text-gray-900 mb-2">
@@ -368,20 +579,82 @@ export default function CheckoutPage() {
                           />
                         </div>
                       </div>
+                      )}
                     </div>
                     
                     {/* Shipping Address */}
-                    <div className="mb-6">
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Building className="h-4 w-4 text-[#266000]" />
-                        Delivery Address
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                          <label htmlFor="street" className="block text-sm font-semibold text-gray-900 mb-2">
-                            Street Name *
-                          </label>
-                          <input
+                      <div className="mb-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <Building className="h-4 w-4 text-[#266000]" />
+                          Delivery Address
+                        </h3>
+                        {user && savedAddresses.length > 0 && (
+                          <div className="mb-6 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-sm font-semibold text-gray-900">
+                                Select Delivery Address
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAddressId(null)}
+                                className="text-[#266000] text-sm font-semibold hover:underline"
+                              >
+                                Add New Address
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              {savedAddresses.map((addr: any) => {
+                                const isSelected = String(addr.id) === String(selectedAddressId);
+                                return (
+                                  <button
+                                    key={addr.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedAddressId(String(addr.id));
+                                      applyAddressToForm(addr);
+                                    }}
+                                    className={`text-left border rounded-2xl p-4 transition-colors ${
+                                      isSelected
+                                        ? "border-[#266000] bg-green-50"
+                                        : "border-black bg-white hover:border-[#266000]"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="font-bold text-gray-900 text-sm">
+                                        {addr.label || "Address"}
+                                      </div>
+                                      {addr.is_default && (
+                                        <span className="inline-block px-2 py-0.5 text-[10px] font-bold border border-[#266000] text-[#266000] rounded-full">
+                                          Default
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-700 space-y-1">
+                                      <div className="font-semibold">{addr.full_name} · {addr.phone}</div>
+                                      <div>
+                                        {addr.street}
+                                        {addr.house ? `, ${addr.house}` : ""}
+                                        {addr.apartment ? `, ${addr.apartment}` : ""}
+                                      </div>
+                                      <div>
+                                        {addr.city}
+                                        {addr.region ? `, ${addr.region}` : ""} {addr.postal_code}
+                                      </div>
+                                      <div>{addr.country}</div>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        {(!user || savedAddresses.length === 0 || selectedAddressId === null) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="md:col-span-2">
+                            <label htmlFor="street" className="block text-sm font-semibold text-gray-900 mb-2">
+                              Street Name *
+                            </label>
+                            <input
                             type="text"
                             id="street"
                             name="street"
@@ -470,7 +743,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         
-                        <div>
+                          <div>
                           <label htmlFor="country" className="block text-sm font-semibold text-gray-900 mb-2">
                             Country *
                           </label>
@@ -486,8 +759,9 @@ export default function CheckoutPage() {
                               <option key={country} value={country}>{country}</option>
                             ))}
                           </select>
+                          </div>
                         </div>
-                      </div>
+                        )}
                     </div>
                     
                     {/* Business/Company (Optional) */}
@@ -837,10 +1111,10 @@ export default function CheckoutPage() {
                     <div className="mb-6">
                       <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <Package className="h-4 w-4 text-[#266000]" />
-                        Order Items ({cartItems.length})
+                        Order Items ({displayItems.length})
                       </h3>
                       <div className="space-y-3">
-                        {cartItems.map((item) => (
+                        {displayItems.map((item) => (
                           <div key={item.id} className="flex gap-4 p-3 bg-gray-50 border border-black rounded-xl">
                             <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border border-black bg-white shrink-0">
                               <img 
@@ -859,9 +1133,9 @@ export default function CheckoutPage() {
                             </div>
                             <div className="text-right shrink-0">
                               {item.originalPrice && (
-                                <p className="text-gray-500 line-through text-xs">₹{(item.originalPrice * item.quantity).toFixed(2)}</p>
-                              )}
-                              <p className="font-bold text-gray-900 text-sm md:text-base">₹{(item.price * item.quantity).toFixed(2)}</p>
+                              <p className="text-gray-500 line-through text-xs">{formatCurrency(item.originalPrice * item.quantity)}</p>
+                            )}
+                              <p className="font-bold text-gray-900 text-sm md:text-base">{formatCurrency(item.price * item.quantity)}</p>
                             </div>
                           </div>
                         ))}
@@ -887,10 +1161,11 @@ export default function CheckoutPage() {
                       </button>
                       <button
                         type="submit"
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        disabled={isSubmitting}
                       >
                         <ShieldCheck className="h-5 w-5" />
-                        Place Order
+                        {isSubmitting ? "Placing..." : "Place Order"}
                       </button>
                     </div>
                   </div>
@@ -906,13 +1181,13 @@ export default function CheckoutPage() {
                   </h2>
                   
                   <div className="space-y-3 mb-4 md:mb-6">
-                    {cartItems.map((item) => (
+                    {displayItems.map((item) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <div className="flex-grow pr-2">
                           <span className="text-gray-600 line-clamp-1">{item.name} ×{item.quantity}</span>
                         </div>
                         <div className="shrink-0">
-                          <span className="font-semibold text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="font-semibold text-gray-900">{formatCurrency(item.price * item.quantity)}</span>
                         </div>
                       </div>
                     ))}
@@ -920,7 +1195,7 @@ export default function CheckoutPage() {
                     <div className="border-t border-gray-300 pt-3 mt-3 space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Subtotal</span>
-                        <span className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
                       </div>
                       
                       <div className="flex justify-between text-sm text-gray-600">
@@ -929,7 +1204,7 @@ export default function CheckoutPage() {
                           {shippingCost === 0 ? (
                             <span className="text-[#266000]">FREE</span>
                           ) : (
-                            `₹${shippingCost.toFixed(2)}`
+                            `${formatCurrency(shippingCost)}`
                           )}
                         </span>
                       </div>
@@ -937,18 +1212,18 @@ export default function CheckoutPage() {
                       {discount > 0 && (
                         <div className="flex justify-between text-sm text-[#266000]">
                           <span>Discount</span>
-                          <span className="font-semibold">-₹{discount.toFixed(2)}</span>
+                          <span className="font-semibold">-{formatCurrency(discount)}</span>
                         </div>
                       )}
                       
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Tax (VAT 5%)</span>
-                        <span className="font-semibold text-gray-900">₹{tax.toFixed(2)}</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                       </div>
                       
                       <div className="border-t border-gray-300 pt-3 mt-3 flex justify-between text-lg md:text-xl">
                         <span className="font-bold text-gray-900">Total</span>
-                        <span className="font-bold text-gray-900">₹{total.toFixed(2)}</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
                       </div>
                     </div>
                   </div>
@@ -961,7 +1236,11 @@ export default function CheckoutPage() {
                     </div>
                     <div className="flex items-center gap-3 text-xs md:text-sm">
                       <Truck className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
-                      <span className="text-gray-700">Free shipping on orders ₹500+</span>
+                      <span className="text-gray-700">
+                        {shippingRates.find((r) => r.type === 'free' && r.active)?.min_order
+                          ? `Free shipping on orders ${formatCurrency(Number(shippingRates.find((r) => r.type === 'free' && r.active)?.min_order || 0))}+`
+                          : 'Free shipping available'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs md:text-sm">
                       <Package className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
@@ -977,3 +1256,9 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+
+
+
+
+

@@ -1,6 +1,7 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MapPin, Mail, Phone, Clock, Send, User, MessageSquare } from "lucide-react";
+import ApiService from "@/lib/api";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -20,12 +21,12 @@ export default function ContactPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormStatus("sending");
-    
-    // Simulate form submission
-    setTimeout(() => {
+
+    try {
+      await ApiService.submitContactMessage(formData);
       setFormStatus("success");
       setFormData({
         name: "",
@@ -38,38 +39,70 @@ export default function ContactPage() {
       setTimeout(() => {
         setFormStatus("");
       }, 3000);
-    }, 1500);
+    } catch (error) {
+      setFormStatus("error");
+      setTimeout(() => {
+        setFormStatus("");
+      }, 3000);
+    }
   };
 
-  const contactInfo = [
+  const [contactInfo, setContactInfo] = useState({
+    visitStoreLines: ["123 Fresh Street, Andheri West", "Mumbai, Maharashtra 400001", "India"],
+    emailLines: ["General: hello@freshmart.com", "Support: support@freshmart.com", "Partnership: partners@freshmart.com"],
+    phoneLines: ["Customer Service: +91 1800-123-4567", "Order Support: +91 1800-123-4568", "Mon - Sat: 9:00 AM - 8:00 PM"],
+    hoursLines: ["Monday - Saturday: 9:00 AM - 8:00 PM", "Sunday: 10:00 AM - 6:00 PM", "Delivery: 7 Days a Week"]
+  });
+
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const info = await ApiService.getContactInfo();
+        if (info) {
+          setContactInfo({
+            visitStoreLines: info.visit_store_lines || [],
+            emailLines: info.email_lines || [],
+            phoneLines: info.phone_lines || [],
+            hoursLines: info.hours_lines || []
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching contact info:', error);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
+
+  const contactInfoCards = [
     {
       icon: <MapPin className="h-6 w-6 text-[#266000]" />,
       title: "Visit Our Store",
-      details: ["123 Fresh Street, Andheri West", "Mumbai, Maharashtra 400001", "India"],
+      details: contactInfo.visitStoreLines,
       link: null
     },
     {
       icon: <Mail className="h-6 w-6 text-[#266000]" />,
       title: "Email Us",
-      details: ["General: hello@freshmart.com", "Support: support@freshmart.com", "Partnership: partners@freshmart.com"],
+      details: contactInfo.emailLines,
       link: "mailto:hello@freshmart.com"
     },
     {
       icon: <Phone className="h-6 w-6 text-[#266000]" />,
       title: "Call Us",
-      details: ["Customer Service: +91 1800-123-4567", "Order Support: +91 1800-123-4568", "Mon - Sat: 9:00 AM - 8:00 PM"],
+      details: contactInfo.phoneLines,
       link: "tel:+911800123456"
     },
     {
       icon: <Clock className="h-6 w-6 text-[#266000]" />,
       title: "Business Hours",
-      details: ["Monday - Saturday: 9:00 AM - 8:00 PM", "Sunday: 10:00 AM - 6:00 PM", "Delivery: 7 Days a Week"],
+      details: contactInfo.hoursLines,
       link: null
     }
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-white fade-in">
       {/* Hero Section */}
       <section className="w-full py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -87,7 +120,7 @@ export default function ContactPage() {
       <section className="w-full py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {contactInfo.map((info, index) => (
+            {contactInfoCards.map((info, index) => (
               <div 
                 key={index} 
                 className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors duration-300"
@@ -210,6 +243,12 @@ export default function ContactPage() {
                   </div>
                 )}
 
+                {formStatus === "error" && (
+                  <div className="bg-white border border-red-500 rounded-xl p-4 text-red-600 font-medium">
+                    Something went wrong. Please try again.
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={formStatus === "sending"}
@@ -325,25 +364,6 @@ export default function ContactPage() {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-              <div className="bg-white border border-black rounded-2xl p-6 text-center">
-                <MapPin className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-                <h4 className="font-bold text-gray-900 mb-2">Address</h4>
-                <p className="text-gray-600 text-sm">123 Fresh Street, Andheri West<br/>Mumbai, Maharashtra 400001</p>
-              </div>
-              
-              <div className="bg-white border border-black rounded-2xl p-6 text-center">
-                <Clock className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-                <h4 className="font-bold text-gray-900 mb-2">Store Hours</h4>
-                <p className="text-gray-600 text-sm">Mon - Sat: 9:00 AM - 8:00 PM<br/>Sunday: 10:00 AM - 6:00 PM</p>
-              </div>
-              
-              <div className="bg-white border border-black rounded-2xl p-6 text-center">
-                <Phone className="h-8 w-8 text-[#266000] mx-auto mb-3" />
-                <h4 className="font-bold text-gray-900 mb-2">Contact</h4>
-                <p className="text-gray-600 text-sm">+91 1800-123-4567<br/>hello@freshmart.com</p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -370,3 +390,6 @@ export default function ContactPage() {
     </div>
   );
 }
+
+
+

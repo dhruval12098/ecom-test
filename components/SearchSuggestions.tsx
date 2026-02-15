@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import ApiService from '@/lib/api';
 
 interface Product {
   id: number;
@@ -18,6 +19,8 @@ interface Product {
   weight: string;
   origin: string;
   slug?: string;
+  category?: string;
+  subcategory?: string;
 }
 
 interface Subcategory {
@@ -54,36 +57,46 @@ const SearchSuggestions = ({
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Extract products from passed categories or fetch if not provided
   useEffect(() => {
     setIsLoading(true);
-    
+
     if (propCategories && propCategories.length > 0) {
-      // Extract all products from provided categories
       const products: Product[] = [];
       propCategories.forEach(category => {
         category.subcategories.forEach(subcategory => {
           if (subcategory.products) {
-            products.push(...subcategory.products);
+            products.push(
+              ...subcategory.products.map((p) => ({
+                ...p,
+                slug: p.name?.toLowerCase().replace(/\s+/g, "-"),
+                category: category.slug,
+                subcategory: subcategory.slug
+              }))
+            );
           }
         });
       });
       setAllProducts(products);
       setIsLoading(false);
     } else {
-      // Fallback to fetching categories if not provided
       const fetchCategories = async () => {
         try {
-          const response = await fetch('/data/categories.json');
-          const data: Category[] = await response.json();
-          
-          // Extract all products from categories
+          const data: Category[] = await ApiService.getCategories();
           const products: Product[] = [];
           data.forEach(category => {
             category.subcategories.forEach(subcategory => {
               if (subcategory.products) {
-                products.push(...subcategory.products);
+                products.push(
+                  ...subcategory.products.map((p) => ({
+                    ...p,
+                    slug: p.name?.toLowerCase().replace(/\s+/g, "-"),
+                    category: category.slug,
+                    subcategory: subcategory.slug
+                  }))
+                );
               }
             });
           });
@@ -112,9 +125,9 @@ const SearchSuggestions = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [setShowSuggestions]);
 
@@ -125,12 +138,6 @@ const SearchSuggestions = ({
     }
   };
 
-  // Handle input blur with delay
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      setShowSuggestions(false);
-    }, 200);
-  };
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -151,7 +158,6 @@ const SearchSuggestions = ({
             value={searchQuery}
             onChange={(e) => onInputChange(e.target.value)}
             onFocus={handleInputFocus}
-            onBlur={handleInputBlur}
             placeholder="Search for products, categories"
             className="w-full bg-gray-200 rounded-full px-6 py-3 text-sm outline-none focus:ring-2 focus:ring-green-700 focus:ring-green-600 pl-12"
             autoComplete="off"
@@ -167,12 +173,18 @@ const SearchSuggestions = ({
             <div className="p-4 text-center text-gray-500">Loading suggestions...</div>
           ) : filteredProducts.length > 0 ? (
             <>
-              {filteredProducts.slice(0, 8).map((product) => (
-                <Link
+              {filteredProducts.slice(0, 8).map((product) => {
+                const href = `/${product.category || 'products'}/${product.subcategory || 'all'}/${product.slug || product.id}`;
+                return (
+                <button
                   key={product.id}
-                  href={`/${findCategorySlugById(product.id, propCategories || [])}/${findSubcategorySlugById(product.id, propCategories || [])}/${product.slug || product.id}`}
-                  className="flex items-center p-4 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                  onClick={() => setShowSuggestions(false)}
+                  type="button"
+                  className="w-full text-left flex items-center p-4 hover:bg-green-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    setShowSuggestions(false);
+                    router.push(href);
+                  }}
                 >
                   <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                     <img 
@@ -189,7 +201,7 @@ const SearchSuggestions = ({
                     <div className="font-medium text-gray-900 truncate">
                       {product.name}
                     </div>
-                    <div className="text-sm text-green-600 font-semibold mt-1">₹{product.price}</div>
+                    <div className="text-sm text-green-600 font-semibold mt-1">€{product.price}</div>
                     {product.weight && (
                       <div className="text-xs text-gray-500 mt-1">{product.weight}</div>
                     )}
@@ -199,8 +211,8 @@ const SearchSuggestions = ({
                       {product.discountPercentage}
                     </div>
                   )}
-                </Link>
-              ))}
+                </button>
+              )})}
             </>
           ) : (
             <div className="p-4 text-gray-500 text-center">
@@ -211,30 +223,6 @@ const SearchSuggestions = ({
       )}
     </div>
   );
-};
-
-// Helper function to find category slug by product ID
-const findCategorySlugById = (productId: number, categories: Category[]): string => {
-  for (const category of categories) {
-    for (const subcategory of category.subcategories) {
-      if (subcategory.products && subcategory.products.some(p => p.id === productId)) {
-        return category.slug;
-      }
-    }
-  }
-  return 'products'; // Default fallback
-};
-
-// Helper function to find subcategory slug by product ID
-const findSubcategorySlugById = (productId: number, categories: Category[]): string => {
-  for (const category of categories) {
-    for (const subcategory of category.subcategories) {
-      if (subcategory.products && subcategory.products.some(p => p.id === productId)) {
-        return subcategory.slug;
-      }
-    }
-  }
-  return 'all'; // Default fallback
 };
 
 export default SearchSuggestions;

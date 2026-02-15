@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import CategoryCard from "@/components/home/CategoryCard";
 import ProductCard from "@/components/common/ProductCard";
@@ -11,6 +11,7 @@ import { FaCarrot, FaAppleAlt, FaSeedling, FaPepperHot, FaMugHot } from "react-i
 import WelcomeSection from "@/components/home/WelcomeSection";
 import MainCategories from "@/components/home/MainCategories";
 import FAQ from "@/components/common/FAQ";
+import ApiService from "@/lib/api";
 
 interface Product {
   id: number;
@@ -52,11 +53,20 @@ interface TrendItem {
 interface HeroSlide {
   id: number;
   imageUrl: string;
+  mobileImageUrl?: string;
+}
+
+// Define the API response format
+interface ApiHeroSlide {
+  id: number;
+  image_url: string;
+  mobile_image_url?: string | null;
 }
 
 export default function HeroSection() {
   const [active, setActive] = useState(0);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [bestDeals, setBestDeals] = useState<Product[]>([]);
   const [topSellers, setTopSellers] = useState<CategoryProduct[]>([]);
@@ -64,6 +74,7 @@ export default function HeroSection() {
   const [bestDealsProducts, setBestDealsProducts] = useState<CategoryProduct[]>([]);
   const [currentTrends, setCurrentTrends] = useState<TrendItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeferred, setShowDeferred] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   const topSellerRef = useRef<HTMLDivElement>(null);
@@ -71,37 +82,54 @@ export default function HeroSection() {
   const newArrivalsRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // Fetch data from JSON files in public directory
+    // Fetch data from backend API
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        const [heroSlidesRes, newArrivalsRes, bestDealsRes, trendsRes, categoriesRes] = await Promise.all([
-          fetch('/data/hero-slider.json'),
+        // Fetch hero slides from backend API
+        const heroSlidesData = await ApiService.getHeroSlides();
+        
+        // Transform API response to match frontend format
+        const transformedHeroSlides: HeroSlide[] = heroSlidesData.map((slide: any) => ({
+          id: slide.id,
+          imageUrl: slide.image_url || slide.imageUrl,
+          mobileImageUrl: slide.mobile_image_url || slide.mobileImageUrl || null
+        }));
+        
+        // For other data, we'll keep using JSON files for now
+        const [newArrivalsRes, bestDealsRes] = await Promise.all([
           fetch('/data/new-arrivals.json'),
-          fetch('/data/best-deals.json'),
-          fetch('/data/current-trends.json'),
-          fetch('/data/categories.json')
+          fetch('/data/best-deals.json')
         ]);
         
-        if (!heroSlidesRes.ok || !newArrivalsRes.ok || !bestDealsRes.ok || !trendsRes.ok || !categoriesRes.ok) {
+        if (!newArrivalsRes.ok || !bestDealsRes.ok) {
           throw new Error('Failed to fetch data');
         }
         
-        const [heroSlidesData, newArrivalsData, bestDealsData, trendsData, categoriesData] = await Promise.all([
-          heroSlidesRes.json(),
+        const [newArrivalsData, bestDealsData] = await Promise.all([
           newArrivalsRes.json(),
-          bestDealsRes.json(),
-          trendsRes.json(),
-          categoriesRes.json()
+          bestDealsRes.json()
         ]);
         
-        setHeroSlides(heroSlidesData);
+        setHeroSlides(transformedHeroSlides);
         setNewArrivals(newArrivalsData);
         setBestDeals(bestDealsData);
-        setCurrentTrends(trendsData);
+        const trendsData = await ApiService.getTrends();
+        const transformedTrends: TrendItem[] = trendsData.map((trend: any, index: number) => ({
+          id: trend.id,
+          title: trend.title || '',
+          subtitle: trend.description || '',
+          imageUrl: trend.image_url || '',
+          buttonText: 'Shop Now',
+          cardType: index % 2 === 0 ? 'wide' : 'narrow',
+          position: index % 2 === 0 ? 'left' : 'right'
+        }));
+        setCurrentTrends(transformedTrends);
         
+        const categoriesData = await ApiService.getCategories();
+
         // Extract all products from categories
         const allProducts: CategoryProduct[] = [];
         categoriesData.forEach((category: any) => {
@@ -140,10 +168,31 @@ export default function HeroSection() {
           }
         };
         
-        // Select 6 products for each section consistently
-        setTopSellers(pickConsistentProducts(allProducts, 6));
-        setNewArrivalsProducts(pickConsistentProducts(allProducts, 6));
-        setBestDealsProducts(pickConsistentProducts(allProducts, 6));
+        const [topSection, bestSection, newSection] = await Promise.all([
+          ApiService.getHomepageSection('top_seller'),
+          ApiService.getHomepageSection('best_deal'),
+          ApiService.getHomepageSection('new_arrivals')
+        ]);
+
+        const productMap = new Map(allProducts.map((product) => [product.id, product]));
+        const mapSectionProducts = (items: any[]) => {
+          const mapped = items
+            .map((item) => {
+              const productId = item?.product_id || item?.product?.id;
+              return productMap.get(productId);
+            })
+            .filter(Boolean) as CategoryProduct[];
+          return mapped;
+        };
+
+        const topSectionProducts = mapSectionProducts(topSection);
+        const bestSectionProducts = mapSectionProducts(bestSection);
+        const newSectionProducts = mapSectionProducts(newSection);
+
+        // Select 6 products for each section consistently (fallback if section is empty)
+        setTopSellers(topSectionProducts.length ? topSectionProducts : pickConsistentProducts(allProducts, 6));
+        setNewArrivalsProducts(newSectionProducts.length ? newSectionProducts : pickConsistentProducts(allProducts, 6));
+        setBestDealsProducts(bestSectionProducts.length ? bestSectionProducts : pickConsistentProducts(allProducts, 6));
         
         console.log('Top sellers count:', pickConsistentProducts(allProducts, 6).length);
         console.log('New arrivals count:', pickConsistentProducts(allProducts, 6).length);
@@ -158,6 +207,8 @@ export default function HeroSection() {
     };
     
     fetchData();
+    const deferredTimer = setTimeout(() => setShowDeferred(true), 400);
+    return () => clearTimeout(deferredTimer);
   }, []);
 
   // Auto slide functionality
@@ -171,14 +222,15 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, [heroSlides.length]);
 
-  // Reset carousels to start when screen size changes to mobile
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 640) {
-        // Reset all carousels to start position on mobile
-        if (categoryRef.current) categoryRef.current.scrollTo({ left: 0 });
-        if (topSellerRef.current) topSellerRef.current.scrollTo({ left: 0 });
-        if (bestDealsRef.current) bestDealsRef.current.scrollTo({ left: 0 });
+    // Reset carousels to start when screen size changes to mobile
+    useEffect(() => {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 640);
+        if (window.innerWidth < 640) {
+          // Reset all carousels to start position on mobile
+          if (categoryRef.current) categoryRef.current.scrollTo({ left: 0 });
+          if (topSellerRef.current) topSellerRef.current.scrollTo({ left: 0 });
+          if (bestDealsRef.current) bestDealsRef.current.scrollTo({ left: 0 });
         if (newArrivalsRef.current) newArrivalsRef.current.scrollTo({ left: 0 });
       }
     };
@@ -193,7 +245,7 @@ export default function HeroSection() {
   
   const scroll = (ref: React.RefObject<HTMLDivElement>, dir: "left" | "right") => {
     if (!ref.current) return;
-    const cardWidth = 300; // approx ProductCard width + gap
+    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
     ref.current.scrollBy({
       left: dir === "left" ? -cardWidth : cardWidth,
       behavior: "smooth",
@@ -203,80 +255,77 @@ export default function HeroSection() {
   const scrollTopSeller = (dir: "left" | "right") => {
     if (!topSellerRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    if (window.innerWidth < 640) {
-      topSellerRef.current.scrollTo({
-        left: dir === "left" ? 0 : topSellerRef.current.scrollWidth,
-        behavior: "smooth",
-      });
-    } else {
-      const cardWidth = 300; // approx ProductCard width + gap
-      topSellerRef.current.scrollBy({
-        left: dir === "left" ? -cardWidth : cardWidth,
-        behavior: "smooth",
-      });
-    }
+    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    topSellerRef.current.scrollBy({
+      left: dir === "left" ? -cardWidth : cardWidth,
+      behavior: "smooth",
+    });
   };
   
   const scrollBestDeals = (dir: "left" | "right") => {
     if (!bestDealsRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    if (window.innerWidth < 640) {
-      bestDealsRef.current.scrollTo({
-        left: dir === "left" ? 0 : bestDealsRef.current.scrollWidth,
-        behavior: "smooth",
-      });
-    } else {
-      const cardWidth = 300; // approx ProductCard width + gap
-      bestDealsRef.current.scrollBy({
-        left: dir === "left" ? -cardWidth : cardWidth,
-        behavior: "smooth",
-      });
-    }
+    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    bestDealsRef.current.scrollBy({
+      left: dir === "left" ? -cardWidth : cardWidth,
+      behavior: "smooth",
+    });
   };
   
   const scrollCategories = (dir: "left" | "right") => {
     if (!categoryRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    if (window.innerWidth < 640) {
-      categoryRef.current.scrollTo({
-        left: dir === "left" ? 0 : categoryRef.current.scrollWidth,
-        behavior: "smooth",
-      });
-    } else {
-      const cardWidth = 300; // approx CategoryCard width + gap
-      categoryRef.current.scrollBy({
-        left: dir === "left" ? -cardWidth : cardWidth,
-        behavior: "smooth",
-      });
-    }
+    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx CategoryCard width + gap
+    categoryRef.current.scrollBy({
+      left: dir === "left" ? -cardWidth : cardWidth,
+      behavior: "smooth",
+    });
   };
   
   const scrollNewArrivals = (dir: "left" | "right") => {
     if (!newArrivalsRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    if (window.innerWidth < 640) {
-      newArrivalsRef.current.scrollTo({
-        left: dir === "left" ? 0 : newArrivalsRef.current.scrollWidth,
-        behavior: "smooth",
-      });
-    } else {
-      const cardWidth = 300; // approx ProductCard width + gap
-      newArrivalsRef.current.scrollBy({
-        left: dir === "left" ? -cardWidth : cardWidth,
-        behavior: "smooth",
-      });
-    }
+    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    newArrivalsRef.current.scrollBy({
+      left: dir === "left" ? -cardWidth : cardWidth,
+      behavior: "smooth",
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <section className="w-full h-screen flex flex-col justify-center items-center bg-white">
+          <div className="relative w-[98%] h-[90%] mt-3 sm:mt-0 rounded-[16px] sm:rounded-[28px] overflow-hidden skeleton" />
+          <div className="mt-6 flex items-center gap-2">
+            <div className="skeleton h-2 w-10 rounded-full" />
+            <div className="skeleton h-2 w-2 rounded-full" />
+            <div className="skeleton h-2 w-2 rounded-full" />
+          </div>
+        </section>
+
+        <div className="h-24" />
+
+        <section className="w-full py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="skeleton h-10 w-1/3 mx-auto mb-10" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
+                  <div className="skeleton w-full aspect-square rounded-xl mb-4" />
+                  <div className="skeleton h-4 w-3/4 mb-2" />
+                  <div className="skeleton h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* Loading State */}
-      {loading && (
-        <div className="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
-          <div className="text-2xl font-semibold text-gray-600">Loading...</div>
-        </div>
-      )}
-      
       {/* Error State */}
       {error && (
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
@@ -293,8 +342,8 @@ export default function HeroSection() {
         </div>
       )}
       {/* ================= HERO SECTION ================= */}
-      <section className="w-full h-screen flex flex-col justify-center items-center bg-white">
-        <div className="relative w-[98%] h-[90%] rounded-[28px] overflow-hidden">
+        <section className="w-full min-h-[70vh] sm:h-screen flex flex-col justify-center items-center bg-white fade-in">
+          <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-[16px] sm:rounded-[28px] overflow-hidden">
           {heroSlides.map((slide: HeroSlide, index: number) => (
             <div
               key={slide.id}
@@ -304,13 +353,13 @@ export default function HeroSection() {
                   : "opacity-0"
               }`}
             >
-              <div 
-                className="w-full h-full bg-cover bg-center"
-                style={{ backgroundImage: `url('${slide.imageUrl}')` }}
-              />
-            </div>
-          ))}
-        </div>
+                <div 
+                  className="w-full h-full bg-cover bg-center"
+                  style={{ backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')` }}
+                />
+              </div>
+            ))}
+          </div>
 
         <div className="mt-6 flex items-center gap-2">
           {heroSlides.map((_: HeroSlide, index: number) => (
@@ -412,16 +461,16 @@ export default function HeroSection() {
               className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
-                {topSellers.length > 0 ? (
-                  topSellers.map((product) => (
-                    <ProductCard 
-                      key={product.id}
-                      product={product}
-                      imageUrl={product.imageUrl} 
+                  {topSellers.length > 0 ? (
+                    topSellers.map((product, index) => (
+                      <ProductCard 
+                        key={`${product.id}-${index}`}
+                        product={product}
+                        imageUrl={product.imageUrl} 
                       title={product.name} 
                       weight={product.weight}
-                      price={`₹${product.price}`}
-                      originalPrice={product.originalPrice ? `₹${product.originalPrice}` : undefined}
+                      price={`€${product.price}`}
+                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
@@ -464,16 +513,16 @@ export default function HeroSection() {
               className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
-                {bestDealsProducts.length > 0 ? (
-                  bestDealsProducts.map((product) => (
-                    <ProductCard 
-                      key={product.id}
-                      product={product}
-                      imageUrl={product.imageUrl} 
+                  {bestDealsProducts.length > 0 ? (
+                    bestDealsProducts.map((product, index) => (
+                      <ProductCard 
+                        key={`${product.id}-${index}`}
+                        product={product}
+                        imageUrl={product.imageUrl} 
                       title={product.name} 
                       weight={product.weight}
-                      price={`₹${product.price}`}
-                      originalPrice={product.originalPrice ? `₹${product.originalPrice}` : undefined}
+                      price={`€${product.price}`}
+                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
@@ -516,16 +565,16 @@ export default function HeroSection() {
               className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
-                {newArrivalsProducts.length > 0 ? (
-                  newArrivalsProducts.map((product) => (
-                    <ProductCard 
-                      key={product.id}
-                      product={product}
-                      imageUrl={product.imageUrl} 
-                      title={product.name} 
-                      weight={product.weight}
-                      price={`₹${product.price}`}
-                      originalPrice={product.originalPrice ? `₹${product.originalPrice}` : undefined}
+                  {newArrivalsProducts.length > 0 ? (
+                    newArrivalsProducts.map((product, index) => (
+                      <ProductCard 
+                        key={`${product.id}-${index}`}
+                        product={product}
+                        imageUrl={product.imageUrl} 
+                        title={product.name} 
+                        weight={product.weight}
+                      price={`€${product.price}`}
+                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
@@ -550,6 +599,8 @@ export default function HeroSection() {
         </div>
       </section>
 
+      {showDeferred && (
+      <>
       {/* ================= CURRENT TRENDS SECTION ================= */}
       <section className="w-full py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
@@ -662,7 +713,8 @@ export default function HeroSection() {
       <section className=" border-black  py-10 bg-white">
         <FAQ />
       </section>
-      
+      </>
+      )}
      
     </>
   );

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import SearchSuggestions from '@/components/SearchSuggestions';
 import { useCart } from '@/contexts/CartContext';
 import MobileMenu from '@/components/layout/MobileMenu';
+import ApiService from '@/lib/api';
 
 interface Product {
   id: number;
@@ -49,6 +50,8 @@ export default function Header() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState<any>(null);
   
   const { getTotalItems } = useCart();
   
@@ -59,8 +62,7 @@ export default function Header() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await fetch('/data/categories.json');
-        const data: Category[] = await response.json();
+        const data: Category[] = await ApiService.getCategories();
         setCategories(data);
       } catch (error) {
         console.error('Error fetching categories:', error);
@@ -70,6 +72,32 @@ export default function Header() {
     };
 
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const settings = await ApiService.getSettings();
+        if (settings?.logo_url) {
+          setLogoUrl(settings.logo_url);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    const fetchAnnouncement = async () => {
+      const data = await ApiService.getAnnouncementBar();
+      if (data) {
+        setAnnouncement(data);
+      }
+    };
+
+    fetchAnnouncement();
   }, []);
 
   const itemsPerRow = columnsPerRow;
@@ -107,16 +135,38 @@ export default function Header() {
   return (
     <>
       <div className="w-full font-sans">
-        <div className="text-white text-sm text-center py-3" style={{ backgroundColor: '#173A00' }}>
-          Free shipping on orders over €69
-        </div>
+        {announcement?.is_active !== false && (announcement?.message || 'Free shipping on orders over EUR 69') && (
+          <div className="announcement-bar" style={{ backgroundColor: '#173A00' }}>
+            <div
+              className="announcement-marquee"
+              style={{ ['--marquee-duration' as any]: `${announcement?.speed || 20}s` }}
+            >
+              <div className="announcement-track">
+                {[0, 1].map((groupIdx) => (
+                  <div className="announcement-group" key={groupIdx}>
+                    {[0, 1, 2, 3].map((idx) => (
+                      <div className="announcement-item" key={`${groupIdx}-${idx}`}>
+                        <span>{announcement?.message || 'Free shipping on orders over EUR 69'}</span>
+                        {announcement?.link_url && announcement?.link_text && (
+                          <a href={announcement.link_url} className="announcement-link">
+                            {announcement.link_text}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white border-b">
           {/* Desktop Layout */}
           <div className="hidden sm:flex max-w-7xl mx-auto px-4 py-5 items-center gap-10 relative">
             <div className="flex items-center">
               <img 
-                src="/brands/fmod.svg" 
+                src={logoUrl || "/brands/fmod.svg"} 
                 alt="Fmod Logo" 
                 className="h-15 w-auto"
                 onError={(e) => {
@@ -169,7 +219,7 @@ export default function Header() {
               {/* Logo */}
               <div className="shrink-0">
                 <img 
-                  src="/brands/fmod.svg" 
+                  src={logoUrl || "/brands/fmod.svg"} 
                   alt="Fmod Logo" 
                   className="h-12 w-auto"
                   onError={(e) => {
@@ -217,7 +267,7 @@ export default function Header() {
 
         <div style={{ backgroundColor: '#266000' }} className="relative">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-x-6 gap-y-2 text-white text-sm font-medium">
+            <div className="flex flex-wrap gap-x-8 gap-y-2 text-white text-sm font-medium">
               {loading ? (
                 <div className="col-span-full text-center py-4">Loading categories...</div>
               ) : (

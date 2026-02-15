@@ -3,22 +3,79 @@
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Package, Truck, Shield } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
+import { formatCurrency } from "@/lib/currency";
+import ApiService from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const [liveMap, setLiveMap] = useState<Record<number, any>>({});
 
-  const subtotal = cartItems.reduce(
+  const displayItems = useMemo(() => {
+    return cartItems.map((item) => {
+      const live = liveMap[item.id];
+      if (!live) return item;
+      const inStock =
+        live.inStock !== undefined
+          ? Boolean(live.inStock)
+          : live.in_stock !== undefined
+            ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
+            : item.inStock ?? true;
+      return {
+        ...item,
+        name: live.name || item.name,
+        price: Number(live.sale_price || live.price || item.price),
+        originalPrice: live.originalPrice
+          ? Number(live.originalPrice)
+          : live.original_price
+            ? Number(live.original_price)
+            : item.originalPrice,
+        imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
+        inStock,
+      };
+    });
+  }, [cartItems, liveMap]);
+
+  const subtotal = displayItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  const shippingCost = subtotal > 500 ? 0 : 50;
-  const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above ₹1000
+  const hasFreeShippingItem = displayItems.some((item) => {
+    const live = liveMap[item.id];
+    const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
+    return method === 'free';
+  });
+  const shippingCost = hasFreeShippingItem ? 0 : subtotal > 500 ? 0 : 50;
+  const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
   const tax = (subtotal - discount) * 0.05; // 5% tax
   const total = subtotal + shippingCost - discount + tax;
 
+  useEffect(() => {
+    const loadLiveProducts = async () => {
+      if (cartItems.length === 0) return;
+      try {
+        const ids = cartItems
+          .map((item) => Number(item.id))
+          .filter((id) => Number.isFinite(id) && id > 0);
+        if (ids.length === 0) return;
+        const results = await Promise.all(ids.map((id) => ApiService.getProductById(id)));
+        const map: Record<number, any> = {};
+        results.forEach((p) => {
+          if (p && typeof p.id === "number") {
+            map[p.id] = p;
+          }
+        });
+        setLiveMap(map);
+      } catch (e) {
+        // keep UI stable on failure
+      }
+    };
+    loadLiveProducts();
+  }, [cartItems]);
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white fade-in">
       {/* Header Section */}
       <section className="w-full py-8 md:py-12 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -29,7 +86,7 @@ export default function CartPage() {
                 Shopping Cart
               </h1>
               <p className="text-gray-600 text-sm md:text-base">
-                {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
+                {displayItems.length} {displayItems.length === 1 ? 'item' : 'items'} in your cart
               </p>
             </div>
             
@@ -44,7 +101,7 @@ export default function CartPage() {
         </div>
       </section>
 
-      {cartItems.length === 0 ? (
+      {displayItems.length === 0 ? (
         /* Empty Cart State */
         <section className="w-full py-12 md:py-20">
           <div className="max-w-2xl mx-auto px-4 md:px-6">
@@ -80,7 +137,7 @@ export default function CartPage() {
                       </div>
                       <div className="text-left">
                         <div className="font-bold text-gray-900 text-xs md:text-sm">Free Shipping</div>
-                        <div className="text-gray-600 text-xs">On orders above ₹500</div>
+                        <div className="text-gray-600 text-xs">On orders above {formatCurrency(500)}</div>
                       </div>
                     </div>
                     
@@ -108,7 +165,7 @@ export default function CartPage() {
 
                 {/* Cart Items */}
                 <div className="space-y-4">
-                  {cartItems.map((item) => (
+                  {displayItems.map((item) => (
                     <div 
                       key={item.id} 
                       className={`bg-white border border-black rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#266000] ${
@@ -119,14 +176,20 @@ export default function CartPage() {
                         <div className="flex gap-4 md:gap-6">
                           {/* Product Image */}
                           <div className="flex-shrink-0 w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden border border-black bg-gray-50">
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="112" height="112" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="112" height="112" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="14" text-anchor="middle" dy=".3em" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                              }}
-                            />
+                            {item.imageUrl ? (
+                              <img 
+                                src={item.imageUrl} 
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="112" height="112" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="112" height="112" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="14" text-anchor="middle" dy=".3em" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                No Image
+                              </div>
+                            )}
                           </div>
                           
                           {/* Product Details */}
@@ -182,15 +245,15 @@ export default function CartPage() {
                               <div className="text-left sm:text-right w-full sm:w-auto">
                                 {item.originalPrice && (
                                   <p className="text-gray-500 line-through text-xs md:text-sm mb-1">
-                                    ₹{(item.originalPrice * item.quantity).toFixed(2)}
+                                    {formatCurrency(item.originalPrice * item.quantity)}
                                   </p>
                                 )}
                                 <p className="text-xl md:text-2xl font-bold text-gray-900">
-                                  ₹{(item.price * item.quantity).toFixed(2)}
+                                  {formatCurrency(item.price * item.quantity)}
                                 </p>
                                 {item.originalPrice && (
                                   <p className="text-[#266000] text-xs md:text-sm font-semibold mt-1">
-                                    Save ₹{((item.originalPrice - item.price) * item.quantity).toFixed(2)}
+                                    Save {formatCurrency((item.originalPrice - item.price) * item.quantity)}
                                   </p>
                                 )}
                               </div>
@@ -219,8 +282,8 @@ export default function CartPage() {
                   
                   <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
-                      <span>Subtotal ({cartItems.length} items)</span>
-                      <span className="font-semibold text-gray-900">₹{subtotal.toFixed(2)}</span>
+                      <span>Subtotal ({displayItems.length} items)</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
                     </div>
                     
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
@@ -229,7 +292,7 @@ export default function CartPage() {
                         {shippingCost === 0 ? (
                           <span className="text-[#266000]">FREE</span>
                         ) : (
-                          `₹${shippingCost.toFixed(2)}`
+                          `${formatCurrency(shippingCost)}`
                         )}
                       </span>
                     </div>
@@ -237,20 +300,20 @@ export default function CartPage() {
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-[#266000]">
                         <span>Discount (10%)</span>
-                        <span className="font-semibold">-₹{discount.toFixed(2)}</span>
+                        <span className="font-semibold">-{formatCurrency(discount)}</span>
                       </div>
                     )}
                     
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
                       <span>Tax (5%)</span>
-                      <span className="font-semibold text-gray-900">₹{tax.toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                     </div>
                     
                     {/* Free shipping progress bar */}
                     {shippingCost > 0 && (
                       <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mt-3 md:mt-4">
                         <div className="flex justify-between text-xs md:text-sm mb-2">
-                          <span className="text-gray-600">Add ₹{(500 - subtotal).toFixed(2)} more for free shipping</span>
+                          <span className="text-gray-600">Add {formatCurrency(500 - subtotal)} more for free shipping</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 border border-gray-300">
                           <div 
@@ -265,11 +328,11 @@ export default function CartPage() {
                   <div className="border-t border-gray-300 pt-3 md:pt-4 mb-4 md:mb-6">
                     <div className="flex justify-between text-lg md:text-xl">
                       <span className="font-bold text-gray-900">Total</span>
-                      <span className="font-bold text-gray-900">₹{total.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
                     </div>
                     {discount > 0 && (
                       <p className="text-[#266000] text-xs md:text-sm font-semibold mt-2 text-right">
-                        You saved ₹{discount.toFixed(2)}!
+                        You saved {formatCurrency(discount)}!
                       </p>
                     )}
                   </div>

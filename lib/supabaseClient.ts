@@ -1,0 +1,14 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Keep runtime stable in dev; auth screens will show a friendly error.
+  console.warn("Missing Supabase env vars: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
+
+export const supabase = createClient(
+  supabaseUrl || "http://localhost:54321",
+  supabaseAnonKey || "public-anon-key"
+);

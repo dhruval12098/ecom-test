@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Package, Search, Calendar, Download, Repeat, MessageSquare, ShoppingBag, ChevronRight } from "lucide-react";
@@ -131,7 +131,7 @@ export default function MyOrdersPage() {
           
           <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 text-center">
             <div className="text-2xl sm:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-              ₹{orders.reduce((sum, o) => sum + o.total, 0).toLocaleString()}
+              €{orders.reduce((sum, o) => sum + o.total, 0).toLocaleString()}
             </div>
             <div className="text-xs sm:text-sm text-gray-600 font-semibold">Total Spent</div>
           </div>
@@ -223,7 +223,7 @@ export default function MyOrdersPage() {
                     
                     <div className="flex flex-col items-start sm:items-end gap-2">
                       <div className="text-sm text-gray-600">Total Amount</div>
-                      <div className="text-3xl font-bold text-gray-900">₹{order.total.toLocaleString()}</div>
+                      <div className="text-3xl font-bold text-gray-900">€{order.total.toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export default function MyOrdersPage() {
                           <div className="flex-grow min-w-0">
                             <h5 className="font-semibold text-gray-900 text-sm mb-1 truncate">{item.name}</h5>
                             <p className="text-xs text-gray-600 mb-2">Qty: {item.quantity}</p>
-                            <p className="font-bold text-gray-900">₹{item.price}</p>
+                            <p className="font-bold text-gray-900">€{item.price}</p>
                           </div>
                         </div>
                       </div>

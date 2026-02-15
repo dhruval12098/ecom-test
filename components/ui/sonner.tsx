@@ -24,8 +24,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-gray-100 group-[.toast]:text-gray-700 group-[.toast]:rounded-lg group-[.toast]:px-3 group-[.toast]:py-1 group-[.toast]:text-sm",
         },
         style: {
-          minWidth: '320px',
-          padding: '16px',
+          minWidth: '240px',
+          padding: '10px',
         }
       }}
       {...props}

@@ -5,6 +5,7 @@ import { notFound, useParams } from "next/navigation";
 import ProductCard from "@/components/common/ProductCard";
 import { Home, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import ApiService from "@/lib/api";
 
 interface Product {
   id: number;
@@ -51,8 +52,7 @@ export default function SubcategoryPage() {
   useEffect(() => {
     const fetchCategoryData = async () => {
       try {
-        const response = await fetch("/data/categories.json");
-        const categories: Category[] = await response.json();
+        const categories: Category[] = await ApiService.getCategories();
         
         const foundCategory = categories.find(cat => cat.slug === category);
         if (!foundCategory) {
@@ -66,10 +66,28 @@ export default function SubcategoryPage() {
         const subcategoryData = foundCategory.subcategories.find(sub => sub.slug === subcategory);
         if (subcategoryData) {
           const productsWithSlugs = subcategoryData.products.map((product: any) => ({
-            ...product,
-            slug: product.name.toLowerCase().replace(/\s+/g, '-'),
+            id: product.id,
+            name: product.name,
+            slug: product.slug || product.name?.toLowerCase().replace(/\s+/g, '-'),
             category: foundCategory.slug,
-            subcategory: subcategoryData.slug
+            subcategory: subcategoryData.slug,
+            price: Number(product.price || 0),
+            originalPrice: product.originalPrice ?? product.original_price ?? null,
+            imageUrl:
+              product.imageUrl ||
+              product.image_url ||
+              product.image ||
+              (Array.isArray(product.imageGallery) ? product.imageGallery[0] : undefined) ||
+              (Array.isArray(product.image_gallery) ? product.image_gallery[0] : undefined) ||
+              '',
+            discountPercentage: product.discountPercentage || product.discount_percentage || '',
+            discountColor: product.discountColor || product.discount_color || 'bg-red-500',
+            description: product.description || '',
+            rating: product.rating || 0,
+            reviews: product.reviews || 0,
+            inStock: product.inStock ?? product.in_stock ?? true,
+            weight: product.weight || '',
+            origin: product.origin || ''
           }));
           setProducts(productsWithSlugs);
         }
@@ -84,8 +102,20 @@ export default function SubcategoryPage() {
 
   if (!categoryData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-2xl font-bold">Loading...</div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-10">
+          <div className="skeleton h-8 w-1/3 mb-3" />
+          <div className="skeleton h-4 w-1/2 mb-6" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
+                <div className="skeleton w-full aspect-square rounded-xl mb-4" />
+                <div className="skeleton h-4 w-3/4 mb-2" />
+                <div className="skeleton h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -97,7 +127,7 @@ export default function SubcategoryPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 fade-in">
       {/* Breadcrumb */}
       <div className="bg-white pt-6">
         <div className="max-w-7xl mx-auto px-4 py-4 border-b border-gray-800">
@@ -159,17 +189,26 @@ export default function SubcategoryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <ProductCard
-                key={product.id}
-                title={product.name}
-                price={`₹${product.price}`}
-                originalPrice={`₹${product.originalPrice}`}
-                imageUrl={product.imageUrl}
-                discountPercentage={product.discountPercentage}
-                discountColor={product.discountColor}
-                productId={product.slug}
-                categorySlug={product.category}
-                subcategorySlug={product.subcategory}
-              />
+  key={product.id}
+  product={{
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    originalPrice: product.originalPrice,
+    imageUrl: product.imageUrl,
+    discountPercentage: product.discountPercentage,
+    discountColor: product.discountColor,
+    description: product.description || "",
+    rating: product.rating,
+    reviews: product.reviews,
+    inStock: product.inStock,
+    weight: product.weight,
+    origin: product.origin,
+    category: product.category,
+    subcategory: product.subcategory,
+    slug: product.slug
+  }}
+/>
             ))}
           </div>
           </>
