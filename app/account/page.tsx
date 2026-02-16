@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Package, MapPin, CreditCard, Settings } from "lucide-react";
 import Link from "next/link";
 import ProfileSection from "@/components/account/ProfileSection";
@@ -35,7 +35,7 @@ interface Address {
   is_default: boolean;
 }
 
-export default function AccountPage() {
+function AccountPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useAuth();
@@ -698,5 +698,13 @@ export default function AccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <AccountPageInner />
+    </Suspense>
   );
 }

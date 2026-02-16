@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import ApiService from "@/lib/api";
 import ProductCard from "@/components/common/ProductCard";
@@ -24,7 +24,7 @@ interface Product {
   description?: string;
 }
 
-export default function SearchPage() {
+function SearchPageInner() {
   const searchParams = useSearchParams();
   const query = (searchParams.get("q") || "").trim();
   const [results, setResults] = useState<Product[]>([]);
@@ -117,5 +117,13 @@ export default function SearchPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageInner />
+    </Suspense>
   );
 }
