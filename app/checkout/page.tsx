@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Payment, 3: Review, 4: Confirmation
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const { cartItems, clearCart } = useCart();
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -1291,6 +1291,14 @@ export default function CheckoutPage() {
         </section>
       </form>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
 
