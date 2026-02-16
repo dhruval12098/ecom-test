@@ -54,7 +54,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Brand Section - Takes more space */}
           <div className="lg:col-span-4">
-            <h2 className="text-3xl font-bold mb-6">Our Company</h2>
+            <h2 className="text-3xl font-bold mb-6">Tulsi | Indian Grocery</h2>
             <p className="text-gray-300 text-sm leading-relaxed mb-8">
               Your trusted source for authentic Indian foods throughout Europe. Bringing the taste of India to your kitchen.
             </p>

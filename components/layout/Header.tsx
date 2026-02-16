@@ -5,6 +5,7 @@ import { MapPin, ShoppingCart, User, ChevronDown, Menu } from 'lucide-react';
 import Link from 'next/link';
 import SearchSuggestions from '@/components/SearchSuggestions';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import MobileMenu from '@/components/layout/MobileMenu';
 import ApiService from '@/lib/api';
 
@@ -52,8 +53,10 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<any>(null);
+  const [deliveryLocation, setDeliveryLocation] = useState('Gujarat, India');
   
   const { getTotalItems } = useCart();
+  const { user: authUser } = useAuth();
   
   useEffect(() => {
     setIsClient(true);
@@ -99,6 +102,32 @@ export default function Header() {
 
     fetchAnnouncement();
   }, []);
+
+  useEffect(() => {
+    const loadDeliveryLocation = async () => {
+      if (!authUser) {
+        setDeliveryLocation('Gujarat, India');
+        return;
+      }
+      try {
+        const profile = await ApiService.getCustomerProfile(authUser.id);
+        if (!profile?.id) return;
+        const addresses = await ApiService.getCustomerAddresses(profile.id);
+        const list = Array.isArray(addresses) ? addresses : [];
+        const preferred = list.find((addr: any) => addr.is_default) || list[0];
+        if (preferred) {
+          const city = preferred.city || '';
+          const country = preferred.country || '';
+          const label = [city, country].filter(Boolean).join(', ');
+          if (label) setDeliveryLocation(label);
+        }
+      } catch (error) {
+        // keep fallback if request fails
+      }
+    };
+
+    loadDeliveryLocation();
+  }, [authUser]);
 
   const itemsPerRow = columnsPerRow;
   const totalRows = Math.ceil(categories.length / itemsPerRow);
@@ -164,7 +193,7 @@ export default function Header() {
         <div className="bg-white border-b">
           {/* Desktop Layout */}
           <div className="hidden sm:flex max-w-7xl mx-auto px-4 py-5 items-center gap-10 relative">
-            <div className="flex items-center">
+            <Link href="/" className="flex items-center">
               <img 
                 src={logoUrl || "/brands/fmod.svg"} 
                 alt="Fmod Logo" 
@@ -174,12 +203,12 @@ export default function Header() {
                   e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
                 }}
               />
-            </div>
+            </Link>
             <div className="flex items-center gap-2 text-sm text-gray-700">
               <MapPin size={16} />
               <div>
                 <div className="text-xs text-gray-500">Delivery to</div>
-                <div className="font-semibold">Gujarat, India</div>
+                <div className="font-semibold">{deliveryLocation}</div>
               </div>
             </div>
             <div className="flex-1 relative z-40">
@@ -217,7 +246,7 @@ export default function Header() {
           <div className="sm:hidden max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               {/* Logo */}
-              <div className="shrink-0">
+              <Link href="/" className="shrink-0">
                 <img 
                   src={logoUrl || "/brands/fmod.svg"} 
                   alt="Fmod Logo" 
@@ -227,7 +256,7 @@ export default function Header() {
                     e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
                   }}
                 />
-              </div>
+              </Link>
               
               {/* Icons */}
               <div className="flex items-center gap-6">

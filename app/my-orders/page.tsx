@@ -1,8 +1,10 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, Search, Calendar, Download, Repeat, MessageSquare, ShoppingBag, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 interface Order {
   id: string;
@@ -20,6 +22,9 @@ interface Order {
 }
 
 export default function MyOrdersPage() {
+  const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuth();
+
   const [orders] = useState<Order[]>([
     {
       id: "ORD-123456",
@@ -81,6 +86,35 @@ export default function MyOrdersPage() {
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.replace("/login");
+    }
+  }, [authLoading, authUser, router]);
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!authUser) {
+    return (
+      <div className="min-h-screen bg-white py-12">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <div className="bg-white border border-black rounded-2xl p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Please sign in</h1>
+            <p className="text-gray-600 mb-6">Log in to view your orders.</p>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-xl font-bold text-sm sm:text-base transition-colors"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const filteredOrders = orders.filter(order => {
     const matchesStatus = filterStatus === "all" || order.status.toLowerCase() === filterStatus;

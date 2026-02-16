@@ -228,17 +228,16 @@ export default function ProductDetailsPage() {
       variantName: selectedVariant?.name ?? null,
       category: product.category,
       subcategory: product.subcategory,
-      slug: product.slug
+      slug: product.slug,
+      quantity
     };
 
-    // Add all items at once to avoid multiple notifications
-    for (let i = 0; i < quantity; i++) {
-      // Only show notification for the first item
-      addToCart(cartItem, i === 0);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("buyNowItem", JSON.stringify(cartItem));
     }
 
-    // Navigate to checkout
-    router.push('/checkout');
+    // Navigate to checkout in buy-now mode
+    router.push('/checkout?mode=buynow');
   };
 
   return (

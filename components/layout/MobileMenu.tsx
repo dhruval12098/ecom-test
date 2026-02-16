@@ -42,7 +42,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
   const navigationLinks = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Products', href: '/search', icon: ShoppingBag },
     { name: 'About', href: '/about', icon: Info },
     { name: 'Contact', href: '/contact', icon: Phone },
     { name: 'FAQ', href: '/faq', icon: HelpCircle },

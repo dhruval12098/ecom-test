@@ -10,10 +10,32 @@ import PageTransition from "@/components/ui/PageTransition";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Tulsi | Indian grocery store",
-  description: "Indian grocery store",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL!),
+
+  title: {
+    default: "Tulsi | Indian Grocery Store",
+    template: "%s | Tulsi",
+  },
+
+  description:
+    "Tulsi is your trusted Indian grocery store offering fresh vegetables, spices, grains, and daily essentials delivered to your doorstep.",
+
+  openGraph: {
+    title: "Tulsi | Indian Grocery Store",
+    description:
+      "Shop authentic Indian groceries, fresh produce, and daily essentials at Tulsi.",
+    url: "/",
+    siteName: "Tulsi",
+    type: "website",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
+
   icons: {
-    icon: "/favcion.ico",
+    icon: "/favicon.ico",
   },
 };
 

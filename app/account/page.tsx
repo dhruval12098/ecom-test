@@ -11,9 +11,11 @@ import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
 interface Order {
   id: number;
+  orderNumber: string;
   date: string;
   status: string;
   total: number;
@@ -39,6 +41,21 @@ function AccountPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useAuth();
+  const normalizeStatus = (value: string) => {
+    const raw = (value || "").toString().trim().toLowerCase();
+    if (!raw) return "Pending";
+    if (raw === "out_for_delivery" || raw === "out for delivery") return "Out for Delivery";
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  };
+  const statusStyles: Record<string, string> = {
+    Pending: "bg-amber-50 text-amber-700 border-amber-200",
+    Confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+    Preparing: "bg-purple-50 text-purple-700 border-purple-200",
+    "Out for Delivery": "bg-indigo-50 text-indigo-700 border-indigo-200",
+    Delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Cancelled: "bg-rose-50 text-rose-700 border-rose-200",
+    Shipped: "bg-sky-50 text-sky-700 border-sky-200"
+  };
   const [activeTab, setActiveTab] = useState("profile");
   const [user, setUser] = useState({
     name: "",
@@ -55,6 +72,7 @@ function AccountPageInner() {
   const [addressesLoading, setAddressesLoading] = useState(false);
   const [addressesError, setAddressesError] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [addressForm, setAddressForm] = useState({
     label: "",
     full_name: "",
@@ -130,13 +148,14 @@ function AccountPageInner() {
           email: user.email || authUser.email,
           phone: user.phone || authUser.phone
         });
-        const mapped = data.map((order: any) => ({
-          id: order.order_number || order.id,
-          date: order.created_at ? new Date(order.created_at).toLocaleDateString() : '',
-          status: order.status || 'pending',
-          total: Number(order.total_amount || 0),
-          items: Number(order.items_count || 0)
-        }));
+          const mapped = data.map((order: any) => ({
+            id: Number(order.id),
+            orderNumber: String(order.order_number || order.order_code || order.id),
+            date: order.created_at ? new Date(order.created_at).toLocaleDateString() : '',
+            status: normalizeStatus(order.status || 'pending'),
+            total: Number(order.total_amount || 0),
+            items: Number(order.items_count || 0)
+          }));
         setOrders(mapped);
       } catch (e: any) {
         setOrdersError(e?.message || 'Failed to load orders');
@@ -164,18 +183,35 @@ function AccountPageInner() {
     loadAddresses();
   }, [customerId]);
 
-  const handleAddressSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerId) return;
-    try {
-      const created = await ApiService.createCustomerAddress({
-        customerId,
-        ...addressForm,
-        is_default: addressForm.is_default
-      });
-      if (created) {
-        setAddresses((prev) => [created, ...prev]);
+    const handleAddressSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!customerId) return;
+      try {
+        if (editingAddressId) {
+          const updated = await ApiService.updateCustomerAddress(editingAddressId, {
+            customerId,
+            ...addressForm,
+            is_default: addressForm.is_default
+          });
+          if (updated) {
+            setAddresses((prev) =>
+              prev.map((addr) => (addr.id === editingAddressId ? updated : addr))
+            );
+            toast.success("Address updated");
+          }
+        } else {
+          const created = await ApiService.createCustomerAddress({
+            customerId,
+            ...addressForm,
+            is_default: addressForm.is_default
+          });
+          if (created) {
+            setAddresses((prev) => [created, ...prev]);
+            toast.success("Address saved");
+          }
+        }
         setShowAddressForm(false);
+        setEditingAddressId(null);
         setAddressForm((prev) => ({
           ...prev,
           label: "",
@@ -188,11 +224,10 @@ function AccountPageInner() {
           country: "Belgium",
           is_default: false
         }));
+      } catch (e: any) {
+        toast.error(e?.message || "Failed to save address");
       }
-    } catch (e) {
-      // ignore; error already handled in api
-    }
-  };
+    };
 
   const handleDeleteAddress = async (id: number) => {
     if (!customerId) return;
@@ -257,16 +292,10 @@ function AccountPageInner() {
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                       <div className="flex-grow">
                         <div className="flex items-center gap-3 mb-2">
-                          <h4 className="text-lg font-bold text-gray-900">Order #{order.id}</h4>
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${
-                            order.status === "Delivered" 
-                              ? "bg-white border-[#266000] text-[#266000]" 
-                              : order.status === "Shipped" 
-                                ? "bg-white border-blue-600 text-blue-600" 
-                                : "bg-white border-yellow-600 text-yellow-600"
-                          }`}>
-                            {order.status}
-                          </span>
+                            <h4 className="text-lg font-bold text-gray-900">Order #{order.orderNumber}</h4>
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
+                              {order.status}
+                            </span>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-gray-600">
                           <span className="flex items-center">
@@ -279,14 +308,14 @@ function AccountPageInner() {
                       
                       <div className="flex flex-col md:items-end gap-4">
                         <div className="text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</div>
-                        <div className="flex gap-3">
-                          <button className="text-[#266000] font-semibold hover:underline text-sm">
-                            View Details
-                          </button>
-                          <button className="bg-white border border-black text-gray-900 px-4 py-2 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm">
-                            Reorder
-                          </button>
-                        </div>
+                          <div className="flex gap-3">
+                            <Link href={`/orders/${order.id}`} className="text-[#266000] font-semibold hover:underline text-sm">
+                              View Details
+                            </Link>
+                            <button className="bg-white border border-black text-gray-900 px-4 py-2 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm">
+                              Reorder
+                            </button>
+                          </div>
                       </div>
                     </div>
                   </div>
@@ -300,19 +329,39 @@ function AccountPageInner() {
         return (
           <div className="space-y-6">
             <div className="bg-white border border-black rounded-2xl p-8">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-                <h3 className="text-2xl font-bold text-gray-900">Shipping Addresses</h3>
-                <button
-                  onClick={() => setShowAddressForm((v) => !v)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors"
-                >
-                  {showAddressForm ? "Close" : "Add New Address"}
-                </button>
-              </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+                  <h3 className="text-2xl font-bold text-gray-900">Shipping Addresses</h3>
+                  <button
+                    onClick={() => {
+                      setShowAddressForm((v) => !v);
+                      setEditingAddressId(null);
+                      if (!showAddressForm) {
+                        setAddressForm((prev) => ({
+                          ...prev,
+                          label: "",
+                          street: "",
+                          house: "",
+                          apartment: "",
+                          city: "",
+                          region: "",
+                          postal_code: "",
+                          country: "Belgium",
+                          is_default: false
+                        }));
+                      }
+                    }}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors"
+                  >
+                    {showAddressForm ? "Close" : "Add New Address"}
+                  </button>
+                </div>
 
-              {showAddressForm && (
-                <form onSubmit={handleAddressSubmit} className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {showAddressForm && (
+                  <form onSubmit={handleAddressSubmit} className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
+                    <div className="text-sm font-semibold text-gray-900">
+                      {editingAddressId ? "Edit Address" : "Add New Address"}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
                       className="border border-gray-300 rounded-lg px-4 py-2"
                       placeholder="Label (Home/Office)"
@@ -388,14 +437,14 @@ function AccountPageInner() {
                     />
                     Set as default
                   </label>
-                  <button
-                    type="submit"
-                    className="bg-black text-white px-6 py-2 rounded-lg font-semibold"
-                  >
-                    Save Address
-                  </button>
-                </form>
-              )}
+                    <button
+                      type="submit"
+                      className="bg-black text-white px-6 py-2 rounded-lg font-semibold"
+                    >
+                      {editingAddressId ? "Update Address" : "Save Address"}
+                    </button>
+                  </form>
+                )}
 
               {addressesLoading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -441,12 +490,34 @@ function AccountPageInner() {
                       <p className="text-gray-700">{address.country}</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                      {!address.is_default && (
+                      <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                         <button
-                          onClick={() => handleSetDefault(address.id)}
-                          className="text-gray-900 text-sm font-semibold hover:underline"
+                          onClick={() => {
+                            setEditingAddressId(address.id);
+                            setAddressForm({
+                              label: address.label || "",
+                              full_name: address.full_name || "",
+                              phone: address.phone || "",
+                              street: address.street || "",
+                              house: address.house || "",
+                              apartment: address.apartment || "",
+                              city: address.city || "",
+                              region: address.region || "",
+                              postal_code: address.postal_code || "",
+                              country: address.country || "Belgium",
+                              is_default: Boolean(address.is_default)
+                            });
+                            setShowAddressForm(true);
+                          }}
+                          className="text-[#266000] text-sm font-semibold hover:underline"
                         >
+                          Edit
+                        </button>
+                        {!address.is_default && (
+                          <button
+                            onClick={() => handleSetDefault(address.id)}
+                            className="text-gray-900 text-sm font-semibold hover:underline"
+                          >
                           Set as Default
                         </button>
                       )}

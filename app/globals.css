@@ -145,7 +145,11 @@ html {
   align-items: center;
   white-space: nowrap;
   width: max-content;
-  animation: announcement-scroll var(--marquee-duration, 20s) linear infinite;
+  animation: announcement-scroll var(--marquee-duration, 35s) linear infinite;
+}
+
+.announcement-bar:hover .announcement-track {
+  animation-play-state: paused;
 }
 
 .announcement-group {

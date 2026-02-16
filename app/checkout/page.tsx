@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import ApiService from "@/lib/api";
@@ -14,9 +15,12 @@ type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Payment, 3: Review, 4: Con
 export default function CheckoutPage() {
   const { cartItems, clearCart } = useCart();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const isBuyNow = searchParams.get("mode") === "buynow";
   const [step, setStep] = useState<CheckoutStep>(1);
   const [orderNumber, setOrderNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [buyNowItem, setBuyNowItem] = useState<any | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -51,12 +55,28 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  useEffect(() => {
+    if (!isBuyNow) {
+      setBuyNowItem(null);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    const raw = sessionStorage.getItem("buyNowItem");
+    if (!raw) {
+      setBuyNowItem(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      setBuyNowItem(parsed);
+    } catch {
+      setBuyNowItem(null);
+    }
+  }, [isBuyNow]);
 
-  const displayItems = cartItems.map((item) => {
+  const sourceItems = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cartItems;
+
+  const displayItems = sourceItems.map((item) => {
     const live = liveMap[item.id];
     if (!live) return item;
     const inStock =
@@ -78,6 +98,11 @@ export default function CheckoutPage() {
       inStock
     };
   });
+
+  const subtotal = displayItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   const hasFreeShippingItem = displayItems.some((item) => {
     const live = liveMap[item.id];
@@ -212,7 +237,7 @@ export default function CheckoutPage() {
           discount_amount: discount,
           total_amount: total,
           status: 'Pending',
-          items: cartItems.map((item) => ({
+          items: displayItems.map((item) => ({
             product_id: item.id,
             variant_id: item.variantId || null,
             product_name: item.name,
@@ -241,7 +266,10 @@ export default function CheckoutPage() {
         }
 
         setTimeout(() => {
-          if (clearCart) clearCart();
+          if (!isBuyNow && clearCart) clearCart();
+          if (isBuyNow && typeof window !== "undefined") {
+            sessionStorage.removeItem("buyNowItem");
+          }
         }, 1000);
       } catch (error) {
         alert("Failed to place order. Please try again.");
@@ -295,9 +323,9 @@ export default function CheckoutPage() {
 
     useEffect(() => {
       const loadLiveProducts = async () => {
-        if (cartItems.length === 0) return;
+        if (sourceItems.length === 0) return;
         try {
-          const ids = cartItems
+          const ids = sourceItems
             .map((item) => Number(item.id))
             .filter((id) => Number.isFinite(id) && id > 0);
           if (ids.length === 0) return;
@@ -314,7 +342,7 @@ export default function CheckoutPage() {
         }
       };
       loadLiveProducts();
-    }, [cartItems]);
+    }, [cartItems, buyNowItem, isBuyNow]);
 
   // Confirmation Screen
   if (step === 4) {
@@ -449,48 +477,57 @@ export default function CheckoutPage() {
       </section>
 
       {/* Progress Steps */}
-      <section className="w-full py-8 bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <div className="flex justify-between items-center relative max-w-3xl mx-auto">
-            {/* Progress Bar Background */}
-            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10"></div>
-            <div 
-              className="absolute top-5 left-0 h-1 bg-[#266000] z-0 transition-all duration-500" 
-              style={{ width: `${((step - 1) / 2) * 100}%` }}
-            ></div>
-            
-            {/* Step 1: Shipping */}
-            <div className={`flex flex-col items-center relative z-10 ${step >= 1 ? 'text-[#266000]' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 md:w-12 md:h-12 border-2 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
-                step >= 1 ? 'bg-[#266000] border-black text-white' : 'bg-white border-gray-300'
-              }`}>
-                <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+        <section className="w-full py-8 bg-gray-50 border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 md:px-6">
+            <div className="flex justify-between items-center relative max-w-3xl mx-auto">
+              {/* Progress Bar Background */}
+              <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 -z-10 rounded-full"></div>
+              <div 
+                className="absolute top-5 left-0 h-1 bg-gradient-to-r from-[#266000] to-[#5aa400] z-0 transition-all duration-500 rounded-full" 
+                style={{ width: `${((step - 1) / 2) * 100}%` }}
+              ></div>
+              
+              {/* Step 1: Shipping */}
+              <div className={`flex flex-col items-center relative z-10 ${step >= 1 ? 'text-[#266000]' : 'text-gray-400'}`}>
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm ${
+                  step > 1 ? 'bg-[#266000] text-white' : step === 1 ? 'bg-white text-[#266000] ring-2 ring-[#266000]' : 'bg-white text-gray-400'
+                }`}>
+                  <MapPin className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <span className="text-xs md:text-sm font-semibold">Shipping</span>
+                <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                  {step === 1 ? 'In Progress' : step > 1 ? 'Completed' : 'Upcoming'}
+                </span>
               </div>
-              <span className="text-xs md:text-sm font-semibold">Shipping</span>
-            </div>
-            
-            {/* Step 2: Payment */}
-            <div className={`flex flex-col items-center relative z-10 ${step >= 2 ? 'text-[#266000]' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 md:w-12 md:h-12 border-2 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
-                step >= 2 ? 'bg-[#266000] border-black text-white' : 'bg-white border-gray-300'
-              }`}>
-                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
+              
+              {/* Step 2: Payment */}
+              <div className={`flex flex-col items-center relative z-10 ${step >= 2 ? 'text-[#266000]' : 'text-gray-400'}`}>
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm ${
+                  step > 2 ? 'bg-[#266000] text-white' : step === 2 ? 'bg-white text-[#266000] ring-2 ring-[#266000]' : 'bg-white text-gray-400'
+                }`}>
+                  <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <span className="text-xs md:text-sm font-semibold">Payment</span>
+                <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                  {step === 2 ? 'In Progress' : step > 2 ? 'Completed' : 'Upcoming'}
+                </span>
               </div>
-              <span className="text-xs md:text-sm font-semibold">Payment</span>
-            </div>
-            
-            {/* Step 3: Review */}
-            <div className={`flex flex-col items-center relative z-10 ${step >= 3 ? 'text-[#266000]' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 md:w-12 md:h-12 border-2 rounded-full flex items-center justify-center mb-2 transition-all duration-300 ${
-                step >= 3 ? 'bg-[#266000] border-black text-white' : 'bg-white border-gray-300'
-              }`}>
-                <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+              
+              {/* Step 3: Review */}
+              <div className={`flex flex-col items-center relative z-10 ${step >= 3 ? 'text-[#266000]' : 'text-gray-400'}`}>
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm ${
+                  step > 3 ? 'bg-[#266000] text-white' : step === 3 ? 'bg-white text-[#266000] ring-2 ring-[#266000]' : 'bg-white text-gray-400'
+                }`}>
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <span className="text-xs md:text-sm font-semibold">Review</span>
+                <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                  {step === 3 ? 'In Progress' : step > 3 ? 'Completed' : 'Upcoming'}
+                </span>
               </div>
-              <span className="text-xs md:text-sm font-semibold">Review</span>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       <form onSubmit={handleSubmit}>
         <section className="w-full py-8 md:py-12">

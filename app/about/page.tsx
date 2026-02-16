@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Heart, Leaf, Shield, Truck, MapPin, Mail, Phone } from "lucide-react";
 import ApiService from '@/lib/api';
 
+
 export default function AboutPage() {
   const [animateNumbers, setAnimateNumbers] = useState(false);
   const [storyContent, setStoryContent] = useState({
