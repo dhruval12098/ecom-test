@@ -23,19 +23,19 @@ const tabs: Tab[] = [
 
 export default function MobileTabNavigation({ activeTab, onTabChange }: MobileTabNavigationProps) {
   return (
-    <div className="bg-white border border-black rounded-2xl p-2">
-      <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+    <div className="bg-white border border-black rounded-2xl p-1.5 sm:p-2">
+      <div className="flex overflow-x-auto gap-1.5 sm:gap-2 pb-1.5 sm:pb-2 scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`flex items-center px-4 py-3 rounded-full font-semibold transition-all duration-200 whitespace-nowrap ${
+            className={`flex items-center px-3 py-2 sm:px-4 sm:py-3 rounded-full font-semibold text-[11px] sm:text-sm transition-all duration-200 whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-[#266000] text-white shadow-md"
                 : "text-gray-700 hover:bg-gray-100"
             }`}
           >
-            <span className="mr-2">{tab.icon}</span>
+            <span className="mr-1.5 sm:mr-2">{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         ))}

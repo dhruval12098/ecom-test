@@ -278,15 +278,15 @@ function AccountPageInner() {
       
       case "orders":
         return (
-          <div className="space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-8">Order History</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Order History</h3>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {ordersLoading && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {Array.from({ length: 2 }).map((_, i) => (
-                      <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6">
+                      <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6">
                         <div className="skeleton h-4 w-1/3 mb-3" />
                         <div className="skeleton h-4 w-1/2 mb-4" />
                         <div className="skeleton h-8 w-24" />
@@ -301,16 +301,16 @@ function AccountPageInner() {
                   <div className="text-sm text-gray-600">No orders found.</div>
                 )}
                 {orders.map((order) => (
-                  <div key={order.id} className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
+                  <div key={order.id} className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                       <div className="flex-grow">
                         <div className="flex items-center gap-3 mb-2">
-                            <h4 className="text-lg font-bold text-gray-900">Order #{order.orderNumber}</h4>
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold border ${statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
+                            <h4 className="text-base sm:text-lg font-bold text-gray-900">Order #{order.orderNumber}</h4>
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold border ${statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
                               {order.status}
                             </span>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-sm text-gray-600">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-gray-600">
                           <span className="flex items-center">
                             <Package size={16} className="mr-1" />
                             {order.items} {order.items === 1 ? 'item' : 'items'}
@@ -320,7 +320,7 @@ function AccountPageInner() {
                       </div>
                       
                       <div className="flex flex-col md:items-end gap-4">
-                        <div className="text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</div>
                           <div className="flex gap-3">
                             <Link href={`/orders/${order.id}`} className="text-[#266000] font-semibold hover:underline text-sm">
                               View Details
@@ -340,10 +340,10 @@ function AccountPageInner() {
       
       case "addresses":
         return (
-          <div className="space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-8">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900">Shipping Addresses</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Shipping Addresses</h3>
                   <button
                     onClick={() => {
                       setShowAddressForm((v) => !v);
@@ -363,86 +363,86 @@ function AccountPageInner() {
                         }));
                       }
                     }}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-colors"
                   >
                     {showAddressForm ? "Close" : "Add New Address"}
                   </button>
                 </div>
 
                 {showAddressForm && (
-                  <form onSubmit={handleAddressSubmit} className="mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-4">
-                    <div className="text-sm font-semibold text-gray-900">
+                  <form onSubmit={handleAddressSubmit} className="mb-6 sm:mb-8 bg-gray-50 border border-gray-200 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+                    <div className="text-xs sm:text-sm font-semibold text-gray-900">
                       {editingAddressId ? "Edit Address" : "Add New Address"}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Label (Home/Office)"
                       value={addressForm.label}
                       onChange={(e) => setAddressForm((p) => ({ ...p, label: e.target.value }))}
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Full name"
                       value={addressForm.full_name}
                       onChange={(e) => setAddressForm((p) => ({ ...p, full_name: e.target.value }))}
                       required
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Phone"
                       value={addressForm.phone}
                       onChange={(e) => setAddressForm((p) => ({ ...p, phone: e.target.value }))}
                       required
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Street"
                       value={addressForm.street}
                       onChange={(e) => setAddressForm((p) => ({ ...p, street: e.target.value }))}
                       required
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="House"
                       value={addressForm.house}
                       onChange={(e) => setAddressForm((p) => ({ ...p, house: e.target.value }))}
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Apartment"
                       value={addressForm.apartment}
                       onChange={(e) => setAddressForm((p) => ({ ...p, apartment: e.target.value }))}
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="City"
                       value={addressForm.city}
                       onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))}
                       required
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Region/State"
                       value={addressForm.region}
                       onChange={(e) => setAddressForm((p) => ({ ...p, region: e.target.value }))}
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Postal code"
                       value={addressForm.postal_code}
                       onChange={(e) => setAddressForm((p) => ({ ...p, postal_code: e.target.value }))}
                       required
                     />
                     <input
-                      className="border border-gray-300 rounded-lg px-4 py-2"
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
                       placeholder="Country"
                       value={addressForm.country}
                       onChange={(e) => setAddressForm((p) => ({ ...p, country: e.target.value }))}
                       required
                     />
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <label className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
                     <input
                       type="checkbox"
                       checked={addressForm.is_default}
@@ -453,7 +453,7 @@ function AccountPageInner() {
                     <button
                       type="submit"
                       disabled={isSavingAddress}
-                      className={`bg-black text-white px-6 py-2 rounded-lg font-semibold transition-colors ${
+                      className={`bg-black text-white px-5 sm:px-6 py-2 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
                         isSavingAddress ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-900"
                       }`}
                     >
@@ -467,9 +467,9 @@ function AccountPageInner() {
                 )}
 
               {addressesLoading && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {Array.from({ length: 2 }).map((_, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-2xl p-6">
+                    <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6">
                       <div className="skeleton h-4 w-1/3 mb-3" />
                       <div className="skeleton h-4 w-2/3 mb-2" />
                       <div className="skeleton h-4 w-1/2 mb-2" />
@@ -484,19 +484,19 @@ function AccountPageInner() {
                 <div className="text-sm text-gray-600">No addresses yet.</div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {addresses.map((address) => (
-                  <div key={address.id} className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
+                  <div key={address.id} className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
                     <div className="flex items-start justify-between mb-4">
-                      <h4 className="text-lg font-bold text-gray-900">{address.label || "Address"}</h4>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">{address.label || "Address"}</h4>
                       {address.is_default && (
-                        <span className="inline-block px-3 py-1 bg-white border border-[#266000] text-[#266000] text-xs font-bold rounded-full">
+                        <span className="inline-block px-2.5 py-1 bg-white border border-[#266000] text-[#266000] text-[10px] sm:text-xs font-bold rounded-full">
                           Default
                         </span>
                       )}
                     </div>
 
-                    <div className="space-y-1 mb-6">
+                    <div className="space-y-1 mb-5 sm:mb-6 text-sm sm:text-base">
                       <p className="text-gray-700">{address.full_name} · {address.phone}</p>
                       <p className="text-gray-700">
                         {address.street}
@@ -510,7 +510,7 @@ function AccountPageInner() {
                       <p className="text-gray-700">{address.country}</p>
                     </div>
 
-                      <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                      <div className="flex flex-wrap gap-3 pt-3 sm:pt-4 border-t border-gray-200">
                         <button
                           onClick={() => {
                             setEditingAddressId(address.id);
@@ -529,14 +529,14 @@ function AccountPageInner() {
                             });
                             setShowAddressForm(true);
                           }}
-                          className="text-[#266000] text-sm font-semibold hover:underline"
+                          className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline"
                         >
                           Edit
                         </button>
                         {!address.is_default && (
                           <button
                             onClick={() => handleSetDefault(address.id)}
-                            className="text-gray-900 text-sm font-semibold hover:underline"
+                            className="text-gray-900 text-xs sm:text-sm font-semibold hover:underline"
                           >
                           Set as Default
                         </button>
@@ -544,7 +544,7 @@ function AccountPageInner() {
                       <button
                         onClick={() => handleDeleteAddress(address.id)}
                         disabled={deletingAddressId === address.id}
-                        className={`text-red-600 text-sm font-semibold hover:underline ${
+                        className={`text-red-600 text-xs sm:text-sm font-semibold hover:underline ${
                           deletingAddressId === address.id ? "opacity-70 cursor-not-allowed" : ""
                         }`}
                       >
@@ -560,40 +560,40 @@ function AccountPageInner() {
       
       case "payment":
         return (
-          <div className="space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-8">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
-                <h3 className="text-2xl font-bold text-gray-900">Payment Methods</h3>
-                <button className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-xl font-bold transition-colors">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Payment Methods</h3>
+                <button className="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-colors">
                   Add New Card
                 </button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Credit Card 1 */}
-                <div className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
+                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <CreditCard className="h-8 w-8 text-[#266000]" />
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
+                        <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-[#266000]" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-bold text-gray-900">Visa ending in 4242</h4>
-                          <span className="inline-block px-3 py-1 bg-white border border-[#266000] text-[#266000] text-xs font-bold rounded-full">
+                          <h4 className="font-bold text-gray-900 text-sm sm:text-base">Visa ending in 4242</h4>
+                          <span className="inline-block px-2.5 py-1 bg-white border border-[#266000] text-[#266000] text-[10px] sm:text-xs font-bold rounded-full">
                             Default
                           </span>
                         </div>
-                        <p className="text-gray-600 text-sm">Expires 12/2026</p>
-                        <p className="text-gray-600 text-sm">John Doe</p>
+                        <p className="text-gray-600 text-xs sm:text-sm">Expires 12/2026</p>
+                        <p className="text-gray-600 text-xs sm:text-sm">John Doe</p>
                       </div>
                     </div>
                     
                     <div className="flex gap-3">
-                      <button className="text-[#266000] text-sm font-semibold hover:underline">
+                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
                         Edit
                       </button>
-                      <button className="text-red-600 text-sm font-semibold hover:underline">
+                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
                         Remove
                       </button>
                     </div>
@@ -601,27 +601,27 @@ function AccountPageInner() {
                 </div>
 
                 {/* Credit Card 2 */}
-                <div className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
+                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <CreditCard className="h-8 w-8 text-[#266000]" />
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
+                        <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-[#266000]" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-gray-900 mb-2">Mastercard ending in 8888</h4>
-                        <p className="text-gray-600 text-sm">Expires 08/2025</p>
-                        <p className="text-gray-600 text-sm">John Doe</p>
+                        <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Mastercard ending in 8888</h4>
+                        <p className="text-gray-600 text-xs sm:text-sm">Expires 08/2025</p>
+                        <p className="text-gray-600 text-xs sm:text-sm">John Doe</p>
                       </div>
                     </div>
                     
                     <div className="flex gap-3">
-                      <button className="text-gray-900 text-sm font-semibold hover:underline">
+                      <button className="text-gray-900 text-xs sm:text-sm font-semibold hover:underline">
                         Set as Default
                       </button>
-                      <button className="text-[#266000] text-sm font-semibold hover:underline">
+                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
                         Edit
                       </button>
-                      <button className="text-red-600 text-sm font-semibold hover:underline">
+                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
                         Remove
                       </button>
                     </div>
@@ -629,23 +629,23 @@ function AccountPageInner() {
                 </div>
 
                 {/* UPI */}
-                <div className="bg-white border border-black rounded-2xl p-6 hover:border-[#266000] transition-colors">
+                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <div className="text-2xl font-bold text-[#266000]">€</div>
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
+                        <div className="text-xl sm:text-2xl font-bold text-[#266000]">€</div>
                       </div>
                       <div>
-                        <h4 className="font-bold text-gray-900 mb-2">UPI</h4>
-                        <p className="text-gray-600 text-sm">johndoe@paytm</p>
+                        <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">UPI</h4>
+                        <p className="text-gray-600 text-xs sm:text-sm">johndoe@paytm</p>
                       </div>
                     </div>
                     
                     <div className="flex gap-3">
-                      <button className="text-[#266000] text-sm font-semibold hover:underline">
+                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
                         Edit
                       </button>
-                      <button className="text-red-600 text-sm font-semibold hover:underline">
+                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
                         Remove
                       </button>
                     </div>
@@ -653,9 +653,9 @@ function AccountPageInner() {
                 </div>
               </div>
 
-              <div className="mt-8 p-6 bg-gray-50 border border-gray-200 rounded-2xl">
-                <h4 className="font-bold text-gray-900 mb-2">Payment Security</h4>
-                <p className="text-sm text-gray-600">
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gray-50 border border-gray-200 rounded-2xl">
+                <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Payment Security</h4>
+                <p className="text-xs sm:text-sm text-gray-600">
                   All payment information is encrypted and stored securely. We never share your payment details with third parties.
                 </p>
               </div>
@@ -665,18 +665,18 @@ function AccountPageInner() {
       
       case "settings":
         return (
-          <div className="space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-8">Account Settings</h3>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Account Settings</h3>
               
               {/* Notifications */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <h4 className="text-lg font-bold text-gray-900 mb-4">Notifications</h4>
-                <div className="space-y-4">
+              <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+                <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Notifications</h4>
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">Order Updates</p>
-                      <p className="text-sm text-gray-600">Get notified about your order status</p>
+                      <p className="font-semibold text-gray-900 text-sm sm:text-base">Order Updates</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Get notified about your order status</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -686,8 +686,8 @@ function AccountPageInner() {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">Promotional Emails</p>
-                      <p className="text-sm text-gray-600">Receive updates about new products and offers</p>
+                      <p className="font-semibold text-gray-900 text-sm sm:text-base">Promotional Emails</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Receive updates about new products and offers</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -697,8 +697,8 @@ function AccountPageInner() {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">SMS Notifications</p>
-                      <p className="text-sm text-gray-600">Get text messages for important updates</p>
+                      <p className="font-semibold text-gray-900 text-sm sm:text-base">SMS Notifications</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Get text messages for important updates</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
@@ -709,13 +709,13 @@ function AccountPageInner() {
               </div>
 
               {/* Privacy */}
-              <div className="mb-8 pb-8 border-b border-gray-200">
-                <h4 className="text-lg font-bold text-gray-900 mb-4">Privacy</h4>
-                <div className="space-y-4">
+              <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+                <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Privacy</h4>
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">Show Profile to Public</p>
-                      <p className="text-sm text-gray-600">Make your profile visible to other users</p>
+                      <p className="font-semibold text-gray-900 text-sm sm:text-base">Show Profile to Public</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Make your profile visible to other users</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" />
@@ -725,8 +725,8 @@ function AccountPageInner() {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">Share Purchase History</p>
-                      <p className="text-sm text-gray-600">Help us improve recommendations</p>
+                      <p className="font-semibold text-gray-900 text-sm sm:text-base">Share Purchase History</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Help us improve recommendations</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -738,14 +738,14 @@ function AccountPageInner() {
 
               {/* Danger Zone */}
               <div>
-                <h4 className="text-lg font-bold text-red-600 mb-4">Danger Zone</h4>
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                <h4 className="text-base sm:text-lg font-bold text-red-600 mb-3 sm:mb-4">Danger Zone</h4>
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                     <div>
-                      <p className="font-semibold text-gray-900 mb-1">Delete Account</p>
-                      <p className="text-sm text-gray-600">Permanently delete your account and all data</p>
+                      <p className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">Delete Account</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Permanently delete your account and all data</p>
                     </div>
-                    <button className="bg-white border border-red-600 text-red-600 px-6 py-2 rounded-xl font-bold hover:bg-red-600 hover:text-white transition-colors">
+                    <button className="bg-white border border-red-600 text-red-600 px-5 sm:px-6 py-2 rounded-xl font-bold text-sm sm:text-base hover:bg-red-600 hover:text-white transition-colors">
                       Delete Account
                     </button>
                   </div>
@@ -761,12 +761,12 @@ function AccountPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-white py-12">
-      <div className="max-w-7xl mx-auto px-6">
-        <h1 className="text-4xl font-bold text-gray-900 mb-8">My Account</h1>
+    <div className="min-h-screen bg-white py-8 sm:py-10 lg:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 sm:mb-8">My Account</h1>
         
         {/* Horizontal Tabs for Mobile/Tablet, Vertical Sidebar for Desktop */}
-        <div className="lg:hidden mb-8">
+        <div className="lg:hidden mb-6 sm:mb-8">
           {/* Mobile Profile Header */}
           <MobileProfileHeader user={user} />
           
@@ -777,7 +777,7 @@ function AccountPageInner() {
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Desktop Sidebar - Hidden on mobile/tablet */}
           <DesktopSidebar 
             activeTab={activeTab} 

@@ -24,12 +24,12 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
   });
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white border border-black rounded-2xl p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-8">Profile Information</h3>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Profile Information</h3>
         
-        <div className="flex flex-col md:flex-row items-start md:items-center mb-8 pb-8 border-b border-gray-200">
-          <div className="w-24 h-24 rounded-full border-2 border-black overflow-hidden mb-4 md:mb-0 md:mr-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-black overflow-hidden mb-4 md:mb-0 md:mr-6">
             <img 
               src={user.avatar} 
               alt="Profile" 
@@ -40,37 +40,37 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
             />
           </div>
           <div>
-            <button className="bg-white border border-black text-gray-900 py-2 px-6 rounded-xl font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors mb-2">
+            <button className="bg-white border border-black text-gray-900 py-2 px-5 sm:px-6 rounded-xl font-semibold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors mb-2">
               Change Photo
             </button>
-            <p className="text-sm text-gray-600">JPG, PNG or GIF. Maximum file size 5MB</p>
+            <p className="text-xs sm:text-sm text-gray-600">JPG, PNG or GIF. Maximum file size 5MB</p>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">Full Name</label>
+            <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Full Name</label>
             <input
               type="text"
               value={isEditing ? editedUser.name : user.name}
               onChange={(e) => isEditing && setEditedUser({...editedUser, name: e.target.value})}
               disabled={!isEditing}
-              className={`w-full bg-white px-4 py-3 border border-black rounded-xl focus:outline-none transition-colors ${
+              className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl focus:outline-none transition-colors text-sm ${
                 isEditing 
                   ? "focus:border-[#266000]" 
-                  : "bg-gray-100 cursor-not-allowed"
+                  : "bg-gray-100 cursor-not-allowed text-gray-500"
               }`}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">Email Address</label>
+            <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Email Address</label>
             <input
               type="email"
               value={isEditing ? editedUser.email : user.email}
               onChange={(e) => isEditing && setEditedUser({...editedUser, email: e.target.value})}
               disabled={!isEditing}
-              className={`w-full bg-white px-4 py-3 border border-black rounded-xl focus:outline-none transition-colors ${
+              className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl focus:outline-none transition-colors text-sm ${
                 isEditing 
                   ? "focus:border-[#266000]" 
                   : "bg-gray-100 cursor-not-allowed"
@@ -79,13 +79,13 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">Phone Number</label>
+            <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Phone Number</label>
             <input
               type="tel"
               value={isEditing ? editedUser.phone : user.phone}
               onChange={(e) => isEditing && setEditedUser({...editedUser, phone: e.target.value})}
               disabled={!isEditing}
-              className={`w-full bg-white px-4 py-3 border border-black rounded-xl focus:outline-none transition-colors ${
+              className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl focus:outline-none transition-colors text-sm ${
                 isEditing 
                   ? "focus:border-[#266000]" 
                   : "bg-gray-100 cursor-not-allowed"
@@ -94,23 +94,23 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
           </div>
           
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2">Password</label>
+            <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Password</label>
             <input
               type="password"
               value="••••••••"
               readOnly
               disabled={!isEditing}
-              className={`w-full bg-white px-4 py-3 border border-black rounded-xl text-gray-500 ${
+              className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl text-gray-500 text-sm ${
                 isEditing ? "" : "bg-gray-100 cursor-not-allowed"
               }`}
             />
-            <button className="mt-2 text-[#266000] text-sm font-semibold hover:underline">
+            <button className="mt-2 text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
               Change Password
             </button>
           </div>
         </div>
         
-        <div className="mt-8 flex justify-end gap-3">
+        <div className="mt-6 sm:mt-8 flex justify-end gap-3">
           {isEditing ? (
             <>
               <button 
@@ -122,7 +122,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                     phone: user.phone
                   });
                 }}
-                className="bg-white border border-black text-gray-900 py-3 px-8 rounded-xl font-bold hover:border-[#266000] hover:text-[#266000] transition-colors"
+                className="bg-white border border-black text-gray-900 py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
               >
                 Cancel
               </button>
@@ -131,7 +131,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                   onUserUpdate({...editedUser, avatar: user.avatar});
                   setIsEditing(false);
                 }}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold transition-colors"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl font-bold text-sm sm:text-base transition-colors"
               >
                 Save Changes
               </button>
@@ -146,7 +146,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                 });
                 setIsEditing(true);
               }}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold transition-colors"
+              className="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl font-bold text-sm sm:text-base transition-colors"
             >
               Edit Info
             </button>
