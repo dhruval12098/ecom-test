@@ -190,6 +190,7 @@ export default function SubcategoryPage() {
             {products.map((product) => (
               <ProductCard
   key={product.id}
+  titleClassName="line-clamp-2"
   product={{
     id: product.id,
     name: product.name,
