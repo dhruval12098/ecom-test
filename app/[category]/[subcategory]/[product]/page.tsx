@@ -6,6 +6,7 @@ import { Star, Home, ChevronRight, ShoppingCart, Heart } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
 import ApiService from "@/lib/api";
+import { formatCurrency } from "@/lib/currency";
 
 interface ProductVariant {
   id: number;
@@ -404,11 +405,11 @@ export default function ProductDetailsPage() {
               {/* Price */}
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-gray-900">
-                    €{Number(safeDisplayPrice).toFixed(2)}
+                    {formatCurrency(Number(safeDisplayPrice))}
                   </span>
                   {safeNormalPrice !== undefined && (
                     <span className="text-lg text-gray-400 line-through">
-                      €{Number(safeNormalPrice).toFixed(2)}
+                      {formatCurrency(Number(safeNormalPrice))}
                     </span>
                   )}
                 </div>

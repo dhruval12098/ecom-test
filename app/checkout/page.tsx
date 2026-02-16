@@ -99,6 +99,18 @@ function CheckoutPageContent() {
     };
   });
 
+  useEffect(() => {
+    const ids = new Set(sourceItems.map((item) => item.id));
+    setLiveMap((prev) => {
+      const next: Record<number, any> = {};
+      Object.keys(prev).forEach((key) => {
+        const id = Number(key);
+        if (ids.has(id)) next[id] = prev[id];
+      });
+      return next;
+    });
+  }, [sourceItems]);
+
   const subtotal = displayItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -110,17 +122,18 @@ function CheckoutPageContent() {
     return method === 'free';
   });
 
+  const activeRates = shippingRates.filter((r) => r.active);
+  const freeRate = activeRates.find((r) => r.type === 'free');
+  const basicRate = activeRates.find((r) => r.type === 'basic');
+  const freeThreshold = freeRate?.min_order ? Number(freeRate.min_order) : null;
   const shippingCost = (() => {
     if (hasFreeShippingItem) return 0;
-    if (shippingRates.length === 0) return subtotal > 500 ? 0 : 50;
-    const activeRates = shippingRates.filter((r) => r.active);
-    const freeRate = activeRates.find((r) => r.type === 'free');
-    if (freeRate && freeRate.min_order && subtotal >= Number(freeRate.min_order)) return 0;
-    const basicRates = activeRates.filter((r) => r.type === 'basic');
-    if (basicRates.length > 0) return Number(basicRates[0].price || 0);
-    const customRates = activeRates.filter((r) => r.type === 'custom');
-    if (customRates.length > 0) return Number(customRates[0].price || 0);
-    return 0;
+    if (freeRate) {
+      if (freeThreshold === null) return 0;
+      if (subtotal >= freeThreshold) return 0;
+    }
+    if (basicRate) return Number(basicRate.price || 0);
+    return subtotal > 500 ? 0 : 50;
   })();
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0;
   const tax = (subtotal - discount) * 0.05; // 5% VAT
@@ -1274,8 +1287,8 @@ function CheckoutPageContent() {
                     <div className="flex items-center gap-3 text-xs md:text-sm">
                       <Truck className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
                       <span className="text-gray-700">
-                        {shippingRates.find((r) => r.type === 'free' && r.active)?.min_order
-                          ? `Free shipping on orders ${formatCurrency(Number(shippingRates.find((r) => r.type === 'free' && r.active)?.min_order || 0))}+`
+                        {freeThreshold !== null
+                          ? `Free shipping on orders ${formatCurrency(freeThreshold)}+`
                           : 'Free shipping available'}
                       </span>
                     </div>

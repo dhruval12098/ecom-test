@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heart, ShoppingCart, Star, Search, Filter, X } from "lucide-react";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/currency";
 
 interface WishlistItem {
   id: number;
@@ -181,9 +182,11 @@ export default function WishlistPage() {
                   
                   <div className="mt-3 flex items-center justify-between">
                     <div>
-                      <span className="text-lg font-bold text-gray-900">€{item.price}</span>
+                      <span className="text-lg font-bold text-gray-900">{formatCurrency(item.price)}</span>
                       {item.originalPrice && (
-                        <span className="ml-2 text-sm text-gray-500 line-through">€{item.originalPrice}</span>
+                        <span className="ml-2 text-sm text-gray-500 line-through">
+                          {formatCurrency(item.originalPrice)}
+                        </span>
                       )}
                     </div>
                     

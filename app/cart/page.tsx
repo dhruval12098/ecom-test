@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
+  const [shippingRates, setShippingRates] = useState<any[]>([]);
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -46,7 +47,19 @@ export default function CartPage() {
     const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
     return method === 'free';
   });
-  const shippingCost = hasFreeShippingItem ? 0 : subtotal > 500 ? 0 : 50;
+  const activeRates = shippingRates.filter((r) => r.active);
+  const freeRate = activeRates.find((r) => r.type === 'free');
+  const basicRate = activeRates.find((r) => r.type === 'basic');
+  const freeThreshold = freeRate?.min_order ? Number(freeRate.min_order) : null;
+  const shippingCost = (() => {
+    if (hasFreeShippingItem) return 0;
+    if (freeRate) {
+      if (freeThreshold === null) return 0;
+      if (subtotal >= freeThreshold) return 0;
+    }
+    if (basicRate) return Number(basicRate.price || 0);
+    return subtotal > 500 ? 0 : 50;
+  })();
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
   const tax = (subtotal - discount) * 0.05; // 5% tax
   const total = subtotal + shippingCost - discount + tax;
@@ -73,6 +86,30 @@ export default function CartPage() {
     };
     loadLiveProducts();
   }, [cartItems]);
+
+  useEffect(() => {
+    const ids = new Set(cartItems.map((item) => item.id));
+    setLiveMap((prev) => {
+      const next: Record<number, any> = {};
+      Object.keys(prev).forEach((key) => {
+        const id = Number(key);
+        if (ids.has(id)) next[id] = prev[id];
+      });
+      return next;
+    });
+  }, [cartItems]);
+
+  useEffect(() => {
+    const loadRates = async () => {
+      try {
+        const data = await ApiService.getShippingRates(true);
+        setShippingRates(Array.isArray(data) ? data : []);
+      } catch (e) {
+        // keep UI stable on failure
+      }
+    };
+    loadRates();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white fade-in">
@@ -137,7 +174,11 @@ export default function CartPage() {
                       </div>
                       <div className="text-left">
                         <div className="font-bold text-gray-900 text-xs md:text-sm">Free Shipping</div>
-                        <div className="text-gray-600 text-xs">On orders above {formatCurrency(500)}</div>
+                        <div className="text-gray-600 text-xs">
+                          {freeThreshold !== null
+                            ? `On orders above ${formatCurrency(freeThreshold)}`
+                            : "On all orders"}
+                        </div>
                       </div>
                     </div>
                     
@@ -310,15 +351,17 @@ export default function CartPage() {
                     </div>
                     
                     {/* Free shipping progress bar */}
-                    {shippingCost > 0 && (
+                    {shippingCost > 0 && freeThreshold !== null && (
                       <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mt-3 md:mt-4">
                         <div className="flex justify-between text-xs md:text-sm mb-2">
-                          <span className="text-gray-600">Add {formatCurrency(500 - subtotal)} more for free shipping</span>
+                          <span className="text-gray-600">
+                            Add {formatCurrency(Math.max(0, freeThreshold - subtotal))} more for free shipping
+                          </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 border border-gray-300">
                           <div 
                             className="bg-[#266000] h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((subtotal / 500) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((subtotal / freeThreshold) * 100, 100)}%` }}
                           />
                         </div>
                       </div>

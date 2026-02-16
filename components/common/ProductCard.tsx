@@ -72,8 +72,14 @@ export default function ProductCard({
   // Use product data if provided, otherwise use props
   const displayTitle = product?.name || title;
   const displayWeight = product?.weight || weight;
-  const displayPrice = product ? formatCurrency(Number(product.price)) : price;
-  const displayOriginalPrice = product?.originalPrice ? formatCurrency(Number(product.originalPrice)) : originalPrice;
+  const parsedPrice = product ? undefined : parsePrice(price);
+  const parsedOriginalPrice = product ? undefined : parsePrice(originalPrice);
+  const displayPrice = product
+    ? formatCurrency(Number(product.price))
+    : (parsedPrice !== undefined ? formatCurrency(parsedPrice) : price);
+  const displayOriginalPrice = product?.originalPrice
+    ? formatCurrency(Number(product.originalPrice))
+    : (parsedOriginalPrice !== undefined ? formatCurrency(parsedOriginalPrice) : originalPrice);
   const displayRating = product?.rating || rating;
   const displayDiscountPercentage = product?.discountPercentage || discountPercentage;
   const displayDiscountColor = product?.discountColor || discountColor;

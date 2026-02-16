@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ApiService from '@/lib/api';
+import { formatCurrency } from '@/lib/currency';
 
 interface Product {
   id: number;
@@ -201,7 +202,9 @@ const SearchSuggestions = ({
                     <div className="font-medium text-gray-900 truncate">
                       {product.name}
                     </div>
-                    <div className="text-sm text-green-600 font-semibold mt-1">€{product.price}</div>
+                    <div className="text-sm text-green-600 font-semibold mt-1">
+                      {formatCurrency(Number(product.price))}
+                    </div>
                     {product.weight && (
                       <div className="text-xs text-gray-500 mt-1">{product.weight}</div>
                     )}
