@@ -10,6 +10,7 @@ import MobileProfileHeader from "@/components/account/MobileProfileHeader";
 import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ function AccountPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: authUser, loading: authLoading } = useAuth();
+  const { addToCart } = useCart();
   const normalizeStatus = (value: string) => {
     const raw = (value || "").toString().trim().toLowerCase();
     if (!raw) return "Pending";
@@ -266,6 +268,42 @@ function AccountPageInner() {
     }
   };
 
+  const [reorderLoadingId, setReorderLoadingId] = useState<number | null>(null);
+  const handleReorder = async (orderId: number) => {
+    try {
+      setReorderLoadingId(orderId);
+      const data = await ApiService.getOrderById(orderId);
+      const items = data?.items || [];
+      if (!items.length) {
+        toast.error("No items found for this order");
+        return;
+      }
+      items.forEach((item: any) => {
+        const baseItem = {
+          id: Number(item.product_id || item.productId || item.id),
+          name: item.product_name || item.name || "Product",
+          price: Number(item.unit_price || item.price || 0),
+          originalPrice: undefined,
+          imageUrl: item.image_url || item.imageUrl || "",
+          weight: item.variant_name || item.weight || "",
+          inStock: true,
+          variantId: item.variant_id || item.variantId || null,
+          variantName: item.variant_name || item.variantName || null
+        };
+        const qty = Math.max(1, Number(item.quantity || 1));
+        for (let i = 0; i < qty; i += 1) {
+          addToCart(baseItem, false);
+        }
+      });
+      toast.success("Items added to cart");
+      router.push("/cart");
+    } catch (e) {
+      toast.error("Failed to reorder items");
+    } finally {
+      setReorderLoadingId(null);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "profile":
@@ -325,8 +363,14 @@ function AccountPageInner() {
                             <Link href={`/orders/${order.id}`} className="text-[#266000] font-semibold hover:underline text-sm">
                               View Details
                             </Link>
-                            <button className="bg-white border border-black text-gray-900 px-4 py-2 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm">
-                              Reorder
+                            <button
+                              onClick={() => handleReorder(order.id)}
+                              disabled={reorderLoadingId === order.id}
+                              className={`bg-white border border-black text-gray-900 px-4 py-2 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm ${
+                                reorderLoadingId === order.id ? "opacity-70 cursor-not-allowed" : ""
+                              }`}
+                            >
+                              {reorderLoadingId === order.id ? "Reordering..." : "Reorder"}
                             </button>
                           </div>
                       </div>

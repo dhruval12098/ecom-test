@@ -347,6 +347,8 @@ function CheckoutPageContent() {
         setOrderNumber(String(rawOrder) || "ORD-" + Date.now().toString().slice(-8));
         setStep(4);
 
+        toast.success("Order placed");
+
         if (typeof window !== 'undefined') {
           localStorage.setItem('orderContact', JSON.stringify({
             email: shippingInfo.email,
@@ -361,7 +363,9 @@ function CheckoutPageContent() {
           }
         }, 1000);
       } catch (error) {
-        alert("Failed to place order. Please try again.");
+        toast.error("Failed to place order", {
+          description: "Please try again.",
+        });
       } finally {
         setIsSubmitting(false);
       }

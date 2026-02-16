@@ -46,7 +46,6 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     { name: 'Contact', href: '/contact', icon: Phone },
     { name: 'FAQ', href: '/faq', icon: HelpCircle },
     { name: 'Account', href: '/account', icon: User },
-    { name: 'Wishlist', href: '/wishlist', icon: Heart },
     { name: 'My Orders', href: '/my-orders', icon: Package },
     { name: 'Returns', href: '/returns', icon: RotateCcw },
     { name: 'Cart', href: '/cart', icon: ShoppingCart },

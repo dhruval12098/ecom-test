@@ -135,7 +135,7 @@ export default function SignupPage() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-black mb-2">
-                  Phone (optional)
+                  Phone
                 </label>
                 <input
                   type="tel"
@@ -143,6 +143,7 @@ export default function SignupPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black/40 bg-white"
+                  required
                 />
               </div>
               <div>
