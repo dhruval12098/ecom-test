@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -54,6 +54,10 @@ function CheckoutPageContent() {
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   useEffect(() => {
     if (!isBuyNow) {
@@ -99,6 +103,11 @@ function CheckoutPageContent() {
     };
   });
 
+  const sourceItemIdsKey = useMemo(
+    () => sourceItems.map((item) => item.id).join("|"),
+    [sourceItems]
+  );
+
   useEffect(() => {
     const ids = new Set(sourceItems.map((item) => item.id));
     setLiveMap((prev) => {
@@ -107,9 +116,12 @@ function CheckoutPageContent() {
         const id = Number(key);
         if (ids.has(id)) next[id] = prev[id];
       });
+      if (Object.keys(next).length === Object.keys(prev).length) {
+        return prev;
+      }
       return next;
     });
-  }, [sourceItems]);
+  }, [sourceItemIdsKey]);
 
   const subtotal = displayItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -135,9 +147,72 @@ function CheckoutPageContent() {
     if (basicRate) return Number(basicRate.price || 0);
     return subtotal > 500 ? 0 : 50;
   })();
-  const discount = subtotal > 1000 ? subtotal * 0.1 : 0;
-  const tax = (subtotal - discount) * 0.05; // 5% VAT
-  const total = subtotal + shippingCost - discount + tax;
+  const orderDiscount = subtotal > 1000 ? subtotal * 0.1 : 0;
+  const couponDiscount = (() => {
+    if (!appliedCoupon) return 0;
+    const value = Number(appliedCoupon.discount_value || 0);
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    if (String(appliedCoupon.discount_type).toLowerCase() === "fixed") {
+      return Math.min(subtotal, value);
+    }
+    return Math.min(subtotal, (subtotal * value) / 100);
+  })();
+  const discountTotal = orderDiscount + couponDiscount;
+  const taxableAmount = Math.max(0, subtotal - discountTotal);
+  const tax = taxableAmount * 0.05; // 5% VAT
+  const total = subtotal + shippingCost - discountTotal + tax;
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponError("Enter a coupon code.");
+      return;
+    }
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const coupons = await ApiService.getCoupons();
+      const match = coupons.find(
+        (c: any) => String(c.code || "").trim().toUpperCase() === code
+      );
+      if (!match) {
+        setCouponError("Coupon not found.");
+        setAppliedCoupon(null);
+        return;
+      }
+      const status = String(match.status || "").toLowerCase();
+      if (status && status !== "active") {
+        setCouponError("Coupon is not active.");
+        setAppliedCoupon(null);
+        return;
+      }
+      if (match.expiry_date) {
+        const exp = new Date(match.expiry_date);
+        if (!Number.isNaN(exp.getTime()) && exp < new Date()) {
+          setCouponError("Coupon expired.");
+          setAppliedCoupon(null);
+          return;
+        }
+      }
+      if (
+        match.usage_limit !== null &&
+        match.usage_limit !== undefined &&
+        Number(match.used_count || 0) >= Number(match.usage_limit)
+      ) {
+        setCouponError("Coupon usage limit reached.");
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon(match);
+      setCouponError("");
+      setCouponCode(code);
+    } catch (e) {
+      setCouponError("Failed to apply coupon.");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -247,7 +322,8 @@ function CheckoutPageContent() {
           subtotal,
           shipping_fee: shippingCost,
           tax_amount: tax,
-          discount_amount: discount,
+          discount_amount: discountTotal,
+          coupon_code: appliedCoupon?.code || (couponCode.trim() ? couponCode.trim().toUpperCase() : null),
           total_amount: total,
           status: 'Pending',
           items: displayItems.map((item) => ({
@@ -1241,6 +1317,47 @@ function CheckoutPageContent() {
                         </div>
                       </div>
                     ))}
+
+                    <div className="border-t border-gray-200 pt-3 mt-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          placeholder="Coupon code"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#266000]"
+                        />
+                        {appliedCoupon ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppliedCoupon(null);
+                              setCouponError("");
+                            }}
+                            className="px-3 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                          >
+                            Remove
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={applyCoupon}
+                            disabled={couponLoading}
+                            className="px-3 py-2 text-sm font-semibold text-white bg-black rounded-lg disabled:opacity-60"
+                          >
+                            {couponLoading ? "Applying..." : "Apply"}
+                          </button>
+                        )}
+                      </div>
+                      {couponError && (
+                        <div className="text-xs text-red-600 mt-2">{couponError}</div>
+                      )}
+                      {appliedCoupon && (
+                        <div className="text-xs text-green-700 mt-2">
+                          Applied: {String(appliedCoupon.code || "").toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="border-t border-gray-300 pt-3 mt-3 space-y-2">
                       <div className="flex justify-between text-sm text-gray-600">
@@ -1259,10 +1376,17 @@ function CheckoutPageContent() {
                         </span>
                       </div>
                       
-                      {discount > 0 && (
+                      {orderDiscount > 0 && (
                         <div className="flex justify-between text-sm text-[#266000]">
-                          <span>Discount</span>
-                          <span className="font-semibold">-{formatCurrency(discount)}</span>
+                          <span>Order Discount</span>
+                          <span className="font-semibold">-{formatCurrency(orderDiscount)}</span>
+                        </div>
+                      )}
+
+                      {couponDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-[#266000]">
+                          <span>Coupon</span>
+                          <span className="font-semibold">-{formatCurrency(couponDiscount)}</span>
                         </div>
                       )}
                       
