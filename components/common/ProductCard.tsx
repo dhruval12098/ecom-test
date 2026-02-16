@@ -38,6 +38,7 @@ type ProductCardProps = {
   subcategorySlug?: string;
   product?: Product;
   layout?: "grid" | "carousel";
+  titleClassName?: string;
 };
 
 export default function ProductCard({
@@ -54,6 +55,7 @@ export default function ProductCard({
   subcategorySlug,
   product,
   layout = "grid",
+  titleClassName,
 }: ProductCardProps) {
   const { addToCart, cartItems } = useCart();
   const parsePrice = (value?: string) => {
@@ -151,7 +153,7 @@ export default function ProductCard({
         {/* Title + Rating */}
         <div className="flex items-start justify-between">
           <div className="flex items-baseline gap-2 min-w-0">
-            <h3 className="font-semibold text-black text-[13px] sm:text-lg leading-snug line-clamp-1 min-w-0">
+            <h3 className={`font-semibold text-black text-[13px] sm:text-lg leading-snug line-clamp-1 min-w-0 ${titleClassName ?? ""}`}>
               {displayTitle}
             </h3>
             <p className="text-[10px] sm:text-sm text-gray-600 whitespace-nowrap">
