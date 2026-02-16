@@ -73,6 +73,8 @@ function AccountPageInner() {
   const [addressesError, setAddressesError] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
   const [addressForm, setAddressForm] = useState({
     label: "",
     full_name: "",
@@ -186,7 +188,9 @@ function AccountPageInner() {
     const handleAddressSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!customerId) return;
+      if (isSavingAddress) return;
       try {
+        setIsSavingAddress(true);
         if (editingAddressId) {
           const updated = await ApiService.updateCustomerAddress(editingAddressId, {
             customerId,
@@ -226,16 +230,25 @@ function AccountPageInner() {
         }));
       } catch (e: any) {
         toast.error(e?.message || "Failed to save address");
+      } finally {
+        setIsSavingAddress(false);
       }
     };
 
   const handleDeleteAddress = async (id: number) => {
     if (!customerId) return;
     try {
+      if (!window.confirm("Delete this address? This action cannot be undone.")) {
+        return;
+      }
+      setDeletingAddressId(id);
       await ApiService.deleteCustomerAddress(id, customerId);
       setAddresses((prev) => prev.filter((a) => a.id !== id));
+      toast.success("Address deleted");
     } catch (e) {
-      // ignore
+      toast.error("Failed to delete address");
+    } finally {
+      setDeletingAddressId(null);
     }
   };
 
@@ -439,9 +452,16 @@ function AccountPageInner() {
                   </label>
                     <button
                       type="submit"
-                      className="bg-black text-white px-6 py-2 rounded-lg font-semibold"
+                      disabled={isSavingAddress}
+                      className={`bg-black text-white px-6 py-2 rounded-lg font-semibold transition-colors ${
+                        isSavingAddress ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-900"
+                      }`}
                     >
-                      {editingAddressId ? "Update Address" : "Save Address"}
+                      {isSavingAddress
+                        ? "Saving..."
+                        : editingAddressId
+                          ? "Update Address"
+                          : "Save Address"}
                     </button>
                   </form>
                 )}
@@ -523,9 +543,12 @@ function AccountPageInner() {
                       )}
                       <button
                         onClick={() => handleDeleteAddress(address.id)}
-                        className="text-red-600 text-sm font-semibold hover:underline"
+                        disabled={deletingAddressId === address.id}
+                        className={`text-red-600 text-sm font-semibold hover:underline ${
+                          deletingAddressId === address.id ? "opacity-70 cursor-not-allowed" : ""
+                        }`}
                       >
-                        Delete
+                        {deletingAddressId === address.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>
