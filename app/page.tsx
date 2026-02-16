@@ -245,7 +245,7 @@ export default function HeroSection() {
   
   const scroll = (ref: React.RefObject<HTMLDivElement>, dir: "left" | "right") => {
     if (!ref.current) return;
-    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
     ref.current.scrollBy({
       left: dir === "left" ? -cardWidth : cardWidth,
       behavior: "smooth",
@@ -255,7 +255,7 @@ export default function HeroSection() {
   const scrollTopSeller = (dir: "left" | "right") => {
     if (!topSellerRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
     topSellerRef.current.scrollBy({
       left: dir === "left" ? -cardWidth : cardWidth,
       behavior: "smooth",
@@ -265,7 +265,7 @@ export default function HeroSection() {
   const scrollBestDeals = (dir: "left" | "right") => {
     if (!bestDealsRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
     bestDealsRef.current.scrollBy({
       left: dir === "left" ? -cardWidth : cardWidth,
       behavior: "smooth",
@@ -285,7 +285,7 @@ export default function HeroSection() {
   const scrollNewArrivals = (dir: "left" | "right") => {
     if (!newArrivalsRef.current) return;
     // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 220 : 300; // approx ProductCard width + gap
+    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
     newArrivalsRef.current.scrollBy({
       left: dir === "left" ? -cardWidth : cardWidth,
       behavior: "smooth",
@@ -474,6 +474,7 @@ export default function HeroSection() {
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
+                      layout="carousel"
                     />
                   ))
                 ) : (
@@ -526,6 +527,7 @@ export default function HeroSection() {
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
+                      layout="carousel"
                     />
                   ))
                 ) : (
@@ -578,6 +580,7 @@ export default function HeroSection() {
                       rating={product.rating}
                       discountPercentage={product.discountPercentage} 
                       discountColor={product.discountColor} 
+                      layout="carousel"
                     />
                   ))
                 ) : (

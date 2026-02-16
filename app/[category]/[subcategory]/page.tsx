@@ -175,7 +175,7 @@ export default function SubcategoryPage() {
       </div>
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8">
         {products.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">No products found in this subcategory</div>
@@ -186,7 +186,7 @@ export default function SubcategoryPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentSubcategory?.name}</h2>
               <p className="text-gray-600">{categoryData.name} - {products.length} products</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
             {products.map((product) => (
               <ProductCard
   key={product.id}

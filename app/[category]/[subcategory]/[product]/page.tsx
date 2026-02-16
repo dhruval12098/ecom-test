@@ -274,15 +274,12 @@ export default function ProductDetailsPage() {
 
       {/* Product Details */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="border border-gray-200 rounded-3xl shadow-lg p-6 bg-white">
+        <div className="border border-gray-200 rounded-3xl shadow-lg p-2 bg-white">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left Column - Image Gallery */}
             <div className="space-y-3 relative">
               {/* Main Image Card */}
-              <div
-                className="relative rounded-2xl overflow-hidden shadow-lg"
-                style={{ width: "85%" }}
-              >
+              <div className="relative rounded-2xl overflow-hidden shadow-lg w-full md:w-[85%] mx-auto">
                 {/* Stock Badge - Stuck to left */}
                 <div className="absolute top-4 left-0 z-10">
                   <span
@@ -328,7 +325,7 @@ export default function ProductDetailsPage() {
 
               {/* Thumbnail Gallery - Smaller */}
               {images.length > 1 && (
-                <div className="flex gap-2" style={{ width: "85%" }}>
+                <div className="flex gap-2 justify-center w-full md:w-[85%] mx-auto">
                   {images.slice(0, 5).map((img, index) => (
                     <button
                       key={index}
@@ -485,7 +482,8 @@ export default function ProductDetailsPage() {
                 </button>
                 <button 
                   onClick={handleBuyNow}
-                  className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors"
+                  disabled={!displayInStock}
+                  className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-black"
                 >
                   Buy Now
                 </button>

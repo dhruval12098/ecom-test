@@ -44,58 +44,67 @@ interface Category {
 export default function CategoryPage() {
   const params = useParams();
   const category = params.category as string;
-  
+
   const [categoryData, setCategoryData] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [activeSubcategory, setActiveSubcategory] = useState<string>('all');
+  const [activeSubcategory, setActiveSubcategory] = useState<string>("all");
 
   useEffect(() => {
     const fetchCategoryData = async () => {
       try {
         const categories: Category[] = await ApiService.getCategories();
-        
-        const foundCategory = categories.find(cat => cat.slug === category);
+
+        const foundCategory = categories.find((cat) => cat.slug === category);
         if (!foundCategory) {
           notFound();
           return;
         }
-        
+
         setCategoryData(foundCategory);
-        
+
         // Flatten all products from all subcategories
         const allProducts: any[] = [];
-        foundCategory.subcategories.forEach(sub => {
+        foundCategory.subcategories.forEach((sub) => {
           sub.products.forEach((product: any) => {
             allProducts.push({
               id: product.id,
               name: product.name,
-              slug: product.slug || product.name?.toLowerCase().replace(/\s+/g, '-'),
+              slug:
+                product.slug ||
+                product.name?.toLowerCase().replace(/\s+/g, "-"),
               category: foundCategory.slug,
               subcategory: sub.slug,
               price: Number(product.price || 0),
-              originalPrice: product.originalPrice ?? product.original_price ?? null,
+              originalPrice:
+                product.originalPrice ?? product.original_price ?? null,
               imageUrl:
                 product.imageUrl ||
                 product.image_url ||
                 product.image ||
-                (Array.isArray(product.imageGallery) ? product.imageGallery[0] : undefined) ||
-                (Array.isArray(product.image_gallery) ? product.image_gallery[0] : undefined) ||
-                '',
-              discountPercentage: product.discountPercentage || product.discount_percentage || '',
-              discountColor: product.discountColor || product.discount_color || 'bg-red-500',
-              description: product.description || '',
+                (Array.isArray(product.imageGallery)
+                  ? product.imageGallery[0]
+                  : undefined) ||
+                (Array.isArray(product.image_gallery)
+                  ? product.image_gallery[0]
+                  : undefined) ||
+                "",
+              discountPercentage:
+                product.discountPercentage || product.discount_percentage || "",
+              discountColor:
+                product.discountColor || product.discount_color || "bg-red-500",
+              description: product.description || "",
               rating: product.rating || 0,
               reviews: product.reviews || 0,
               inStock: product.inStock ?? product.in_stock ?? true,
-              weight: product.weight || '',
-              origin: product.origin || ''
+              weight: product.weight || "",
+              origin: product.origin || "",
             });
           });
         });
         setProducts(allProducts);
-        
+
         // Set 'all' as the default active subcategory
-        setActiveSubcategory('all');
+        setActiveSubcategory("all");
       } catch (error) {
         console.error("Error fetching category data:", error);
         notFound();
@@ -105,9 +114,10 @@ export default function CategoryPage() {
     fetchCategoryData();
   }, [category]);
 
-  const filteredProducts = activeSubcategory === 'all' 
-    ? products 
-    : products.filter(product => product.subcategory === activeSubcategory);
+  const filteredProducts =
+    activeSubcategory === "all"
+      ? products
+      : products.filter((product: Product) => product.subcategory === activeSubcategory);
 
   if (!categoryData) {
     return (
@@ -117,7 +127,10 @@ export default function CategoryPage() {
           <div className="skeleton h-4 w-1/2 mb-6" />
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
+              <div
+                key={i}
+                className="bg-white border border-gray-200 rounded-2xl p-4"
+              >
                 <div className="skeleton w-full aspect-square rounded-xl mb-4" />
                 <div className="skeleton h-4 w-3/4 mb-2" />
                 <div className="skeleton h-4 w-1/2" />
@@ -129,10 +142,7 @@ export default function CategoryPage() {
     );
   }
 
-  const subcats = [
-    { name: "All", slug: "all" },
-    ...categoryData.subcategories
-  ];
+  const subcats = [{ name: "All", slug: "all" }, ...categoryData.subcategories];
 
   return (
     <div className="min-h-screen bg-gray-50 fade-in">
@@ -152,7 +162,9 @@ export default function CategoryPage() {
       {/* Category Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{categoryData.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {categoryData.name}
+          </h1>
           <p className="text-lg text-gray-600">{categoryData.description}</p>
           <div className="mt-4 flex items-center space-x-4">
             <span className="text-sm text-gray-500">
@@ -179,9 +191,11 @@ export default function CategoryPage() {
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                {sub.name} ({sub.slug !== 'all' 
-                  ? products.filter(p => p.subcategory === sub.slug).length 
-                  : products.length})
+                {sub.name} (
+                {sub.slug !== "all"
+                  ? products.filter((p) => p.subcategory === sub.slug).length
+                  : products.length}
+                )
               </Link>
             ))}
           </div>
@@ -189,13 +203,13 @@ export default function CategoryPage() {
       </div>
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8">
         <div className="bg-white border border-black rounded-t-2xl p-6 mb-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">
-              {activeSubcategory === 'all' 
-                ? 'All Products' 
-                : subcats.find(s => s.slug === activeSubcategory)?.name}
+              {activeSubcategory === "all"
+                ? "All Products"
+                : subcats.find((s) => s.slug === activeSubcategory)?.name}
             </h2>
             <div className="text-sm text-gray-600">
               {filteredProducts.length} products
@@ -208,29 +222,29 @@ export default function CategoryPage() {
             <div className="text-gray-500 text-lg">No products found</div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+            {filteredProducts.map((product: Product) => (
               <ProductCard
-  key={product.id}
-  product={{
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    originalPrice: product.originalPrice,
-    imageUrl: product.imageUrl,
-    discountPercentage: product.discountPercentage,
-    discountColor: product.discountColor,
-    description: product.description || "",
-    rating: product.rating,
-    reviews: product.reviews,
-    inStock: product.inStock,
-    weight: product.weight,
-    origin: product.origin,
-    category: product.category,
-    subcategory: product.subcategory,
-    slug: product.slug
-  }}
-/>
+                key={product.id}
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  price: product.price,
+                  originalPrice: product.originalPrice,
+                  imageUrl: product.imageUrl,
+                  discountPercentage: product.discountPercentage,
+                  discountColor: product.discountColor,
+                  description: product.description || "",
+                  rating: product.rating,
+                  reviews: product.reviews,
+                  inStock: product.inStock,
+                  weight: product.weight,
+                  origin: product.origin,
+                  category: product.category,
+                  subcategory: product.subcategory,
+                  slug: product.slug,
+                }}
+              />
             ))}
           </div>
         )}

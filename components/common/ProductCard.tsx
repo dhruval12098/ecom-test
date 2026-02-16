@@ -37,6 +37,7 @@ type ProductCardProps = {
   categorySlug?: string;
   subcategorySlug?: string;
   product?: Product;
+  layout?: "grid" | "carousel";
 };
 
 export default function ProductCard({
@@ -52,6 +53,7 @@ export default function ProductCard({
   categorySlug,
   subcategorySlug,
   product,
+  layout = "grid",
 }: ProductCardProps) {
   const { addToCart, cartItems } = useCart();
   const parsePrice = (value?: string) => {
@@ -109,16 +111,21 @@ export default function ProductCard({
     addToCart(cartItem);
   };
   return (
-    <Link href={productUrl} className="w-52 sm:w-72 h-80 sm:h-[430px] border border-gray-300 rounded-xl sm:rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300">
+    <Link
+      href={productUrl}
+      className={`border border-gray-300 rounded-xl sm:rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300 bg-white ${
+        layout === "carousel" ? "w-48 sm:w-72 shrink-0" : "w-full min-w-0"
+      } h-[290px] sm:h-[420px]`}
+    >
       
       {/* ===== LABEL ===== */}
-      <div className={`absolute top-0 left-0 z-10 ${displayDiscountColor} text-white text-sm px-4 py-1 
+      <div className={`absolute top-0 left-0 z-10 ${displayDiscountColor} text-white text-[11px] sm:text-sm px-3 sm:px-4 py-0.5 sm:py-1 
                       rounded-tl-xl rounded-br-lg`}>
         {displayDiscountPercentage}
       </div>
 
       {/* ===== IMAGE AREA (70% on mobile, 75% on desktop) ===== */}
-      <div className="relative h-[70%] sm:h-[75%] w-full">
+      <div className="relative w-full h-[60%] sm:h-[70%]">
         <img
           src={displayImageUrl}
           alt={displayTitle}
@@ -133,58 +140,44 @@ export default function ProductCard({
       </div>
 
       {/* ===== CONTENT AREA (30% on mobile, 25% on desktop) ===== */}
-      <div className="h-[30%] sm:h-[25%] px-4 py-3 flex flex-col justify-between">
+      <div className="px-3 sm:px-4 py-3 sm:py-4 flex flex-col gap-2 h-[40%] sm:h-[30%]">
         
         {/* Title + Rating */}
         <div className="flex items-start justify-between">
-          <div>
-            <h3 className="font-bold text-black text-sm sm:text-lg leading-tight">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <h3 className="font-semibold text-black text-[13px] sm:text-lg leading-snug line-clamp-1 min-w-0">
               {displayTitle}
             </h3>
-            <p className="text-[10px] sm:text-sm text-gray-600">{displayWeight}</p>
+            <p className="text-[10px] sm:text-sm text-gray-600 whitespace-nowrap">
+              {displayWeight}
+            </p>
           </div>
 
-          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-700">
-            {/* SVG Star */}
-            <svg
-              className="w-4 h-4 fill-yellow-400"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.516 8.287L12 18.896l-7.452 4.525 1.516-8.287L0 9.306l8.332-1.151z" />
-            </svg>
-            <span className="font-medium">{displayRating}</span>
-          </div>
+          <div className="shrink-0" />
         </div>
 
         {/* Divider */}
-        <div className="h-px w-full bg-gray-300 my-1" />
+        <div className="h-px w-full bg-gray-200" />
 
         {/* Price + Cart */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <p className="text-base sm:text-xl font-bold text-black">{displayPrice}</p>
+          <div className="flex flex-col">
+            <p className="text-sm sm:text-xl font-bold text-black">{displayPrice}</p>
             {displayOriginalPrice && (
-              <p className="text-xs sm:text-sm text-gray-500 line-through">{displayOriginalPrice}</p>
+              <p className="text-[11px] sm:text-sm text-gray-500 line-through">{displayOriginalPrice}</p>
             )}
           </div>
 
           <button 
             onClick={handleAddToCart}
             disabled={isInCart}
-            className={`rounded-lg px-2.5 py-2 transition-all duration-200 flex items-center gap-1 ${
+            className={`rounded-full w-9 h-9 sm:w-10 sm:h-10 transition-all duration-200 flex items-center justify-center ${
               isInCart 
-                ? "bg-green-800 border border-green-900 text-white cursor-default" 
+                ? "bg-green-800 text-white scale-105" 
                 : "bg-white border border-gray-300 hover:bg-gray-100 hover:shadow-md cursor-pointer"
             }`}
           >
-            {isInCart ? (
-              <>
-                <ShoppingCart size={16} />
-                <span className="text-[10px] font-medium">Added</span>
-              </>
-            ) : (
-              <ShoppingCart size={16} />
-            )}
+            <ShoppingCart size={16} />
           </button>
         </div>
       </div>
