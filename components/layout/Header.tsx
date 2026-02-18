@@ -106,7 +106,7 @@ export default function Header() {
   useEffect(() => {
     const loadDeliveryLocation = async () => {
       if (!authUser) {
-        setDeliveryLocation('Gujarat, India');
+        setDeliveryLocation('Belgium');
         return;
       }
       try {

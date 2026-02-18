@@ -101,7 +101,39 @@ export default function CategoryPage() {
             });
           });
         });
-        setProducts(allProducts);
+        const schedules = await Promise.all(
+          allProducts.map((product) => ApiService.getActiveSchedule(product.id))
+        );
+        const productsWithSchedules = allProducts.map((product, index) => {
+          const schedule = schedules[index];
+          if (!schedule) return product;
+          const scheduledPrice = Number(
+            schedule.scheduled_price ?? schedule.scheduledPrice
+          );
+          const normalPrice = Number(
+            schedule.normal_price ?? schedule.normalPrice ?? product.originalPrice ?? product.price
+          );
+          const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : product.price;
+          const finalOriginal =
+            Number.isFinite(normalPrice) && normalPrice > finalPrice
+              ? normalPrice
+              : product.originalPrice;
+          const discountPercent = schedule.discount_percent ?? schedule.discountPercent;
+          const computedDiscount =
+            discountPercent !== null && discountPercent !== undefined
+              ? `${Number(discountPercent).toFixed(0)}%`
+              : Number.isFinite(normalPrice) && normalPrice > finalPrice
+                ? `${Math.round(((normalPrice - finalPrice) / normalPrice) * 100)}%`
+                : product.discountPercentage;
+
+          return {
+            ...product,
+            price: finalPrice,
+            originalPrice: finalOriginal,
+            discountPercentage: computedDiscount || product.discountPercentage
+          };
+        });
+        setProducts(productsWithSchedules);
 
         // Set 'all' as the default active subcategory
         setActiveSubcategory("all");
