@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
+import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle, Star } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
@@ -22,6 +22,14 @@ function CheckoutPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buyNowItem, setBuyNowItem] = useState<any | null>(null);
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
+  const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
+  const [createdOrderItems, setCreatedOrderItems] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewItemId, setReviewItemId] = useState<number | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDelayPassed, setReviewDelayPassed] = useState(false);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -346,11 +354,24 @@ function CheckoutPageContent() {
 
         const result = await ApiService.createOrder(payload);
         const rawOrder = result?.order?.order_code || result?.order?.order_number || "";
+        const createdId = Number(result?.order?.id || 0);
         setOrderNumber(String(rawOrder) || "ORD-" + Date.now().toString().slice(-8));
         setConfirmedTotal(total);
+        setCreatedOrderId(createdId || null);
+        setCreatedOrderItems(result?.items || []);
         setStep(4);
 
         toast.success("Order placed");
+
+        if (user && (result?.items || []).length > 0) {
+          const firstItem = result.items[0];
+          setReviewItemId(Number(firstItem?.id || 0) || null);
+          setReviewDelayPassed(false);
+          setTimeout(() => {
+            setReviewDelayPassed(true);
+            setShowReviewModal(true);
+          }, 1800);
+        }
 
         if (typeof window !== 'undefined') {
           localStorage.setItem('orderContact', JSON.stringify({
@@ -556,6 +577,125 @@ function CheckoutPageContent() {
                   Need help? Contact us at <a href="mailto:support@freshmart.com" className="text-[#266000] font-semibold hover:underline">support@freshmart.com</a> or call <a href="tel:+911800123456" className="text-[#266000] font-semibold hover:underline">+91 1800-123-456</a>
                 </p>
               </div>
+
+              {showReviewModal && user && reviewDelayPassed && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                  <div className="bg-white w-full max-w-xl rounded-2xl p-6 shadow-2xl border border-black">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Leave a Review</h3>
+                        <p className="text-xs text-gray-600">Verified purchase</p>
+                      </div>
+                      <button
+                        onClick={() => setShowReviewModal(false)}
+                        className="text-gray-500 hover:text-gray-900"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
+                          Purchased items
+                        </label>
+                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
+                          {(createdOrderItems || []).map((item: any) => {
+                            const selected = Number(reviewItemId) === Number(item.id);
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setReviewItemId(Number(item.id))}
+                                className={`text-left border rounded-full px-3 py-1 text-xs transition-colors ${
+                                  selected
+                                    ? "border-[#266000] bg-green-50 text-[#266000]"
+                                    : "border-gray-200 bg-white hover:border-[#266000] text-gray-700"
+                                }`}
+                              >
+                                {item.product_name} • Qty {item.quantity || 1}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
+                          Rating
+                        </label>
+                        <div className="flex items-center justify-center gap-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              className="p-1"
+                            >
+                              <Star
+                                className={`w-6 h-6 ${
+                                  reviewRating >= star
+                                    ? "text-yellow-400 fill-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
+                          Review
+                        </label>
+                        <textarea
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="Share your experience..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
+                      <button
+                        onClick={() => setShowReviewModal(false)}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        disabled={reviewSubmitting || !reviewItemId}
+                        onClick={async () => {
+                          if (!reviewItemId || !createdOrderId) return;
+                          try {
+                            setReviewSubmitting(true);
+                            const item = (createdOrderItems || []).find((i: any) => Number(i.id) === Number(reviewItemId));
+                            await ApiService.submitProductReview({
+                              auth_user_id: user.id,
+                              product_id: item?.product_id,
+                              order_id: createdOrderId,
+                              order_item_id: reviewItemId,
+                              rating: reviewRating,
+                              review_text: reviewText
+                            });
+                            toast.success("Review submitted");
+                            setShowReviewModal(false);
+                          } catch (e: any) {
+                            toast.error(e?.message || "Failed to submit review");
+                          } finally {
+                            setReviewSubmitting(false);
+                          }
+                        }}
+                        className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
+                      >
+                        {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>

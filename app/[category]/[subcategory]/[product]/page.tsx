@@ -67,6 +67,10 @@ export default function ProductDetailsPage() {
   const [showZoom, setShowZoom] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [reviewSummary, setReviewSummary] = useState<{ count: number; avg_rating: number }>({
+    count: 0,
+    avg_rating: 0
+  });
 
   const { addToCart } = useCart();
 
@@ -87,6 +91,12 @@ export default function ProductDetailsPage() {
           category: foundProduct.category_slug || category,
           subcategory: foundProduct.subcategory_slug || subcategory
         });
+        try {
+          const reviewsData = await ApiService.getProductReviews(foundProduct.id, { published: true, limit: 1 });
+          setReviewSummary(reviewsData.summary || { count: 0, avg_rating: 0 });
+        } catch {
+          setReviewSummary({ count: 0, avg_rating: 0 });
+        }
         if (foundProduct.variants && foundProduct.variants.length > 0) {
           setSelectedVariantId(foundProduct.variants[0].id);
         }
@@ -151,14 +161,19 @@ export default function ProductDetailsPage() {
     ? Number(selectedVariant.stockQuantity ?? 0) > 0
     : product.inStock;
   const basePrice = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
+  const discountPercent = product.discountPercentage
+    ? Number(String(product.discountPercentage).replace(/[^0-9.]/g, ""))
+    : 0;
   const displayPrice = activeSchedule?.scheduled_price !== undefined && activeSchedule?.scheduled_price !== null
     ? Number(activeSchedule.scheduled_price)
     : basePrice;
   const normalPrice = activeSchedule?.normal_price !== undefined && activeSchedule?.normal_price !== null
     ? Number(activeSchedule.normal_price)
-    : Number(product.originalPrice ?? basePrice);
+    : discountPercent > 0
+      ? basePrice + (basePrice * discountPercent) / 100
+      : Number(product.originalPrice ?? basePrice);
   const safeDisplayPrice = Number.isFinite(displayPrice) ? displayPrice : 0;
-  const safeNormalPrice = Number.isFinite(normalPrice) ? normalPrice : undefined;
+  const safeNormalPrice = Number.isFinite(normalPrice) && normalPrice > safeDisplayPrice ? normalPrice : undefined;
 
   const images =
     product.imageGallery && product.imageGallery.length > 0
@@ -390,7 +405,7 @@ export default function ProductDetailsPage() {
                       key={i}
                       size={16}
                       className={
-                        i < Math.floor(product.rating)
+                        i < Math.floor(reviewSummary.avg_rating || 0)
                           ? "fill-yellow-400 text-yellow-400"
                           : "fill-gray-300 text-gray-300"
                       }
@@ -398,7 +413,7 @@ export default function ProductDetailsPage() {
                   ))}
                 </div>
                 <span className="text-gray-600 text-sm">
-                  ({product.reviews} Reviews)
+                  {reviewSummary.avg_rating ? reviewSummary.avg_rating.toFixed(1) : "0.0"} ({reviewSummary.count} Reviews)
                 </span>
               </div>
 

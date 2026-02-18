@@ -15,7 +15,8 @@ import {
   ShoppingCart,
   Shield,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Star
 } from 'lucide-react';
 
 interface MobileMenuProps {
@@ -47,6 +48,7 @@ export default function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     { name: 'FAQ', href: '/faq', icon: HelpCircle },
     { name: 'Account', href: '/account', icon: User },
     { name: 'My Orders', href: '/my-orders', icon: Package },
+    { name: 'Reviews', href: '/reviews', icon: Star },
     { name: 'Returns', href: '/returns', icon: RotateCcw },
     { name: 'Cart', href: '/cart', icon: ShoppingCart },
     { name: 'Privacy Policy', href: '/privacy-policy', icon: Shield },
