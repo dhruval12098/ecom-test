@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabaseClient";
 
 interface Order {
   id: number;
@@ -79,7 +80,8 @@ function AccountPageInner() {
   const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
   const [addressForm, setAddressForm] = useState({
     label: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     phone: "",
     street: "",
     house: "",
@@ -116,10 +118,12 @@ function AccountPageInner() {
   }, [authUser]);
 
   useEffect(() => {
+    let isMounted = true;
     const loadProfile = async () => {
       try {
         if (!authUser) return;
         const profile = await ApiService.getCustomerProfile(authUser.id);
+        if (!isMounted) return;
         if (profile) {
           setCustomerId(profile.id || null);
           setUser((prev) => ({
@@ -129,17 +133,53 @@ function AccountPageInner() {
             phone: profile.phone || prev.phone,
             avatar: profile.avatar_url || prev.avatar
           }));
+          const nameParts = String(profile.full_name || "").trim().split(" ");
+          const firstName = nameParts.shift() || "";
+          const lastName = nameParts.join(" ");
           setAddressForm((prev) => ({
             ...prev,
-            full_name: profile.full_name || prev.full_name,
+            first_name: firstName || prev.first_name,
+            last_name: lastName || prev.last_name,
             phone: profile.phone || prev.phone
           }));
+          return;
         }
+
+        const fallbackName =
+          authUser.email?.split("@")[0] ||
+          authUser.phone ||
+          "Customer";
+        const created = await ApiService.upsertCustomer({
+          auth_user_id: authUser.id,
+          full_name: fallbackName,
+          email: authUser.email,
+          phone: authUser.phone
+        });
+        if (!isMounted || !created) return;
+        setCustomerId(created.id || null);
+        setUser((prev) => ({
+          ...prev,
+          name: created.full_name || prev.name,
+          email: created.email || prev.email,
+          phone: created.phone || prev.phone
+        }));
+        const createdParts = String(created.full_name || "").trim().split(" ");
+        const createdFirst = createdParts.shift() || "";
+        const createdLast = createdParts.join(" ");
+        setAddressForm((prev) => ({
+          ...prev,
+          first_name: createdFirst || prev.first_name,
+          last_name: createdLast || prev.last_name,
+          phone: created.phone || prev.phone
+        }));
       } catch (e) {
         // keep UI usable if profile fetch fails
       }
     };
     loadProfile();
+    return () => {
+      isMounted = false;
+    };
   }, [authUser]);
 
   useEffect(() => {
@@ -189,14 +229,19 @@ function AccountPageInner() {
 
     const handleAddressSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!customerId) return;
+      if (!customerId) {
+        toast.error("Your profile is still loading. Please try again in a moment.");
+        return;
+      }
       if (isSavingAddress) return;
       try {
         setIsSavingAddress(true);
+        const fullName = `${addressForm.first_name} ${addressForm.last_name}`.trim();
         if (editingAddressId) {
           const updated = await ApiService.updateCustomerAddress(editingAddressId, {
             customerId,
             ...addressForm,
+            full_name: fullName,
             is_default: addressForm.is_default
           });
           if (updated) {
@@ -209,6 +254,7 @@ function AccountPageInner() {
           const created = await ApiService.createCustomerAddress({
             customerId,
             ...addressForm,
+            full_name: fullName,
             is_default: addressForm.is_default
           });
           if (created) {
@@ -221,6 +267,8 @@ function AccountPageInner() {
         setAddressForm((prev) => ({
           ...prev,
           label: "",
+          first_name: "",
+          last_name: "",
           street: "",
           house: "",
           apartment: "",
@@ -396,6 +444,8 @@ function AccountPageInner() {
                         setAddressForm((prev) => ({
                           ...prev,
                           label: "",
+                          first_name: "",
+                          last_name: "",
                           street: "",
                           house: "",
                           apartment: "",
@@ -427,9 +477,16 @@ function AccountPageInner() {
                     />
                     <input
                       className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
-                      placeholder="Full name"
-                      value={addressForm.full_name}
-                      onChange={(e) => setAddressForm((p) => ({ ...p, full_name: e.target.value }))}
+                      placeholder="First name"
+                      value={addressForm.first_name ?? ""}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, first_name: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm"
+                      placeholder="Last name"
+                      value={addressForm.last_name ?? ""}
+                      onChange={(e) => setAddressForm((p) => ({ ...p, last_name: e.target.value }))}
                       required
                     />
                     <input
@@ -496,9 +553,9 @@ function AccountPageInner() {
                   </label>
                     <button
                       type="submit"
-                      disabled={isSavingAddress}
+                      disabled={isSavingAddress || !customerId}
                       className={`bg-black text-white px-5 sm:px-6 py-2 rounded-lg font-semibold text-sm sm:text-base transition-colors ${
-                        isSavingAddress ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-900"
+                        isSavingAddress || !customerId ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-900"
                       }`}
                     >
                       {isSavingAddress
@@ -558,9 +615,13 @@ function AccountPageInner() {
                         <button
                           onClick={() => {
                             setEditingAddressId(address.id);
+                            const nameParts = String(address.full_name || "").trim().split(" ");
+                            const firstName = nameParts.shift() || "";
+                            const lastName = nameParts.join(" ");
                             setAddressForm({
                               label: address.label || "",
-                              full_name: address.full_name || "",
+                              first_name: firstName,
+                              last_name: lastName,
                               phone: address.phone || "",
                               street: address.street || "",
                               house: address.house || "",
@@ -712,6 +773,31 @@ function AccountPageInner() {
           <div className="space-y-4 sm:space-y-6">
             <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Account Settings</h3>
+
+              {/* Session */}
+              <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+                <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Session</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">Log out</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Sign out from this device</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await supabase.auth.signOut();
+                        toast.success("Logged out");
+                        router.replace("/login");
+                      } catch (e) {
+                        toast.error("Failed to log out");
+                      }
+                    }}
+                    className="bg-white border border-black text-gray-900 px-5 sm:px-6 py-2 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
+                  >
+                    Log out
+                  </button>
+                </div>
+              </div>
               
               {/* Notifications */}
               <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">

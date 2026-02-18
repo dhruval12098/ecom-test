@@ -32,6 +32,10 @@ export default function SignupPage() {
     setInfo(null);
     setSubmitting(true);
     try {
+      if (!phone.trim()) {
+        setError("Phone number is required.");
+        return;
+      }
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password
@@ -191,7 +195,7 @@ export default function SignupPage() {
 
               <button
                 type="submit"
-                disabled={submitting || envMissing || !agreed}
+                disabled={submitting || envMissing || !agreed || !phone.trim()}
                 className="w-full py-3 rounded-xl bg-black text-white font-semibold text-sm hover:bg-[#111827] transition-colors disabled:opacity-60"
               >
                 {submitting ? "Creating..." : "Create account"}

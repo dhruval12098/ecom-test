@@ -14,13 +14,14 @@ type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Payment, 3: Review, 4: Con
 
 function CheckoutPageContent() {
   const { cartItems, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const isBuyNow = searchParams.get("mode") === "buynow";
   const [step, setStep] = useState<CheckoutStep>(1);
   const [orderNumber, setOrderNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buyNowItem, setBuyNowItem] = useState<any | null>(null);
+  const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -161,6 +162,7 @@ function CheckoutPageContent() {
   const taxableAmount = Math.max(0, subtotal - discountTotal);
   const tax = taxableAmount * 0.05; // 5% VAT
   const total = subtotal + shippingCost - discountTotal + tax;
+  const displayTotal = confirmedTotal ?? total;
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -345,6 +347,7 @@ function CheckoutPageContent() {
         const result = await ApiService.createOrder(payload);
         const rawOrder = result?.order?.order_code || result?.order?.order_number || "";
         setOrderNumber(String(rawOrder) || "ORD-" + Date.now().toString().slice(-8));
+        setConfirmedTotal(total);
         setStep(4);
 
         toast.success("Order placed");
@@ -393,9 +396,21 @@ function CheckoutPageContent() {
 
   useEffect(() => {
       const loadSavedAddresses = async () => {
-        if (!user?.id) return;
+        if (authLoading || !user?.id) return;
         try {
-          const profile = await ApiService.getCustomerProfile(user.id);
+          let profile = await ApiService.getCustomerProfile(user.id);
+          if (!profile?.id) {
+            const fallbackName =
+              user.email?.split("@")[0] ||
+              user.phone ||
+              "Customer";
+            profile = await ApiService.upsertCustomer({
+              auth_user_id: user.id,
+              full_name: fallbackName,
+              email: user.email,
+              phone: user.phone
+            });
+          }
           if (!profile?.id) return;
           applyProfileToForm(profile);
           const addresses = await ApiService.getCustomerAddresses(profile.id);
@@ -412,7 +427,7 @@ function CheckoutPageContent() {
       };
 
       loadSavedAddresses();
-    }, [user?.id]);
+    }, [user?.id, authLoading]);
 
     useEffect(() => {
       const loadLiveProducts = async () => {
@@ -470,7 +485,7 @@ function CheckoutPageContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Total Amount</div>
-                    <div className="text-xl font-bold text-gray-900">{formatCurrency(total)}</div>
+                    <div className="text-xl font-bold text-gray-900">{formatCurrency(displayTotal)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Payment Method</div>
