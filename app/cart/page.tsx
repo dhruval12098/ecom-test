@@ -11,6 +11,7 @@ export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [taxRate, setTaxRate] = useState(5);
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -61,7 +62,7 @@ export default function CartPage() {
     return subtotal > 500 ? 0 : 50;
   })();
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
-  const tax = (subtotal - discount) * 0.05; // 5% tax
+  const tax = (subtotal - discount) * (taxRate / 100);
   const total = subtotal + shippingCost - discount + tax;
 
   useEffect(() => {
@@ -109,6 +110,20 @@ export default function CartPage() {
       }
     };
     loadRates();
+  }, []);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await ApiService.getSettings();
+        const rate = settings?.tax_rate;
+        const normalized = Number(rate);
+        setTaxRate(Number.isFinite(normalized) ? normalized : 5);
+      } catch (e) {
+        setTaxRate(5);
+      }
+    };
+    loadSettings();
   }, []);
 
   return (
@@ -346,7 +361,7 @@ export default function CartPage() {
                     )}
                     
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
-                      <span>Tax (5%)</span>
+                      <span>Tax (VAT {taxRate}%)</span>
                       <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                     </div>
                     

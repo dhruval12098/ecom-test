@@ -30,6 +30,7 @@ function CheckoutPageContent() {
   const [reviewText, setReviewText] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDelayPassed, setReviewDelayPassed] = useState(false);
+  const [taxRate, setTaxRate] = useState(5);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -86,6 +87,20 @@ function CheckoutPageContent() {
       setBuyNowItem(null);
     }
   }, [isBuyNow]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await ApiService.getSettings();
+        const rate = settings?.tax_rate;
+        const normalized = Number(rate);
+        setTaxRate(Number.isFinite(normalized) ? normalized : 5);
+      } catch {
+        setTaxRate(5);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const sourceItems = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cartItems;
 
@@ -168,7 +183,7 @@ function CheckoutPageContent() {
   })();
   const discountTotal = orderDiscount + couponDiscount;
   const taxableAmount = Math.max(0, subtotal - discountTotal);
-  const tax = taxableAmount * 0.05; // 5% VAT
+  const tax = taxableAmount * (taxRate / 100);
   const total = subtotal + shippingCost - discountTotal + tax;
   const displayTotal = confirmedTotal ?? total;
 
@@ -1550,7 +1565,7 @@ function CheckoutPageContent() {
                       )}
                       
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Tax (VAT 5%)</span>
+                        <span>Tax (VAT {taxRate}%)</span>
                         <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                       </div>
                       
