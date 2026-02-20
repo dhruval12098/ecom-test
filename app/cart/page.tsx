@@ -12,6 +12,7 @@ export default function CartPage() {
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [shippingRates, setShippingRates] = useState<any[]>([]);
   const [taxRate, setTaxRate] = useState(5);
+  const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -43,6 +44,22 @@ export default function CartPage() {
     0
   );
 
+  const excludedCategorySet = useMemo(
+    () => new Set(excludedCategoryIds.map((id) => Number(id))),
+    [excludedCategoryIds]
+  );
+
+  const eligibleSubtotal = displayItems.reduce((sum, item) => {
+    const live = liveMap[item.id];
+    const categoryId = Number(
+      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+    );
+    if (Number.isFinite(categoryId) && excludedCategorySet.has(categoryId)) {
+      return sum;
+    }
+    return sum + item.price * item.quantity;
+  }, 0);
+
   const hasFreeShippingItem = displayItems.some((item) => {
     const live = liveMap[item.id];
     const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
@@ -56,7 +73,7 @@ export default function CartPage() {
     if (hasFreeShippingItem) return 0;
     if (freeRate) {
       if (freeThreshold === null) return 0;
-      if (subtotal >= freeThreshold) return 0;
+      if (eligibleSubtotal >= freeThreshold) return 0;
     }
     if (basicRate) return Number(basicRate.price || 0);
     return subtotal > 500 ? 0 : 50;
@@ -119,6 +136,9 @@ export default function CartPage() {
         const rate = settings?.tax_rate;
         const normalized = Number(rate);
         setTaxRate(Number.isFinite(normalized) ? normalized : 5);
+        const raw = settings?.excluded_free_shipping_category_ids || [];
+        const parsed = Array.isArray(raw) ? raw : [];
+        setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
       } catch (e) {
         setTaxRate(5);
       }
@@ -370,13 +390,13 @@ export default function CartPage() {
                       <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mt-3 md:mt-4">
                         <div className="flex justify-between text-xs md:text-sm mb-2">
                           <span className="text-gray-600">
-                            Add {formatCurrency(Math.max(0, freeThreshold - subtotal))} more for free shipping
+                            Add {formatCurrency(Math.max(0, freeThreshold - eligibleSubtotal))} more for free shipping
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 border border-gray-300">
                           <div 
                             className="bg-[#266000] h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((subtotal / freeThreshold) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((eligibleSubtotal / freeThreshold) * 100, 100)}%` }}
                           />
                         </div>
                       </div>

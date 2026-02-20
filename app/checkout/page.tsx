@@ -31,6 +31,7 @@ function CheckoutPageContent() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewDelayPassed, setReviewDelayPassed] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
+  const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -95,6 +96,9 @@ function CheckoutPageContent() {
         const rate = settings?.tax_rate;
         const normalized = Number(rate);
         setTaxRate(Number.isFinite(normalized) ? normalized : 5);
+        const raw = settings?.excluded_free_shipping_category_ids || [];
+        const parsed = Array.isArray(raw) ? raw : [];
+        setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
       } catch {
         setTaxRate(5);
       }
@@ -152,6 +156,22 @@ function CheckoutPageContent() {
     0
   );
 
+  const excludedCategorySet = useMemo(
+    () => new Set(excludedCategoryIds.map((id) => Number(id))),
+    [excludedCategoryIds]
+  );
+
+  const eligibleSubtotal = displayItems.reduce((sum, item) => {
+    const live = liveMap[item.id];
+    const categoryId = Number(
+      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+    );
+    if (Number.isFinite(categoryId) && excludedCategorySet.has(categoryId)) {
+      return sum;
+    }
+    return sum + item.price * item.quantity;
+  }, 0);
+
   const hasFreeShippingItem = displayItems.some((item) => {
     const live = liveMap[item.id];
     const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
@@ -166,7 +186,7 @@ function CheckoutPageContent() {
     if (hasFreeShippingItem) return 0;
     if (freeRate) {
       if (freeThreshold === null) return 0;
-      if (subtotal >= freeThreshold) return 0;
+      if (eligibleSubtotal >= freeThreshold) return 0;
     }
     if (basicRate) return Number(basicRate.price || 0);
     return subtotal > 500 ? 0 : 50;
