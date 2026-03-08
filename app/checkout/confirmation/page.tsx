@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle, Loader2 } from "lucide-react";
 import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 
-export default function CheckoutConfirmationPage() {
+function CheckoutConfirmationContent() {
   const searchParams = useSearchParams();
   const orderIdParam = searchParams.get("orderId");
   const [isLoading, setIsLoading] = useState(true);
@@ -112,5 +112,31 @@ export default function CheckoutConfirmationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutConfirmationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[70vh] bg-white">
+          <div className="max-w-3xl mx-auto px-4 md:px-6 py-10 md:py-14">
+            <div className="bg-white border border-black rounded-3xl p-6 md:p-10 text-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 bg-gray-50 border border-black rounded-full flex items-center justify-center">
+                  <Loader2 className="h-7 w-7 text-[#266000] animate-spin" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Preparing confirmation</h1>
+                  <p className="text-sm text-gray-600 mt-2">Please wait while we load your order.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutConfirmationContent />
+    </Suspense>
   );
 }
