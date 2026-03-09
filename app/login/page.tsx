@@ -164,6 +164,12 @@ export default function LoginPage() {
                 Create account
               </Link>
             </p>
+            <p className="text-center text-gray-500 mt-3 text-sm">
+              Ordered as a guest?{" "}
+              <Link href="/guest-orders" className="text-black font-semibold">
+                View your orders
+              </Link>
+            </p>
           </div>
         </div>
       </div>

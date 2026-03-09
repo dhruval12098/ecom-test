@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { Package, MapPin, CreditCard, Settings } from "lucide-react";
+import { Package, MapPin, Settings } from "lucide-react";
 import Link from "next/link";
 import ProfileSection from "@/components/account/ProfileSection";
 import MobileTabNavigation from "@/components/account/MobileTabNavigation";
@@ -101,7 +101,7 @@ function AccountPageInner() {
 
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab && ["profile", "orders", "addresses", "payment", "settings"].includes(tab)) {
+    if (tab && ["profile", "orders", "addresses", "settings"].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -663,110 +663,6 @@ function AccountPageInner() {
           </div>
         );
       
-      case "payment":
-        return (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Payment Methods</h3>
-                <button className="bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-colors">
-                  Add New Card
-                </button>
-              </div>
-              
-              <div className="space-y-3 sm:space-y-4">
-                {/* Credit Card 1 */}
-                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-[#266000]" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-bold text-gray-900 text-sm sm:text-base">Visa ending in 4242</h4>
-                          <span className="inline-block px-2.5 py-1 bg-white border border-[#266000] text-[#266000] text-[10px] sm:text-xs font-bold rounded-full">
-                            Default
-                          </span>
-                        </div>
-                        <p className="text-gray-600 text-xs sm:text-sm">Expires 12/2026</p>
-                        <p className="text-gray-600 text-xs sm:text-sm">John Doe</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
-                        Edit
-                      </button>
-                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Credit Card 2 */}
-                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-[#266000]" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Mastercard ending in 8888</h4>
-                        <p className="text-gray-600 text-xs sm:text-sm">Expires 08/2025</p>
-                        <p className="text-gray-600 text-xs sm:text-sm">John Doe</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <button className="text-gray-900 text-xs sm:text-sm font-semibold hover:underline">
-                        Set as Default
-                      </button>
-                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
-                        Edit
-                      </button>
-                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* UPI */}
-                <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl border border-black flex items-center justify-center shrink-0">
-                        <div className="text-xl sm:text-2xl font-bold text-[#266000]">€</div>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">UPI</h4>
-                        <p className="text-gray-600 text-xs sm:text-sm">johndoe@paytm</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <button className="text-[#266000] text-xs sm:text-sm font-semibold hover:underline">
-                        Edit
-                      </button>
-                      <button className="text-red-600 text-xs sm:text-sm font-semibold hover:underline">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gray-50 border border-gray-200 rounded-2xl">
-                <h4 className="font-bold text-gray-900 mb-2 text-sm sm:text-base">Payment Security</h4>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  All payment information is encrypted and stored securely. We never share your payment details with third parties.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
       
       case "settings":
         return (

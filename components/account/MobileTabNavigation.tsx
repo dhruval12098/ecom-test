@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Package, MapPin, CreditCard, Settings } from "lucide-react";
+import { User, Package, MapPin, Settings } from "lucide-react";
 
 interface Tab {
   id: string;
@@ -17,7 +17,6 @@ const tabs: Tab[] = [
   { id: "profile", label: "Profile", icon: <User size={18} /> },
   { id: "orders", label: "Orders", icon: <Package size={18} /> },
   { id: "addresses", label: "Addresses", icon: <MapPin size={18} /> },
-  { id: "payment", label: "Payment", icon: <CreditCard size={18} /> },
   { id: "settings", label: "Settings", icon: <Settings size={18} /> }
 ];
 

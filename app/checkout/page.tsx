@@ -73,6 +73,8 @@ function CheckoutPageContent() {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const [deliveryCheckLoading, setDeliveryCheckLoading] = useState(false);
+  const [deliveryCheckError, setDeliveryCheckError] = useState<string | null>(null);
   const paymentLabel =
     paymentMethod === "worldline"
       ? "Worldline"
@@ -406,6 +408,27 @@ function CheckoutPageContent() {
       if (shippingStep === 1) {
         setShippingStep(2);
         return;
+      }
+      try {
+        setDeliveryCheckLoading(true);
+        setDeliveryCheckError(null);
+        const result = await ApiService.validateDeliveryZone({
+          country: shippingInfo.country,
+          city: shippingInfo.city,
+          postal_code: shippingInfo.postalCode
+        });
+        if (!result?.allowed) {
+          setDeliveryCheckError('Delivery is not available in your area.');
+          toast.error('Delivery is not available in your area.');
+          return;
+        }
+      } catch (err: any) {
+        const msg = err?.message || 'Unable to validate delivery area.';
+        setDeliveryCheckError(msg);
+        toast.error(msg);
+        return;
+      } finally {
+        setDeliveryCheckLoading(false);
       }
       setStep(2);
       return;
@@ -1319,13 +1342,17 @@ function CheckoutPageContent() {
                         >
                           Back to Personal
                         </button>
-                        <button
-                          type="submit"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors"
-                        >
-                          Continue to Payment
-                        </button>
-                      </div>
+                          <button
+                            type="submit"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors disabled:opacity-70"
+                            disabled={deliveryCheckLoading}
+                          >
+                            {deliveryCheckLoading ? "Checking delivery..." : "Continue to Payment"}
+                          </button>
+                        </div>
+                        {deliveryCheckError && (
+                          <div className="mt-3 text-sm text-red-600">{deliveryCheckError}</div>
+                        )}
                     </div>
                   </>
                   )}
