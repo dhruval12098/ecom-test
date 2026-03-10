@@ -20,6 +20,7 @@ interface Product {
   weight: string;
   origin: string;
   slug?: string;
+  product_slug?: string;
   category?: string;
   subcategory?: string;
 }
