@@ -49,7 +49,10 @@ function SearchPageInner() {
                   imageUrl: product.imageUrl || product.image_url || product.image || "",
                   category: category.slug,
                   subcategory: subcategory.slug,
-                  slug: product.name?.toLowerCase().replace(/\s+/g, "-")
+                  slug:
+                    product.slug ||
+                    product.product_slug ||
+                    (product.id !== undefined && product.id !== null ? String(product.id) : "")
                 });
               });
             }

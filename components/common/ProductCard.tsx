@@ -65,11 +65,18 @@ export default function ProductCard({
     return Number.isFinite(parsed) ? parsed : undefined;
   };
   // Generate product URL if all required slugs are provided
-  const productUrl = product && product.category && product.subcategory && product.slug
-    ? `/${product.category}/${product.subcategory}/${product.slug}`
-    : (productId && categorySlug && subcategorySlug 
+  const rawSlug = product?.slug !== undefined && product?.slug !== null ? String(product.slug) : null;
+  const safeSlug = rawSlug && !/\s/.test(rawSlug) ? rawSlug : null;
+  const productSlugValue =
+    safeSlug ||
+    (product?.id !== undefined && product?.id !== null ? String(product.id) : null) ||
+    (productId !== undefined && productId !== null ? String(productId) : null);
+  const productUrl =
+    product && product.category && product.subcategory && productSlugValue
+      ? `/${product.category}/${product.subcategory}/${productSlugValue}`
+      : productId && categorySlug && subcategorySlug
         ? `/${categorySlug}/${subcategorySlug}/${productId}`
-        : '#');
+        : "#";
   
   // Use product data if provided, otherwise use props
   const displayTitle = product?.name || title;
@@ -88,7 +95,9 @@ export default function ProductCard({
   const displayImageUrl = product?.imageUrl || imageUrl || "";
 
   // Generate product ID for cart lookup
-  const productIdForCart = product?.id || (typeof productId === 'string' ? parseInt(productId) : productId as number) || Date.now();
+  const productIdForCart =
+    product?.id ||
+    (typeof productId === "string" ? parseInt(productId, 10) : (productId as number));
   
   // Check if item is already in cart
   const isInCart = cartItems.some(item => item.id === productIdForCart);
@@ -113,7 +122,7 @@ export default function ProductCard({
       inStock: product?.inStock !== undefined ? product.inStock : true,
       category: product?.category || categorySlug,
       subcategory: product?.subcategory || subcategorySlug,
-      slug: product?.slug || (typeof productId === 'string' ? productId : undefined)
+      slug: product?.slug || (product?.id !== undefined ? String(product.id) : (typeof productId === "string" ? productId : undefined))
     };
     
     addToCart(cartItem);

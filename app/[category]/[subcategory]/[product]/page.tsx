@@ -1,12 +1,13 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Star, Home, ChevronRight, ShoppingCart, Heart } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
 import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
+import { readCache, writeCache } from "@/lib/storageCache";
 
 interface ProductVariant {
   id: number;
@@ -52,6 +53,7 @@ interface Category {
 }
 
 export default function ProductDetailsPage() {
+  const PRODUCT_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
   const params = useParams();
   const router = useRouter();
   const category = params.category as string;
@@ -71,44 +73,102 @@ export default function ProductDetailsPage() {
     count: 0,
     avg_rating: 0
   });
+  const [missing, setMissing] = useState(false);
 
   const { addToCart } = useCart();
 
   useEffect(() => {
+    const safeDecode = (value: string) => {
+      if (!value.includes('%')) return value;
+      try {
+        return decodeURIComponent(value);
+      } catch {
+        return value;
+      }
+    };
+    const decodedSlug = safeDecode(productSlug);
+    const cacheKey = `product:${category}/${subcategory}/${decodedSlug}`;
+    const cached = readCache<{
+      product: ProductDetails;
+      activeSchedule: any | null;
+      reviewSummary: { count: number; avg_rating: number };
+    }>(cacheKey);
+    const isNumericId = /^[0-9]+$/.test(decodedSlug);
+    const normalizedSlug = decodedSlug
+      ? decodedSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+      : "";
+
+    if (cached?.product) {
+      setProduct(cached.product);
+      setActiveSchedule(cached.activeSchedule ?? null);
+      setReviewSummary(cached.reviewSummary || { count: 0, avg_rating: 0 });
+      if (cached.product.variants && cached.product.variants.length > 0) {
+        setSelectedVariantId(cached.product.variants[0].id);
+      }
+      setLoading(false);
+      setMissing(false);
+    }
+
     const fetchProductData = async () => {
       try {
-        setLoading(true);
-        const foundProduct = await ApiService.getProductBySlug(productSlug);
+        if (!cached) setLoading(true);
+        let foundProduct = null;
+        if (!isNumericId) {
+          foundProduct = await ApiService.getProductBySlug(decodedSlug);
+          if (!foundProduct && normalizedSlug && normalizedSlug !== decodedSlug) {
+            foundProduct = await ApiService.getProductBySlug(normalizedSlug);
+          }
+        }
+        if (!foundProduct && isNumericId) {
+          foundProduct = await ApiService.getProductById(Number(decodedSlug));
+        }
 
         if (!foundProduct) {
-          notFound();
+          if (!cached) setMissing(true);
           return;
         }
 
-        setProduct({
+        const nextProduct = {
           ...foundProduct,
-          slug: foundProduct.slug || productSlug,
+          slug: foundProduct.slug || (foundProduct.id !== undefined ? String(foundProduct.id) : decodedSlug),
           category: foundProduct.category_slug || category,
           subcategory: foundProduct.subcategory_slug || subcategory
-        });
+        };
+        setProduct(nextProduct);
+        let nextReviewSummary = { count: 0, avg_rating: 0 };
         try {
           const reviewsData = await ApiService.getProductReviews(foundProduct.id, { published: true, limit: 1 });
-          setReviewSummary(reviewsData.summary || { count: 0, avg_rating: 0 });
+          nextReviewSummary = reviewsData.summary || nextReviewSummary;
+          setReviewSummary(nextReviewSummary);
         } catch {
-          setReviewSummary({ count: 0, avg_rating: 0 });
+          nextReviewSummary = { count: 0, avg_rating: 0 };
+          setReviewSummary(nextReviewSummary);
         }
         if (foundProduct.variants && foundProduct.variants.length > 0) {
           setSelectedVariantId(foundProduct.variants[0].id);
         }
+        let nextSchedule = null;
         try {
           const schedule = await ApiService.getActiveSchedule(foundProduct.id);
+          nextSchedule = schedule;
           setActiveSchedule(schedule);
         } catch (e) {
+          nextSchedule = null;
           setActiveSchedule(null);
         }
+        setMissing(false);
+        writeCache(
+          cacheKey,
+          {
+            product: nextProduct,
+            activeSchedule: nextSchedule,
+            reviewSummary: nextReviewSummary
+          },
+          PRODUCT_CACHE_TTL
+        );
       } catch (error) {
         console.error("Error fetching product data:", error);
-        notFound();
+        if (!cached) setMissing(true);
       } finally {
         setLoading(false);
       }
@@ -116,6 +176,14 @@ export default function ProductDetailsPage() {
 
     fetchProductData();
   }, [category, subcategory, productSlug]);
+
+  if (missing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl font-bold">Product not found</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

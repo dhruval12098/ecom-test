@@ -42,6 +42,20 @@ interface Category {
 }
 
 export default function Header() {
+  const getApiCache = <T,>(key: string): T | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(`tulsi_cache:api:${key}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed.expiresAt !== 'number') return null;
+      if (Date.now() > parsed.expiresAt) return null;
+      return parsed.data ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   const [showAll, setShowAll] = useState(false);
   const [columnsPerRow, setColumnsPerRow] = useState(6);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -73,6 +87,12 @@ export default function Header() {
         setLoading(false);
       }
     };
+
+    const cached = getApiCache<Category[]>('categories');
+    if (cached && cached.length > 0) {
+      setCategories(cached);
+      setLoading(false);
+    }
 
     fetchCategories();
   }, []);

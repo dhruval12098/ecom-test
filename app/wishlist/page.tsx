@@ -212,7 +212,7 @@ export default function WishlistPage() {
                     </button>
                     
                     <Link 
-                      href={`/${item.category}/${item.subcategory}/${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                      href={`/${item.category}/${item.subcategory}/${String(item.id)}`}
                       className="flex-1 flex items-center justify-center py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                     >
                       View

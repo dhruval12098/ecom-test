@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle, Star } from "lucide-react";
+import { CreditCard, MapPin, Package, Truck, ShieldCheck, CheckCircle, ArrowLeft, User, Mail, Phone, Building, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
@@ -10,7 +10,7 @@ import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 import { toast } from "sonner";
 
-type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Payment, 3: Review, 4: Confirmation
+type CheckoutStep = 1 | 2 | 3 | 4; // 1: Shipping, 2: Review, 3: Payment, 4: Confirmation
 
 function CheckoutPageContent() {
   const { cartItems, clearCart } = useCart();
@@ -26,16 +26,14 @@ function CheckoutPageContent() {
   const [confirmedTotal, setConfirmedTotal] = useState<number | null>(null);
   const [createdOrderId, setCreatedOrderId] = useState<number | null>(null);
   const [createdOrderItems, setCreatedOrderItems] = useState<any[]>([]);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewItemId, setReviewItemId] = useState<number | null>(null);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [reviewDelayPassed, setReviewDelayPassed] = useState(false);
   const [isReturnFlow, setIsReturnFlow] = useState(false);
   const [returnChecked, setReturnChecked] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [orderAcceptDays, setOrderAcceptDays] = useState<string[]>([]);
+  const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
+  const [deliveryTimeRange, setDeliveryTimeRange] = useState<any | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -152,6 +150,13 @@ function CheckoutPageContent() {
         const raw = settings?.excluded_free_shipping_category_ids || [];
         const parsed = Array.isArray(raw) ? raw : [];
         setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
+        setScheduleEnabled(Boolean(settings?.delivery_schedule_enabled));
+        const acceptRaw = Array.isArray(settings?.order_accept_days) ? settings.order_accept_days : [];
+        const deliveryRaw = Array.isArray(settings?.delivery_days) ? settings.delivery_days : [];
+        setOrderAcceptDays(acceptRaw.map((d: any) => String(d)));
+        setDeliveryDays(deliveryRaw.map((d: any) => String(d)));
+        const range = settings?.delivery_time_blocks || null;
+        setDeliveryTimeRange(range);
       } catch {
         setTaxRate(5);
       }
@@ -256,9 +261,39 @@ function CheckoutPageContent() {
   })();
   const discountTotal = orderDiscount + couponDiscount;
   const taxableAmount = Math.max(0, subtotal - discountTotal);
-  const tax = taxableAmount * (taxRate / 100);
+  const tax = (() => {
+    if (subtotal <= 0) return 0;
+    return displayItems.reduce((sum, item) => {
+      const live = liveMap[item.id];
+      const rawRate = live?.tax_percent ?? live?.taxPercent ?? item.tax_percent ?? item.taxPercent ?? null;
+      const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+      const itemSubtotal = item.price * item.quantity;
+      const discountShare = subtotal > 0 ? (discountTotal * (itemSubtotal / subtotal)) : 0;
+      const itemTaxable = Math.max(0, itemSubtotal - discountShare);
+      return sum + itemTaxable * (rate / 100);
+    }, 0);
+  })();
+  const taxLabel = (() => {
+    const rates = displayItems.map((item) => {
+      const live = liveMap[item.id];
+      const rawRate = live?.tax_percent ?? live?.taxPercent ?? item.tax_percent ?? item.taxPercent ?? null;
+      const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+      return Number.isFinite(rate) ? rate : Number(taxRate);
+    });
+    if (rates.length === 0) return `Tax (VAT ${taxRate}%)`;
+    const first = rates[0];
+    const allSame = rates.every((r) => Math.abs(r - first) < 0.0001);
+    if (allSame) return `Tax (VAT ${first}%)`;
+    return 'Tax (mixed rates)';
+  })();
   const total = subtotal + shippingCost - discountTotal + tax;
   const displayTotal = confirmedTotal ?? total;
+  const scheduleDeliveryDays = deliveryDays.length > 0 ? deliveryDays : orderAcceptDays;
+  const scheduleAcceptLabel = orderAcceptDays.length ? orderAcceptDays.join(", ") : "Daily";
+  const scheduleDeliveryLabel = scheduleDeliveryDays.length ? scheduleDeliveryDays.join(", ") : "Daily";
+  const scheduleWindowLabel = deliveryTimeRange?.from && deliveryTimeRange?.to
+    ? `${String(deliveryTimeRange.from.hour).padStart(2, '0')}:${String(deliveryTimeRange.from.minute).padStart(2, '0')} ${deliveryTimeRange.from.meridiem} - ${String(deliveryTimeRange.to.hour).padStart(2, '0')}:${String(deliveryTimeRange.to.minute).padStart(2, '0')} ${deliveryTimeRange.to.meridiem}`
+    : "Time slots announced at checkout";
 
   const applyCoupon = async () => {
     const code = couponCode.trim().toUpperCase();
@@ -453,7 +488,7 @@ function CheckoutPageContent() {
           shipping_fee: shippingCost,
           tax_amount: tax,
           discount_amount: discountTotal,
-          coupon_code: appliedCoupon?.code || (couponCode.trim() ? couponCode.trim().toUpperCase() : null),
+          coupon_code: appliedCoupon?.code ? String(appliedCoupon.code).trim() : null,
           total_amount: total,
           status: 'Pending',
           items: displayItems.map((item) => ({
@@ -509,15 +544,6 @@ function CheckoutPageContent() {
         setStep(4);
         toast.success("Order placed");
 
-        if (user && (result?.items || []).length > 0) {
-          const firstItem = result.items[0];
-          setReviewItemId(Number(firstItem?.id || 0) || null);
-          setReviewDelayPassed(false);
-          setTimeout(() => {
-            setReviewDelayPassed(true);
-            setShowReviewModal(true);
-          }, 1800);
-        }
 
         setTimeout(() => {
           if (!isBuyNow && clearCart) clearCart();
@@ -526,8 +552,16 @@ function CheckoutPageContent() {
           }
         }, 1000);
       } catch (error) {
+        const message =
+          error instanceof Error && error.message
+            ? error.message.replace(/^HTTP error! status: \d+\s*-?\s*/i, "")
+            : "Please try again.";
+        if (message.toLowerCase().includes("coupon")) {
+          setCouponError(message);
+          setAppliedCoupon(null);
+        }
         toast.error("Failed to place order", {
-          description: "Please try again.",
+          description: message || "Please try again.",
         });
       } finally {
         setIsSubmitting(false);
@@ -667,8 +701,8 @@ function CheckoutPageContent() {
                 </div>
               </div>
               
-              {/* Information Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* Information Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <div className="bg-white border border-black rounded-2xl p-6 text-left">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 bg-gray-50 border border-black rounded-full flex items-center justify-center">
@@ -717,124 +751,6 @@ function CheckoutPageContent() {
                 </p>
               </div>
 
-              {showReviewModal && user && reviewDelayPassed && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-                  <div className="bg-white w-full max-w-xl rounded-2xl p-6 shadow-2xl border border-black">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">Leave a Review</h3>
-                        <p className="text-xs text-gray-600">Verified purchase</p>
-                      </div>
-                      <button
-                        onClick={() => setShowReviewModal(false)}
-                        className="text-gray-500 hover:text-gray-900"
-                      >
-                        ?
-                      </button>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
-                          Purchased items
-                        </label>
-                        <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto pr-1">
-                          {(createdOrderItems || []).map((item: any) => {
-                            const selected = Number(reviewItemId) === Number(item.id);
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={() => setReviewItemId(Number(item.id))}
-                                className={`text-left border rounded-full px-3 py-1 text-xs transition-colors ${
-                                  selected
-                                    ? "border-[#266000] bg-green-50 text-[#266000]"
-                                    : "border-gray-200 bg-white hover:border-[#266000] text-gray-700"
-                                }`}
-                              >
-                                {item.product_name} • Qty {item.quantity || 1}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
-                          Rating
-                        </label>
-                        <div className="flex items-center justify-center gap-2">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              onClick={() => setReviewRating(star)}
-                              className="p-1"
-                            >
-                              <Star
-                                className={`w-6 h-6 ${
-                                  reviewRating >= star
-                                    ? "text-yellow-400 fill-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2 text-center">
-                          Review
-                        </label>
-                        <textarea
-                          value={reviewText}
-                          onChange={(e) => setReviewText(e.target.value)}
-                          rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                          placeholder="Share your experience..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
-                      <button
-                        onClick={() => setShowReviewModal(false)}
-                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm"
-                      >
-                        Skip
-                      </button>
-                      <button
-                        disabled={reviewSubmitting || !reviewItemId}
-                        onClick={async () => {
-                          if (!reviewItemId || !createdOrderId) return;
-                          try {
-                            setReviewSubmitting(true);
-                            const item = (createdOrderItems || []).find((i: any) => Number(i.id) === Number(reviewItemId));
-                            await ApiService.submitProductReview({
-                              auth_user_id: user.id,
-                              product_id: item?.product_id,
-                              order_id: createdOrderId,
-                              order_item_id: reviewItemId,
-                              rating: reviewRating,
-                              review_text: reviewText
-                            });
-                            toast.success("Review submitted");
-                            setShowReviewModal(false);
-                          } catch (e: any) {
-                            toast.error(e?.message || "Failed to submit review");
-                          } finally {
-                            setReviewSubmitting(false);
-                          }
-                        }}
-                        className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
-                      >
-                        {reviewSubmitting ? "Submitting..." : "Submit Review"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </section>
@@ -900,27 +816,27 @@ function CheckoutPageContent() {
               </span>
             </div>
 
-            {/* Step 3: Payment */}
+            {/* Step 3: Review */}
             <div className={`flex flex-col items-center relative z-10 ${effectiveStep >= 3 ? 'text-[#266000]' : 'text-gray-400'}`}>
               <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm ${
                 effectiveStep > 3 ? 'bg-[#266000] text-white' : effectiveStep === 3 ? 'bg-white text-[#266000] ring-2 ring-[#266000]' : 'bg-white text-gray-400'
               }`}>
-                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
+                <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <span className="text-xs md:text-sm font-semibold">Payment</span>
+              <span className="text-xs md:text-sm font-semibold">Review</span>
               <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-gray-400">
                 {effectiveStep === 3 ? 'In Progress' : effectiveStep > 3 ? 'Completed' : 'Upcoming'}
               </span>
             </div>
 
-            {/* Step 4: Review */}
+            {/* Step 4: Payment */}
             <div className={`flex flex-col items-center relative z-10 ${effectiveStep >= 4 ? 'text-[#266000]' : 'text-gray-400'}`}>
               <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-2 transition-all duration-300 shadow-sm ${
                 effectiveStep > 4 ? 'bg-[#266000] text-white' : effectiveStep === 4 ? 'bg-white text-[#266000] ring-2 ring-[#266000]' : 'bg-white text-gray-400'
               }`}>
-                <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <span className="text-xs md:text-sm font-semibold">Review</span>
+              <span className="text-xs md:text-sm font-semibold">Payment</span>
               <span className="text-[10px] md:text-[11px] font-medium uppercase tracking-wide text-gray-400">
                 {effectiveStep === 4 ? 'In Progress' : effectiveStep > 4 ? 'Completed' : 'Upcoming'}
               </span>
@@ -1270,12 +1186,26 @@ function CheckoutPageContent() {
                           </div>
                         </>
                       )}
-                    </div>
-                    
-                    {/* Delivery Notes */}
-                    <div className="mb-6">
-                      <label htmlFor="deliveryNotes" className="block text-sm font-semibold text-gray-900 mb-2">
-                        Delivery Instructions (Optional)
+                      </div>
+                      
+                      {scheduleEnabled && (
+                        <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                          <div className="flex items-start gap-3">
+                            <Truck className="h-5 w-5 text-emerald-700 mt-0.5" />
+                            <div className="text-sm text-emerald-900">
+                              <p className="font-semibold mb-1">Delivery Schedule</p>
+                              <p>Order acceptance: {scheduleAcceptLabel}</p>
+                              <p>Delivery days: {scheduleDeliveryLabel}</p>
+                              <p>Delivery window: {scheduleWindowLabel}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delivery Notes */}
+                      <div className="mb-6">
+                        <label htmlFor="deliveryNotes" className="block text-sm font-semibold text-gray-900 mb-2">
+                          Delivery Instructions (Optional)
                       </label>
                       <textarea
                         id="deliveryNotes"
@@ -1333,34 +1263,42 @@ function CheckoutPageContent() {
                       </div>
                     </div>
                     
-                    <div className="flex justify-end">
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setShippingStep(1)}
-                          className="bg-white border border-black hover:border-[#266000] text-gray-900 py-3 px-6 rounded-xl font-bold text-sm md:text-base transition-colors"
-                        >
-                          Back to Personal
-                        </button>
+                      <div className="flex justify-end">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShippingStep(1)}
+                            className="bg-white border border-black hover:border-[#266000] text-gray-900 py-3 px-6 rounded-xl font-bold text-sm md:text-base transition-colors"
+                          >
+                            Back to Personal
+                          </button>
                           <button
                             type="submit"
                             className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors disabled:opacity-70"
                             disabled={deliveryCheckLoading}
                           >
-                            {deliveryCheckLoading ? "Checking delivery..." : "Continue to Payment"}
+                              {deliveryCheckLoading ? "Checking delivery..." : "Continue to Review"}
                           </button>
                         </div>
-                        {deliveryCheckError && (
-                          <div className="mt-3 text-sm text-red-600">{deliveryCheckError}</div>
-                        )}
-                    </div>
+                      </div>
+                      {deliveryCheckError && (
+                        <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                          <div className="flex items-start gap-3 text-red-800">
+                            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                            <div className="text-sm">
+                              <p className="font-semibold">Delivery Unavailable</p>
+                              <p>{deliveryCheckError}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                   </>
                   )}
                   </div>
                 )}
 
-                {/* STEP 2: Payment Method */}
-                {step === 2 && (
+                {/* STEP 3: Payment Method */}
+                {step === 3 && (
                   <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:p-4">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                       <div className="w-10 h-10 bg-gray-50 border border-black rounded-full flex items-center justify-center">
@@ -1439,14 +1377,14 @@ function CheckoutPageContent() {
                         type="submit"
                         className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors order-1 sm:order-2"
                       >
-                        Review Order
+                        Place Order
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* STEP 3: Review Order */}
-                {step === 3 && (
+                {/* STEP 2: Review Order */}
+                {step === 2 && (
                   <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:p-4">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                       <div className="w-10 h-10 bg-gray-50 border border-black rounded-full flex items-center justify-center">
@@ -1481,24 +1419,32 @@ function CheckoutPageContent() {
                         <p className="pt-2">{shippingInfo.email}</p>
                         <p>{shippingInfo.phone}</p>
                       </div>
+                      {scheduleEnabled && (
+                        <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                          <p className="font-semibold mb-1">Delivery Schedule</p>
+                          <p>Order acceptance: {scheduleAcceptLabel}</p>
+                          <p>Delivery days: {scheduleDeliveryLabel}</p>
+                          <p>Delivery window: {scheduleWindowLabel}</p>
+                        </div>
+                      )}
                     </div>
                     
-                    {/* Payment Method Summary */}
-                    <div className="mb-6 bg-gray-50 border border-black rounded-xl p-4 md:p-6 lg:p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-[#266000]" />
-                          Payment Method
-                        </h3>
-                        <button
-                          type="button"
-                          onClick={() => setStep(2)}
-                          className="text-[#266000] text-sm font-semibold hover:underline"
-                        >
-                          Edit
-                        </button>
-                      </div>
-                      <p className="text-gray-700 font-semibold capitalize text-sm">
+                      {/* Payment Method Summary */}
+                      <div className="mb-6 bg-gray-50 border border-black rounded-xl p-4 md:p-6 lg:p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-[#266000]" />
+                            Payment Method
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => setStep(3)}
+                            className="text-[#266000] text-sm font-semibold hover:underline"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                        <p className="text-gray-700 font-semibold capitalize text-sm">
                         {paymentLabel}
                       </p>
                     </div>
@@ -1640,7 +1586,7 @@ function CheckoutPageContent() {
                             )}
                             
                             <div className="flex justify-between text-sm text-gray-600">
-                              <span>Tax (VAT {taxRate}%)</span>
+                              <span>{taxLabel}</span>
                               <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                             </div>
                             
@@ -1659,15 +1605,14 @@ function CheckoutPageContent() {
                         onClick={() => setStep(2)}
                         className="bg-white border border-black hover:border-[#266000] text-gray-900 py-3 px-6 rounded-xl font-bold text-sm md:text-base transition-colors order-2 sm:order-1"
                       >
-                        Back to Payment
+                        Back to Review
                       </button>
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={() => setStep(3)}
                         className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                        disabled={isSubmitting}
                       >
-                        <ShieldCheck className="h-5 w-5" />
-                        {isSubmitting ? "Placing..." : "Place Order"}
+                        Continue to Payment
                       </button>
                     </div>
                   </div>
@@ -1675,7 +1620,7 @@ function CheckoutPageContent() {
               </div>
               
               {/* Order Summary Sidebar */}
-              {step === 3 && (
+              {step === 2 && (
               <div className="lg:col-span-1 hidden lg:block">
                 <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:p-4 lg:sticky lg:top-6">
                   <h2 className="text-xl font-bold text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
@@ -1768,7 +1713,7 @@ function CheckoutPageContent() {
                       )}
                       
                       <div className="flex justify-between text-sm text-gray-600">
-                        <span>Tax (VAT {taxRate}%)</span>
+                      <span>{taxLabel}</span>
                         <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                       </div>
                       
@@ -1799,6 +1744,7 @@ function CheckoutPageContent() {
                     </div>
                   </div>
                 </div>
+
               </div>
               )}
             </div>

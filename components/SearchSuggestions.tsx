@@ -70,12 +70,21 @@ const SearchSuggestions = ({
         category.subcategories.forEach(subcategory => {
           if (subcategory.products) {
             products.push(
-              ...subcategory.products.map((p) => ({
-                ...p,
-                slug: p.name?.toLowerCase().replace(/\s+/g, "-"),
-                category: category.slug,
-                subcategory: subcategory.slug
-              }))
+              ...subcategory.products.map((p) => {
+                const rawSlug =
+                  p.slug ||
+                  p.product_slug ||
+                  "";
+                const safeSlug = rawSlug && !/\s/.test(String(rawSlug))
+                  ? String(rawSlug)
+                  : (p.id !== undefined && p.id !== null ? String(p.id) : "");
+                return ({
+                  ...p,
+                  slug: safeSlug,
+                  category: category.slug,
+                  subcategory: subcategory.slug
+                });
+              })
             );
           }
         });
@@ -91,12 +100,21 @@ const SearchSuggestions = ({
             category.subcategories.forEach(subcategory => {
               if (subcategory.products) {
                 products.push(
-                  ...subcategory.products.map((p) => ({
-                    ...p,
-                    slug: p.name?.toLowerCase().replace(/\s+/g, "-"),
-                    category: category.slug,
-                    subcategory: subcategory.slug
-                  }))
+                  ...subcategory.products.map((p) => {
+                    const rawSlug =
+                      p.slug ||
+                      p.product_slug ||
+                      "";
+                    const safeSlug = rawSlug && !/\s/.test(String(rawSlug))
+                      ? String(rawSlug)
+                      : (p.id !== undefined && p.id !== null ? String(p.id) : "");
+                    return ({
+                      ...p,
+                      slug: safeSlug,
+                      category: category.slug,
+                      subcategory: subcategory.slug
+                    });
+                  })
                 );
               }
             });

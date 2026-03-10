@@ -12,6 +12,7 @@ import WelcomeSection from "@/components/home/WelcomeSection";
 import MainCategories from "@/components/home/MainCategories";
 import FAQ from "@/components/common/FAQ";
 import ApiService from "@/lib/api";
+import { readCache, writeCache } from "@/lib/storageCache";
 
 interface Product {
   id: number;
@@ -64,6 +65,9 @@ interface ApiHeroSlide {
 }
 
 export default function HeroSection() {
+  const HOME_CACHE_KEY = "home:v1";
+  const HOME_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
+
   const [active, setActive] = useState(0);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
   const [isMobile, setIsMobile] = useState(false);
@@ -82,10 +86,31 @@ export default function HeroSection() {
   const newArrivalsRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
+    const cached = readCache<{
+      heroSlides: HeroSlide[];
+      newArrivals: Product[];
+      bestDeals: Product[];
+      topSellers: CategoryProduct[];
+      newArrivalsProducts: CategoryProduct[];
+      bestDealsProducts: CategoryProduct[];
+      currentTrends: TrendItem[];
+    }>(HOME_CACHE_KEY);
+
+    if (cached) {
+      setHeroSlides(cached.heroSlides || []);
+      setNewArrivals(cached.newArrivals || []);
+      setBestDeals(cached.bestDeals || []);
+      setTopSellers(cached.topSellers || []);
+      setNewArrivalsProducts(cached.newArrivalsProducts || []);
+      setBestDealsProducts(cached.bestDealsProducts || []);
+      setCurrentTrends(cached.currentTrends || []);
+      setLoading(false);
+    }
+
     // Fetch data from backend API
     const fetchData = async () => {
       try {
-        setLoading(true);
+        if (!cached) setLoading(true);
         setError(null);
         
         // Fetch hero slides from backend API
@@ -136,11 +161,15 @@ export default function HeroSection() {
           category.subcategories.forEach((subcategory: any) => {
             if (subcategory.products && Array.isArray(subcategory.products)) {
               subcategory.products.forEach((product: any) => {
+                const normalizedSlug =
+                  product.slug ||
+                  product.product_slug ||
+                  (product.id !== undefined && product.id !== null ? String(product.id) : null);
                 allProducts.push({
                   ...product,
                   category: category.slug,
                   subcategory: subcategory.slug,
-                  slug: product.name.toLowerCase().replace(/\s+/g, '-')
+                  slug: normalizedSlug || ""
                 });
               });
             }
@@ -154,6 +183,7 @@ export default function HeroSection() {
         
         // Helper function to pick products consistently (no randomization)
         const pickConsistentProducts = (products: CategoryProduct[], count: number): CategoryProduct[] => {
+          if (!products || products.length === 0) return [];
           if (products.length >= count) {
             // Enough products, take first 'count' items in order
             return products.slice(0, count);
@@ -190,17 +220,36 @@ export default function HeroSection() {
         const newSectionProducts = mapSectionProducts(newSection);
 
         // Select 6 products for each section consistently (fallback if section is empty)
-        setTopSellers(topSectionProducts.length ? topSectionProducts : pickConsistentProducts(allProducts, 6));
-        setNewArrivalsProducts(newSectionProducts.length ? newSectionProducts : pickConsistentProducts(allProducts, 6));
-        setBestDealsProducts(bestSectionProducts.length ? bestSectionProducts : pickConsistentProducts(allProducts, 6));
+        const nextTop = topSectionProducts.length ? topSectionProducts : pickConsistentProducts(allProducts, 6);
+        const nextNew = newSectionProducts.length ? newSectionProducts : pickConsistentProducts(allProducts, 6);
+        const nextBest = bestSectionProducts.length ? bestSectionProducts : pickConsistentProducts(allProducts, 6);
+
+        setTopSellers(nextTop);
+        setNewArrivalsProducts(nextNew);
+        setBestDealsProducts(nextBest);
         
         console.log('Top sellers count:', pickConsistentProducts(allProducts, 6).length);
         console.log('New arrivals count:', pickConsistentProducts(allProducts, 6).length);
         console.log('Best deals count:', pickConsistentProducts(allProducts, 6).length);
         
+        writeCache(
+          HOME_CACHE_KEY,
+          {
+            heroSlides: transformedHeroSlides,
+            newArrivals: newArrivalsData,
+            bestDeals: bestDealsData,
+            topSellers: nextTop,
+            newArrivalsProducts: nextNew,
+            bestDealsProducts: nextBest,
+            currentTrends: transformedTrends
+          },
+          HOME_CACHE_TTL
+        );
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        if (!cached) {
+          setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        }
       } finally {
         setLoading(false);
       }
@@ -343,7 +392,7 @@ export default function HeroSection() {
       )}
       {/* ================= HERO SECTION ================= */}
         <section className="w-full min-h-[70vh] sm:h-screen flex flex-col justify-center items-center bg-white fade-in">
-          <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-[16px] sm:rounded-[28px] overflow-hidden">
+          <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-2xl sm:rounded-[28px] overflow-hidden">
           {heroSlides.map((slide: HeroSlide, index: number) => (
             <div
               key={slide.id}

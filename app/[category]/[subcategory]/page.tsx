@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { notFound, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import ProductCard from "@/components/common/ProductCard";
 import { Home, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import ApiService from "@/lib/api";
+import { readCache, writeCache } from "@/lib/storageCache";
 
 interface Product {
   id: number;
@@ -42,21 +43,36 @@ interface Category {
 }
 
 export default function SubcategoryPage() {
+  const SUBCATEGORY_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
   const params = useParams();
   const category = params.category as string;
   const subcategory = params.subcategory as string;
-  
   const [categoryData, setCategoryData] = useState<Category | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [missing, setMissing] = useState(false);
 
   useEffect(() => {
+    const cacheKey = `subcategory:${category}/${subcategory}`;
+    const cached = readCache<{
+      categoryData: Category;
+      products: Product[];
+    }>(cacheKey);
+    if (cached?.categoryData) {
+      setCategoryData(cached.categoryData);
+      setProducts(cached.products || []);
+      setLoading(false);
+      setMissing(false);
+    }
+
     const fetchCategoryData = async () => {
       try {
+        if (!cached) setLoading(true);
         const categories: Category[] = await ApiService.getCategories();
         
         const foundCategory = categories.find(cat => cat.slug === category);
         if (!foundCategory) {
-          notFound();
+          if (!cached) setMissing(true);
           return;
         }
         
@@ -65,10 +81,15 @@ export default function SubcategoryPage() {
         // Find the specific subcategory and get its products
         const subcategoryData = foundCategory.subcategories.find(sub => sub.slug === subcategory);
         if (subcategoryData) {
-          const productsWithSlugs = subcategoryData.products.map((product: any) => ({
+          const productsWithSlugs = subcategoryData.products.map((product: any) => {
+            const normalizedSlug =
+              product.slug ||
+              product.product_slug ||
+              (product.id !== undefined && product.id !== null ? String(product.id) : null);
+            return ({
             id: product.id,
             name: product.name,
-            slug: product.slug || product.name?.toLowerCase().replace(/\s+/g, '-'),
+            slug: normalizedSlug || "",
             category: foundCategory.slug,
             subcategory: subcategoryData.slug,
             price: Number(product.price || 0),
@@ -88,7 +109,8 @@ export default function SubcategoryPage() {
             inStock: product.inStock ?? product.in_stock ?? true,
             weight: product.weight || '',
             origin: product.origin || ''
-          }));
+          });
+        });
           const schedules = await Promise.all(
             productsWithSlugs.map((product) => ApiService.getActiveSchedule(product.id))
           );
@@ -122,17 +144,44 @@ export default function SubcategoryPage() {
             };
           });
           setProducts(productsWithSchedules);
+          setMissing(false);
+          writeCache(
+            cacheKey,
+            { categoryData: foundCategory, products: productsWithSchedules },
+            SUBCATEGORY_CACHE_TTL
+          );
+        } else {
+          if (!cached) setMissing(true);
         }
       } catch (error) {
         console.error("Error fetching category data:", error);
-        notFound();
+        if (!cached) setMissing(true);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchCategoryData();
   }, [category, subcategory]);
 
-  if (!categoryData) {
+  if (missing) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+          <div className="text-2xl font-bold text-gray-900 mb-2">Subcategory Not Found</div>
+          <div className="text-gray-600 mb-6">Please choose another subcategory.</div>
+          <Link
+            href={`/${category}`}
+            className="inline-flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg font-semibold"
+          >
+            Back to Category
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !categoryData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-10">
@@ -150,6 +199,10 @@ export default function SubcategoryPage() {
         </div>
       </div>
     );
+  }
+
+  if (!categoryData) {
+    return null;
   }
 
   const currentSubcategory = categoryData.subcategories.find(sub => sub.slug === subcategory);
