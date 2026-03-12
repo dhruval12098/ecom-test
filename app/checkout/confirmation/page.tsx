@@ -20,9 +20,11 @@ function CheckoutConfirmationContent() {
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewerName, setReviewerName] = useState("");
   const [reviewerEmail, setReviewerEmail] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [paymentPending, setPaymentPending] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -35,8 +37,14 @@ function CheckoutConfirmationContent() {
     (async () => {
       try {
         setIsLoading(true);
-        await ApiService.getWorldlineCheckoutStatus(orderId);
-        const orderData = await ApiService.getOrderById(orderId);
+        const statusPromise = ApiService.getWorldlineCheckoutStatus(orderId).catch(() => null);
+        const orderPromise = ApiService.getOrderById(orderId);
+        const timeout = new Promise((resolve) => setTimeout(() => resolve("timeout"), 4000));
+        const statusResult = await Promise.race([statusPromise, timeout]);
+        if (statusResult === "timeout") {
+          setPaymentPending(true);
+        }
+        const orderData = await orderPromise;
         const rawOrder = orderData?.order_code || orderData?.order_number || "";
         setOrderNumber(String(rawOrder || orderId));
         setTotalAmount(Number(orderData?.total_amount || 0));
@@ -105,6 +113,11 @@ function CheckoutConfirmationContent() {
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Order Confirmed</h1>
                 <p className="text-sm text-gray-600 mt-2">Thank you for your purchase.</p>
+                {paymentPending && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Payment confirmation is taking longer than usual. Your order is saved and will update shortly.
+                  </p>
+                )}
               </div>
               <div className="text-sm text-gray-700 bg-gray-50 border border-black rounded-2xl px-4 py-3">
                 <div>Order: <span className="font-semibold">{orderNumber || "-"}</span></div>
@@ -154,45 +167,54 @@ function CheckoutConfirmationContent() {
                         </button>
                       ))}
                     </div>
-                    <textarea
-                      value={reviewText}
-                      onChange={(e) => setReviewText(e.target.value)}
-                      placeholder="Share your experience..."
-                      rows={3}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#266000]"
-                    />
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        disabled={reviewSubmitting || !reviewItemId}
-                        onClick={async () => {
-                          if (!reviewItemId || !orderIdParam) return;
-                          try {
-                            setReviewSubmitting(true);
-                            const item = orderItems.find((i: any) => Number(i.id) === Number(reviewItemId));
-                            await ApiService.submitProductReview({
-                              auth_user_id: user?.id || null,
-                              product_id: item?.product_id,
-                              order_id: Number(orderIdParam),
-                              order_item_id: reviewItemId,
-                              reviewer_name: reviewerName || null,
-                              reviewer_email: reviewerEmail || null,
-                              rating: reviewRating,
-                              review_text: reviewText
-                            });
-                            toast.success("Review submitted");
-                            setReviewText("");
-                          } catch (e: any) {
-                            toast.error(e?.message || "Failed to submit review");
-                          } finally {
-                            setReviewSubmitting(false);
-                          }
-                        }}
-                        className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
-                      >
-                        {reviewSubmitting ? "Submitting..." : "Submit Review"}
-                      </button>
-                    </div>
+                    {reviewSubmitted ? (
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                        Review submitted. Thank you!
+                      </div>
+                    ) : (
+                      <>
+                        <textarea
+                          value={reviewText}
+                          onChange={(e) => setReviewText(e.target.value)}
+                          placeholder="Share your experience..."
+                          rows={3}
+                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#266000]"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            disabled={reviewSubmitting || !reviewItemId}
+                            onClick={async () => {
+                              if (!reviewItemId || !orderIdParam) return;
+                              try {
+                                setReviewSubmitting(true);
+                                const item = orderItems.find((i: any) => Number(i.id) === Number(reviewItemId));
+                                await ApiService.submitProductReview({
+                                  auth_user_id: user?.id || null,
+                                  product_id: item?.product_id,
+                                  order_id: Number(orderIdParam),
+                                  order_item_id: reviewItemId,
+                                  reviewer_name: reviewerName || null,
+                                  reviewer_email: reviewerEmail || null,
+                                  rating: reviewRating,
+                                  review_text: reviewText
+                                });
+                                toast.success("Review submitted");
+                                setReviewSubmitted(true);
+                                setReviewText("");
+                              } catch (e: any) {
+                                toast.error(e?.message || "Failed to submit review");
+                              } finally {
+                                setReviewSubmitting(false);
+                              }
+                            }}
+                            className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
+                          >
+                            {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

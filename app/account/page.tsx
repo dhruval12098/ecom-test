@@ -78,6 +78,17 @@ function AccountPageInner() {
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
+
+  const handleLogout = async () => {
+    if (!window.confirm("Are you sure you want to log out?")) return;
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out");
+      router.replace("/login");
+    } catch (e) {
+      toast.error("Failed to log out");
+    }
+  };
   const [addressForm, setAddressForm] = useState({
     label: "",
     first_name: "",
@@ -679,15 +690,7 @@ function AccountPageInner() {
                     <p className="text-xs sm:text-sm text-gray-600">Sign out from this device</p>
                   </div>
                   <button
-                    onClick={async () => {
-                      try {
-                        await supabase.auth.signOut();
-                        toast.success("Logged out");
-                        router.replace("/login");
-                      } catch (e) {
-                        toast.error("Failed to log out");
-                      }
-                    }}
+                    onClick={handleLogout}
                     className="bg-white border border-black text-gray-900 px-5 sm:px-6 py-2 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
                   >
                     Log out
@@ -808,7 +811,8 @@ function AccountPageInner() {
           <DesktopSidebar 
             activeTab={activeTab} 
             onTabChange={setActiveTab} 
-            user={user} 
+            user={user}
+            onLogout={handleLogout}
           />
           
           {/* Main Content */}

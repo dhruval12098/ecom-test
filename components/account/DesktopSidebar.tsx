@@ -12,6 +12,7 @@ interface DesktopSidebarProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
   user: User;
+  onLogout: () => void;
 }
 
 const menuItems = [
@@ -21,7 +22,7 @@ const menuItems = [
   { id: "settings", label: "Settings", icon: <Settings size={18} /> }
 ];
 
-export default function DesktopSidebar({ activeTab, onTabChange, user }: DesktopSidebarProps) {
+export default function DesktopSidebar({ activeTab, onTabChange, user, onLogout }: DesktopSidebarProps) {
   return (
     <div className="hidden lg:block lg:col-span-1">
       <div className="bg-white border border-black rounded-2xl p-6 sticky top-6">
@@ -56,7 +57,11 @@ export default function DesktopSidebar({ activeTab, onTabChange, user }: Desktop
             </button>
           ))}
           
-          <button className="w-full flex items-center px-4 py-3 rounded-xl text-left text-red-600 hover:bg-red-50 font-semibold border-2 border-transparent transition-colors mt-4">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="w-full flex items-center px-4 py-3 rounded-xl text-left text-red-600 hover:bg-red-50 font-semibold border-2 border-transparent transition-colors mt-4"
+          >
             <LogOut className="mr-3" size={18} />
             Logout
           </button>

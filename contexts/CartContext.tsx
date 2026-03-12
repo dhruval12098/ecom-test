@@ -25,8 +25,8 @@ interface CartItem {
 interface CartContextType {
   cartItems: CartItem[];
   addToCart: (item: Omit<CartItem, 'quantity'>, showNotification?: boolean) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeFromCart: (id: number, variantId?: number | null) => void;
+  updateQuantity: (id: number, quantity: number, variantId?: number | null) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -74,14 +74,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cartItems]);
 
+  const normalizeVariantId = (variantId?: number | null) =>
+    variantId === undefined ? null : variantId;
+
+  const isSameCartLine = (a: CartItem, b: { id: number; variantId?: number | null }) =>
+    a.id === b.id && normalizeVariantId(a.variantId) === normalizeVariantId(b.variantId);
+
   const addToCart = (item: Omit<CartItem, 'quantity'>, showNotification: boolean = true) => {
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(cartItem => cartItem.id === item.id);
+      const existingItem = prevItems.find(cartItem => isSameCartLine(cartItem, item));
       
       if (existingItem) {
         // If item exists, increase quantity
         const updatedItems = prevItems.map(cartItem =>
-          cartItem.id === item.id
+          isSameCartLine(cartItem, item)
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
@@ -118,9 +124,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const removeFromCart = (id: number) => {
-    const itemToRemove = cartItems.find(item => item.id === id);
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  const removeFromCart = (id: number, variantId?: number | null) => {
+    const itemToRemove = cartItems.find(item => isSameCartLine(item, { id, variantId }));
+    setCartItems(prevItems => prevItems.filter(item => !isSameCartLine(item, { id, variantId })));
     
     if (itemToRemove) {
       toast.info(`${itemToRemove.name} removed from cart`, {
@@ -130,16 +136,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (id: number, quantity: number, variantId?: number | null) => {
     if (quantity < 1) {
-      removeFromCart(id);
+      removeFromCart(id, variantId);
       return;
     }
     
-    const itemToUpdate = cartItems.find(item => item.id === id);
+    const itemToUpdate = cartItems.find(item => isSameCartLine(item, { id, variantId }));
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.id === id ? { ...item, quantity } : item
+        isSameCartLine(item, { id, variantId }) ? { ...item, quantity } : item
       )
     );
     

@@ -56,6 +56,13 @@ interface HeroSlide {
   imageUrl: string;
   mobileImageUrl?: string;
 }
+interface HomeCategory {
+  id: number;
+  name: string;
+  slug: string;
+  image?: string | null;
+  image_url?: string | null;
+}
 
 // Define the API response format
 interface ApiHeroSlide {
@@ -77,6 +84,7 @@ export default function HeroSection() {
   const [newArrivalsProducts, setNewArrivalsProducts] = useState<CategoryProduct[]>([]);
   const [bestDealsProducts, setBestDealsProducts] = useState<CategoryProduct[]>([]);
   const [currentTrends, setCurrentTrends] = useState<TrendItem[]>([]);
+  const [shopCategories, setShopCategories] = useState<HomeCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeferred, setShowDeferred] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +102,7 @@ export default function HeroSection() {
       newArrivalsProducts: CategoryProduct[];
       bestDealsProducts: CategoryProduct[];
       currentTrends: TrendItem[];
+      shopCategories: HomeCategory[];
     }>(HOME_CACHE_KEY);
 
     if (cached) {
@@ -104,6 +113,7 @@ export default function HeroSection() {
       setNewArrivalsProducts(cached.newArrivalsProducts || []);
       setBestDealsProducts(cached.bestDealsProducts || []);
       setCurrentTrends(cached.currentTrends || []);
+      setShopCategories(cached.shopCategories || []);
       setLoading(false);
     }
 
@@ -154,6 +164,7 @@ export default function HeroSection() {
         setCurrentTrends(transformedTrends);
         
         const categoriesData = await ApiService.getCategories();
+        setShopCategories(categoriesData || []);
 
         // Extract all products from categories
         const allProducts: CategoryProduct[] = [];
@@ -241,7 +252,8 @@ export default function HeroSection() {
             topSellers: nextTop,
             newArrivalsProducts: nextNew,
             bestDealsProducts: nextBest,
-            currentTrends: transformedTrends
+            currentTrends: transformedTrends,
+            shopCategories: categoriesData || []
           },
           HOME_CACHE_TTL
         );
@@ -444,41 +456,36 @@ export default function HeroSection() {
               className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
-                <CategoryCard 
-                  title="Vegetables" 
-                  prefix="Fresh" 
-                  bgColor="#9ca308" 
-                  icon={<FaCarrot className="w-12 h-12 text-white" />}
-                  slug="vegetables"
-                />
-                <CategoryCard 
-                  title="Fruits" 
-                  prefix="Organic" 
-                  bgColor="#6b0f6b" 
-                  icon={<FaAppleAlt className="w-12 h-12 text-white" />}
-                  slug="fruits"
-                />
-                <CategoryCard 
-                  title="Grains" 
-                  prefix="Natural" 
-                  bgColor="#007a4d" 
-                  icon={<FaSeedling className="w-12 h-12 text-white" />}
-                  slug="grains"
-                />
-                <CategoryCard 
-                  title="Spices" 
-                  prefix="Pure" 
-                  bgColor="#8b0000" 
-                  icon={<FaPepperHot className="w-12 h-12 text-white" />}
-                  slug="spices"
-                />
-                <CategoryCard 
-                  title="Tea" 
-                  prefix="Premium" 
-                  bgColor="#1b0b4f" 
-                  icon={<FaMugHot className="w-12 h-12 text-white" />}
-                  slug="tea"
-                />
+                {(shopCategories.length > 0
+                  ? shopCategories
+                  : [
+                      { id: 1, name: 'Vegetables', slug: 'vegetables' },
+                      { id: 2, name: 'Fruits', slug: 'fruits' },
+                      { id: 3, name: 'Grains', slug: 'grains' },
+                      { id: 4, name: 'Spices', slug: 'spices' },
+                      { id: 5, name: 'Tea', slug: 'tea' }
+                    ]
+                ).map((category, index) => {
+                  const fallbackIcons = [
+                    <FaCarrot key="veg" className="w-12 h-12 text-white" />,
+                    <FaAppleAlt key="fruit" className="w-12 h-12 text-white" />,
+                    <FaSeedling key="grain" className="w-12 h-12 text-white" />,
+                    <FaPepperHot key="spice" className="w-12 h-12 text-white" />,
+                    <FaMugHot key="tea" className="w-12 h-12 text-white" />
+                  ];
+                  const fallbackColors = ['#9ca308', '#6b0f6b', '#007a4d', '#8b0000', '#1b0b4f'];
+                  return (
+                    <CategoryCard
+                      key={category.id || category.slug}
+                      title={category.name}
+                      prefix=""
+                      bgColor={fallbackColors[index % fallbackColors.length]}
+                      icon={fallbackIcons[index % fallbackIcons.length]}
+                      slug={category.slug}
+                      imageUrl={(category as any).image || (category as any).image_url || null}
+                    />
+                  );
+                })}
               </div>
             </div>
 

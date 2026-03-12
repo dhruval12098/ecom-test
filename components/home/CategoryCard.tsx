@@ -3,17 +3,33 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 
-export default function CategoryCard({ title = "Category", prefix = "Prefix", bgColor = "#9ca308", icon = null, slug }: { title?: string; prefix?: string; bgColor?: string; icon?: ReactNode | null; slug?: string; }) {
+export default function CategoryCard({
+  title = "Category",
+  prefix = "Prefix",
+  bgColor = "#9ca308",
+  icon = null,
+  slug,
+  imageUrl
+}: {
+  title?: string;
+  prefix?: string;
+  bgColor?: string;
+  icon?: ReactNode | null;
+  slug?: string;
+  imageUrl?: string | null;
+}) {
   const categorySlug = slug || title.toLowerCase().replace(/\s+/g, '-');
   
   return (
     <Link href={`/${categorySlug}`} className="w-40 sm:w-52 h-72 sm:h-80 bg-gray-200 rounded-3xl overflow-hidden flex flex-col">
       {/* Card Image/Color Area */}
       <div 
-        className="w-full flex-1 rounded-3xl flex items-center justify-center min-h-[60%]"
+        className="w-full flex-1 rounded-3xl flex items-center justify-center min-h-[60%] overflow-hidden"
         style={{ backgroundColor: bgColor }}
       >
-        {icon ? (
+        {imageUrl ? (
+          <img src={imageUrl} alt={title} className="w-full h-full object-cover rounded-3xl" />
+        ) : icon ? (
           <div className="text-white scale-125">
             {icon}
           </div>

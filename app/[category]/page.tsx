@@ -25,6 +25,9 @@ interface Product {
   inStock: boolean;
   weight: string;
   origin: string;
+  variants?: Array<{
+    price?: number | string;
+  }>;
 }
 
 interface Subcategory {
@@ -93,6 +96,7 @@ export default function CategoryPage() {
               price: Number(product.price || 0),
               originalPrice:
                 product.originalPrice ?? product.original_price ?? null,
+              variants: Array.isArray(product.variants) ? product.variants : [],
               imageUrl:
                 product.imageUrl ||
                 product.image_url ||
@@ -309,6 +313,7 @@ export default function CategoryPage() {
                   name: product.name,
                   price: product.price,
                   originalPrice: product.originalPrice,
+                  variants: product.variants,
                   imageUrl: product.imageUrl,
                   discountPercentage: product.discountPercentage,
                   discountColor: product.discountColor,

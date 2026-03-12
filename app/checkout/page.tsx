@@ -63,7 +63,7 @@ function CheckoutPageContent() {
 
   const [paymentMethod, setPaymentMethod] = useState("worldline");
   const [saveAddress, setSaveAddress] = useState(false);
-  const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [shippingZone, setShippingZone] = useState<any | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
@@ -169,6 +169,9 @@ function CheckoutPageContent() {
   const displayItems = sourceItems.map((item) => {
     const live = liveMap[item.id];
     if (!live) return item;
+    const variantPrice = item.variantId && Array.isArray(live.variants)
+      ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
+      : null;
     const inStock =
       live.inStock !== undefined
         ? Boolean(live.inStock)
@@ -178,12 +181,16 @@ function CheckoutPageContent() {
     return {
       ...item,
       name: live.name || item.name,
-      price: Number(live.sale_price || live.price || item.price),
-      originalPrice: live.originalPrice
-        ? Number(live.originalPrice)
-        : live.original_price
-          ? Number(live.original_price)
-          : item.originalPrice,
+      price: variantPrice !== null && variantPrice !== undefined
+        ? Number(variantPrice)
+        : Number(live.sale_price || live.price || item.price),
+      originalPrice: variantPrice !== null && variantPrice !== undefined
+        ? item.originalPrice
+        : live.originalPrice
+          ? Number(live.originalPrice)
+          : live.original_price
+            ? Number(live.original_price)
+            : item.originalPrice,
       imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
       inStock
     };
@@ -236,18 +243,29 @@ function CheckoutPageContent() {
     return method === 'free';
   });
 
-  const activeRates = shippingRates.filter((r) => r.active);
-  const freeRate = activeRates.find((r) => r.type === 'free');
-  const basicRate = activeRates.find((r) => r.type === 'basic');
-  const freeThreshold = freeRate?.min_order ? Number(freeRate.min_order) : null;
   const shippingCost = (() => {
     if (hasFreeShippingItem) return 0;
-    if (freeRate) {
-      if (freeThreshold === null) return 0;
-      if (eligibleSubtotal >= freeThreshold) return 0;
+    if (shippingZone) {
+      const fee = Number(shippingZone.delivery_fee ?? 0);
+      const threshold =
+        shippingZone.conditional !== undefined && shippingZone.conditional !== null
+          ? Number(shippingZone.conditional)
+          : null;
+      if (threshold !== null && Number.isFinite(threshold) && eligibleSubtotal >= threshold) {
+        return 0;
+      }
+      return Number.isFinite(fee) ? fee : 0;
     }
-    if (basicRate) return Number(basicRate.price || 0);
-    return subtotal > 500 ? 0 : 50;
+    return 0;
+  })();
+  const freeThreshold = (() => {
+    if (hasFreeShippingItem) return null;
+    if (!shippingZone) return null;
+    const threshold =
+      shippingZone.conditional !== undefined && shippingZone.conditional !== null
+        ? Number(shippingZone.conditional)
+        : null;
+    return threshold !== null && Number.isFinite(threshold) ? threshold : null;
   })();
   const orderDiscount = subtotal > 1000 ? subtotal * 0.1 : 0;
   const couponDiscount = (() => {
@@ -457,6 +475,8 @@ function CheckoutPageContent() {
           toast.error('Delivery is not available in your area.');
           return;
         }
+        const zone = result?.zone || null;
+        setShippingZone(zone);
       } catch (err: any) {
         const msg = err?.message || 'Unable to validate delivery area.';
         setDeliveryCheckError(msg);
@@ -468,10 +488,45 @@ function CheckoutPageContent() {
       setStep(2);
       return;
     }
+
+    let effectiveZone = shippingZone;
+    if (!effectiveZone) {
+      try {
+        const refreshed = await ApiService.validateDeliveryZone({
+          country: shippingInfo.country,
+          city: shippingInfo.city,
+          postal_code: shippingInfo.postalCode
+        });
+        effectiveZone = refreshed?.zone || null;
+        if (effectiveZone) setShippingZone(effectiveZone);
+      } catch {
+        // ignore and keep null
+      }
+    }
     if (step < 3) {
+      if (step === 2) {
+        const minOrderAmount = Number(
+          effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
+        );
+        if (Number.isFinite(minOrderAmount) && subtotal < minOrderAmount) {
+          toast.error("Minimum order amount not met", {
+            description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
+          });
+          return;
+        }
+      }
       setStep((step + 1) as CheckoutStep);
     } else {
       try {
+        const minOrderAmount = Number(
+          effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
+        );
+        if (Number.isFinite(minOrderAmount) && subtotal < minOrderAmount) {
+          toast.error("Minimum order amount not met", {
+            description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
+          });
+          return;
+        }
         setIsSubmitting(true);
         const payload = {
           customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
@@ -576,17 +631,7 @@ function CheckoutPageContent() {
   ];
 
 
-  useEffect(() => {
-      const loadRates = async () => {
-        try {
-          const data = await ApiService.getShippingRates(true);
-          setShippingRates(Array.isArray(data) ? data : []);
-        } catch (e) {
-          // keep UI stable on failure
-        }
-      };
-      loadRates();
-    }, []);
+  // Shipping rates removed in favor of per-phase delivery zones
 
   useEffect(() => {
       const loadSavedAddresses = async () => {
@@ -1375,9 +1420,10 @@ function CheckoutPageContent() {
                       </button>
                       <button
                         type="submit"
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors order-1 sm:order-2"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        disabled={isSubmitting}
                       >
-                        Place Order
+                        {isSubmitting ? "Placing order..." : "Place Order"}
                       </button>
                     </div>
                   </div>
@@ -1608,8 +1654,7 @@ function CheckoutPageContent() {
                         Back to Review
                       </button>
                       <button
-                        type="button"
-                        onClick={() => setStep(3)}
+                        type="submit"
                         className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
                       >
                         Continue to Payment

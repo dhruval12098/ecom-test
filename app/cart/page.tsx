@@ -18,6 +18,9 @@ export default function CartPage() {
     return cartItems.map((item) => {
       const live = liveMap[item.id];
       if (!live) return item;
+      const variantPrice = item.variantId && Array.isArray(live.variants)
+        ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
+        : null;
       const inStock =
         live.inStock !== undefined
           ? Boolean(live.inStock)
@@ -27,12 +30,16 @@ export default function CartPage() {
       return {
         ...item,
         name: live.name || item.name,
-        price: Number(live.sale_price || live.price || item.price),
-        originalPrice: live.originalPrice
-          ? Number(live.originalPrice)
-          : live.original_price
-            ? Number(live.original_price)
-            : item.originalPrice,
+        price: variantPrice !== null && variantPrice !== undefined
+          ? Number(variantPrice)
+          : Number(live.sale_price || live.price || item.price),
+        originalPrice: variantPrice !== null && variantPrice !== undefined
+          ? item.originalPrice
+          : live.originalPrice
+            ? Number(live.originalPrice)
+            : live.original_price
+              ? Number(live.original_price)
+              : item.originalPrice,
         imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
         inStock,
       };
@@ -243,7 +250,7 @@ export default function CartPage() {
                 <div className="space-y-4">
                   {displayItems.map((item) => (
                     <div 
-                      key={item.id} 
+                      key={`${item.id}-${item.variantId ?? 'base'}`} 
                       className={`bg-white border border-black rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#266000] ${
                         !item.inStock ? 'opacity-50' : ''
                       }`}
@@ -284,7 +291,7 @@ export default function CartPage() {
                               
                               {/* Remove Button */}
                               <button
-                                onClick={() => removeFromCart(item.id)}
+                                onClick={() => removeFromCart(item.id, item.variantId)}
                                 className="p-1.5 md:p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 shrink-0"
                                 title="Remove item"
                               >
@@ -297,7 +304,7 @@ export default function CartPage() {
                               {/* Quantity Controls */}
                               <div className="flex items-center border border-black rounded-xl overflow-hidden">
                                 <button
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
                                   disabled={!item.inStock || item.quantity <= 1}
                                   className="px-3 md:px-4 py-1.5 md:py-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >
@@ -309,7 +316,7 @@ export default function CartPage() {
                                 </span>
                                 
                                 <button
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
                                   disabled={!item.inStock}
                                   className="px-3 md:px-4 py-1.5 md:py-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 >

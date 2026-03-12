@@ -22,6 +22,9 @@ interface Product {
   category?: string;
   subcategory?: string;
   slug?: string;
+  variants?: Array<{
+    price?: number | string;
+  }>;
 }
 
 type ProductCardProps = {
@@ -83,8 +86,27 @@ export default function ProductCard({
   const displayWeight = product?.weight || weight;
   const parsedPrice = product ? undefined : parsePrice(price);
   const parsedOriginalPrice = product ? undefined : parsePrice(originalPrice);
+  const productVariants = product?.variants ?? [];
+  const productHasVariants = productVariants.length > 0;
+  const productPriceValueRaw = String(product?.price ?? "");
+  const productPriceValue =
+    productPriceValueRaw !== ''
+      ? Number(productPriceValueRaw)
+      : undefined;
+  const matchedVariantPrice = productHasVariants
+    ? productVariants
+        .map((v) => Number(v?.price))
+        .find((v) => Number.isFinite(v) && (productPriceValue === undefined || v === productPriceValue))
+    : undefined;
+  const fallbackVariantPrice = productHasVariants
+    ? Number(productVariants[0]?.price)
+    : undefined;
+  const resolvedProductPrice =
+    productHasVariants
+      ? (matchedVariantPrice ?? fallbackVariantPrice)
+      : productPriceValue;
   const displayPrice = product
-    ? formatCurrency(Number(product.price))
+    ? formatCurrency(Number(resolvedProductPrice || 0))
     : (parsedPrice !== undefined ? formatCurrency(parsedPrice) : price);
   const displayOriginalPrice = product?.originalPrice
     ? formatCurrency(Number(product.originalPrice))

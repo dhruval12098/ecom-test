@@ -22,6 +22,9 @@ interface Product {
   subcategory?: string;
   slug?: string;
   description?: string;
+  variants?: Array<{
+    price?: number | string;
+  }>;
 }
 
 function SearchPageInner() {
@@ -101,6 +104,7 @@ function SearchPageInner() {
                   name: product.name,
                   price: product.price,
                   originalPrice: product.originalPrice,
+                  variants: product.variants,
                   imageUrl: product.imageUrl,
                   discountPercentage: product.discountPercentage || "",
                   discountColor: product.discountColor || "bg-red-500",
