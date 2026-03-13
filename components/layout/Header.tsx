@@ -316,7 +316,7 @@ export default function Header() {
 
         <div style={{ backgroundColor: '#266000' }} className="relative">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex flex-wrap gap-x-8 gap-y-2 text-white text-sm font-medium">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-white text-[12px] font-medium">
               {loading ? (
                 <div className="col-span-full text-center py-4">Loading categories...</div>
               ) : (
@@ -329,30 +329,30 @@ export default function Header() {
                   >
                     <Link 
                       href={`/${item.slug}`}
-                      className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-1 font-medium"
+                      className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-0.5 font-medium"
                     >
-                      <span className="font-bold">{item.name}</span>
-                      <ChevronDown size={12} />
+                      <span className="font-semibold">{item.name}</span>
+                      <ChevronDown size={10} />
                     </Link>
                     
                     {/* Dropdown Menu */}
                     {openDropdown === item.slug && item.subcategories.length > 0 && (
                       <div 
-                        className="absolute top-full left-0 mt-1 w-64 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
+                        className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
                         onMouseEnter={() => handleMouseEnter(item.slug)}
                         onMouseLeave={handleMouseLeave}
                       >
-                        <div className="p-3">
-                          <div className="text-gray-900 font-semibold mb-3 border-b pb-2">{item.name}</div>
-                          <div className="grid grid-cols-1 gap-1 max-h-80 overflow-y-auto">
+                        <div className="p-1.5">
+                          <div className="text-gray-900 text-xs font-semibold mb-1.5 border-b pb-1.5">{item.name}</div>
+                          <div className="grid grid-cols-1 gap-0.5 max-h-60 overflow-y-auto">
                             {item.subcategories.map((subcat) => (
                               <Link
                                 key={subcat.id}
                                 href={`/${item.slug}/${subcat.slug}`}
-                                className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 transition-colors group"
+                                className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 transition-colors group"
                               >
                                 {subcat.image && (
-                                  <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
+                                  <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 bg-gray-100">
                                     <img 
                                       src={subcat.image} 
                                       alt={subcat.name}
@@ -364,7 +364,7 @@ export default function Header() {
                                     />
                                   </div>
                                 )}
-                                <span className="text-gray-700 group-hover:text-green-700 transition-colors">
+                                <span className="text-xs text-gray-700 group-hover:text-green-700 transition-colors">
                                   {subcat.name}
                                 </span>
                               </Link>
