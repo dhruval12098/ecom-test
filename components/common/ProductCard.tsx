@@ -23,6 +23,9 @@ interface Product {
   subcategory?: string;
   slug?: string;
   variants?: Array<{
+    id?: number | string;
+    name?: string | null;
+    weight?: string | null;
     price?: number | string;
   }>;
 }
@@ -88,6 +91,13 @@ export default function ProductCard({
   const parsedOriginalPrice = product ? undefined : parsePrice(originalPrice);
   const productVariants = product?.variants ?? [];
   const productHasVariants = productVariants.length > 0;
+  const defaultVariant = productHasVariants ? productVariants[0] : null;
+  const defaultVariantIdRaw = defaultVariant?.id;
+  const defaultVariantId =
+    defaultVariantIdRaw !== undefined && defaultVariantIdRaw !== null && defaultVariantIdRaw !== ""
+      ? Number(defaultVariantIdRaw)
+      : null;
+  const defaultVariantName = defaultVariant?.name || defaultVariant?.weight || null;
   const productPriceValueRaw = String(product?.price ?? "");
   const productPriceValue =
     productPriceValueRaw !== ''
@@ -120,10 +130,19 @@ export default function ProductCard({
   const productIdForCart =
     product?.id ||
     (typeof productId === "string" ? parseInt(productId, 10) : (productId as number));
+
+  const normalizeVariantId = (variantId?: number | null) =>
+    variantId === undefined ? null : variantId;
+  const cartLineVariantId = productHasVariants ? defaultVariantId : null;
   
   // Check if item is already in cart
-  const isInCart = cartItems.some(item => item.id === productIdForCart);
-  const cartItemQuantity = cartItems.find(item => item.id === productIdForCart)?.quantity || 0;
+  const isInCart = cartItems.some(
+    (item) => item.id === productIdForCart && normalizeVariantId(item.variantId) === cartLineVariantId
+  );
+  const cartItemQuantity =
+    cartItems.find(
+      (item) => item.id === productIdForCart && normalizeVariantId(item.variantId) === cartLineVariantId
+    )?.quantity || 0;
   
   // Handle cart add functionality
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -137,14 +156,18 @@ export default function ProductCard({
     const cartItem = {
       id: productIdForCart,
       name: displayTitle,
-      price: product?.price ?? parsePrice(price) ?? 0,
+      price: product
+        ? Number(resolvedProductPrice || 0)
+        : parsePrice(price) ?? 0,
       originalPrice: product?.originalPrice ?? parsePrice(originalPrice),
       imageUrl: displayImageUrl,
       weight: displayWeight,
       inStock: product?.inStock !== undefined ? product.inStock : true,
       category: product?.category || categorySlug,
       subcategory: product?.subcategory || subcategorySlug,
-      slug: product?.slug || (product?.id !== undefined ? String(product.id) : (typeof productId === "string" ? productId : undefined))
+      slug: product?.slug || (product?.id !== undefined ? String(product.id) : (typeof productId === "string" ? productId : undefined)),
+      variantId: cartLineVariantId,
+      variantName: productHasVariants ? defaultVariantName : null
     };
     
     addToCart(cartItem);
@@ -187,9 +210,6 @@ export default function ProductCard({
             <h3 className={`font-semibold text-black text-[13px] sm:text-lg leading-snug line-clamp-1 min-w-0 ${titleClassName ?? ""}`}>
               {displayTitle}
             </h3>
-            <p className="text-[10px] sm:text-sm text-gray-600 whitespace-nowrap">
-              {displayWeight}
-            </p>
           </div>
 
           <div className="shrink-0" />
