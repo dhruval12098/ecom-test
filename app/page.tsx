@@ -353,37 +353,7 @@ export default function HeroSection() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <section className="w-full h-screen flex flex-col justify-center items-center bg-white">
-          <div className="relative w-[98%] h-[90%] mt-3 sm:mt-0 rounded-[16px] sm:rounded-[28px] overflow-hidden skeleton" />
-          <div className="mt-6 flex items-center gap-2">
-            <div className="skeleton h-2 w-10 rounded-full" />
-            <div className="skeleton h-2 w-2 rounded-full" />
-            <div className="skeleton h-2 w-2 rounded-full" />
-          </div>
-        </section>
-
-        <div className="h-24" />
-
-        <section className="w-full py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="skeleton h-10 w-1/3 mx-auto mb-10" />
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
-                  <div className="skeleton w-full aspect-square rounded-xl mb-4" />
-                  <div className="skeleton h-4 w-3/4 mb-2" />
-                  <div className="skeleton h-4 w-1/2" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
-    );
-  }
+  const showHeroSkeleton = loading && heroSlides.length === 0;
 
   return (
     <>
@@ -403,36 +373,49 @@ export default function HeroSection() {
         </div>
       )}
       {/* ================= HERO SECTION ================= */}
-        <section className="w-full min-h-[70vh] sm:h-screen flex flex-col justify-center items-center bg-white fade-in">
-          <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-2xl sm:rounded-[28px] overflow-hidden">
-          {heroSlides.map((slide: HeroSlide, index: number) => (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                index === active
-                  ? "opacity-100"
-                  : "opacity-0"
-              }`}
-            >
-                <div 
-                  className="w-full h-full bg-cover bg-center"
-                  style={{ backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')` }}
-                />
-              </div>
-            ))}
-          </div>
+      <section className="w-full min-h-[70vh] sm:h-screen flex flex-col justify-center items-center bg-white fade-in">
+        {showHeroSkeleton ? (
+          <>
+            <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-2xl sm:rounded-[28px] overflow-hidden skeleton" />
+            <div className="mt-6 flex items-center gap-2">
+              <div className="skeleton h-2 w-10 rounded-full" />
+              <div className="skeleton h-2 w-2 rounded-full" />
+              <div className="skeleton h-2 w-2 rounded-full" />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="relative w-[98%] h-[70vh] sm:h-[90%] mt-3 sm:mt-0 rounded-2xl sm:rounded-[28px] overflow-hidden">
+              {heroSlides.map((slide: HeroSlide, index: number) => (
+                <div
+                  key={slide.id}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    index === active ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <div
+                    className="w-full h-full bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')`
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
 
-        <div className="mt-6 flex items-center gap-2">
-          {heroSlides.map((_: HeroSlide, index: number) => (
-            <button
-              key={index}
-              onClick={() => setActive(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                active === index ? "w-10 bg-gray-600" : "w-2 bg-gray-300"
-              }`}
-            />
-          ))}
-        </div>
+            <div className="mt-6 flex items-center gap-2">
+              {heroSlides.map((_: HeroSlide, index: number) => (
+                <button
+                  key={index}
+                  onClick={() => setActive(index)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    active === index ? "w-10 bg-gray-600" : "w-2 bg-gray-300"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       {/* ================= GAP ================= */}
