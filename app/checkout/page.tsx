@@ -718,9 +718,9 @@ function CheckoutPageContent() {
             .map((item) => Number(item.id))
             .filter((id) => Number.isFinite(id) && id > 0);
           if (ids.length === 0) return;
-          const results = await Promise.all(ids.map((id) => ApiService.getProductById(id)));
+          const results: any[] = await Promise.all(ids.map((id) => ApiService.getProductById(id)));
           const map: Record<number, any> = {};
-          results.forEach((p) => {
+          results.forEach((p: any) => {
             if (p && typeof p.id === "number") {
               map[p.id] = p;
             }

@@ -1,0 +1,63 @@
+declare module "@/lib/api" {
+  export default class ApiService {
+    static _cache: Map<any, any>;
+    static _storagePrefix: string;
+    static _normalizeProduct(raw: any): any;
+    static _getCached(key: string): any;
+    static _setCached(key: string, data: any, ttlMs?: number): void;
+    static _getHeroSlidesMeta(): Promise<any>;
+    static _getCategoriesMeta(): Promise<any>;
+    static _getTrendsMeta(): Promise<any>;
+    static _getAnnouncementMeta(): Promise<any>;
+    static getHeroSlides(): Promise<any>;
+    static createHeroSlide(slideData: any): Promise<any>;
+    static updateHeroSlide(id: any, slideData: any): Promise<any>;
+    static deleteHeroSlide(id: any): Promise<any>;
+    static getAboutStory(): Promise<any>;
+    static getFounders(): Promise<any>;
+    static getLeadership(): Promise<any>;
+    static getTrends(): Promise<any>;
+    static getCategories(options?: any): Promise<any>;
+    static getHomepageSection(sectionKey: any): Promise<any>;
+    static getActiveSchedule(productId: any): Promise<any>;
+    static getAnnouncementBar(): Promise<any>;
+    static getContactInfo(): Promise<any>;
+    static getSettings(): Promise<any>;
+    static getFaqs(publishedOnly?: boolean): Promise<any>;
+    static submitContactMessage(payload: any): Promise<any>;
+    static upsertCustomer(payload: any): Promise<any>;
+    static getCustomerProfile(authUserId: any): Promise<any>;
+    static getProductBySlug(slug: any): Promise<any>;
+    static getProductById(id: any): Promise<any>;
+    static getCustomerAddresses(customerId: any): Promise<any>;
+    static createCustomerAddress(payload: any): Promise<any>;
+    static updateCustomerAddress(id: any, payload: any): Promise<any>;
+    static deleteCustomerAddress(id: any, customerId: any): Promise<any>;
+    static setDefaultCustomerAddress(id: any, customerId: any): Promise<any>;
+    static updateAboutStory(storyData: any): Promise<any>;
+    static uploadAboutStoryImage(file: any): Promise<any>;
+    static getStorageImages(): Promise<any>;
+    static healthCheck(): Promise<any>;
+    static createOrder(payload: any): Promise<any>;
+    static createWorldlineCheckout(payload: any): Promise<any>;
+    static getWorldlineCheckoutStatus(orderId: any): Promise<any>;
+    static createWopCheckout(payload: any): Promise<any>;
+    static verifyWopReturn(queryString: any): Promise<any>;
+    static getOrdersByContact(args: {
+      email?: string | null;
+      phone?: string | null;
+      customerId?: number | string | null;
+    }): Promise<any[]>;
+    static requestGuestOrdersOtp(email: any): Promise<any>;
+    static verifyGuestOrdersOtp(payload: { email: any; code: any }): Promise<any>;
+    static getOrderById(orderId: any): Promise<any>;
+    static getShippingRates(activeOnly?: boolean): Promise<any>;
+    static validateDeliveryZone(payload: any): Promise<any>;
+    static getCoupons(): Promise<any>;
+    static createSupportTicket(payload: any): Promise<any>;
+    static createSupportMessage(ticketId: any, payload: any): Promise<any>;
+    static getPublicReviews(args?: any): Promise<any>;
+    static getProductReviews(productId: any, args?: any): Promise<any>;
+    static submitProductReview(payload: any): Promise<any>;
+  }
+}
