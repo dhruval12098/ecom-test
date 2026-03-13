@@ -347,107 +347,127 @@ export default function CartPage() {
 
 
                 {/* Cart Items */}
-                <div className="space-y-4">
-                  {displayItems.map((item) => (
-                    <div 
-                      key={`${item.id}-${item.variantId ?? 'base'}`} 
-                      className={`bg-white border border-black rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#266000] ${
-                        !item.inStock ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <div className="p-4 md:p-6">
-                        <div className="flex gap-4 md:gap-6">
-                          {/* Product Image */}
-                          <div className="flex-shrink-0 w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden border border-black bg-gray-50">
-                            {item.imageUrl ? (
-                              <img 
-                                src={item.imageUrl} 
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="112" height="112" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="112" height="112" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="14" text-anchor="middle" dy=".3em" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
-                                No Image
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Product Details */}
-                          <div className="flex-grow min-w-0">
-                            <div className="flex justify-between items-start gap-2 mb-2 md:mb-3">
-                              <div className="flex-grow min-w-0">
-                                <h3 className="text-base md:text-xl font-bold text-gray-900 mb-1 line-clamp-1">{item.name}</h3>
-                                <p className="text-gray-600 text-xs md:text-sm">
-                                  {item.variantName || item.weight}
-                                </p>
-                                
-                                {!item.inStock && (
-                                  <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 md:px-3 py-1 rounded-lg text-xs font-semibold">
-                                    Out of Stock
+                <div className="bg-white border border-black rounded-2xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50 text-gray-700">
+                        <tr>
+                          <th className="px-3 md:px-4 py-3 text-left font-semibold">Item</th>
+                          <th className="px-3 md:px-4 py-3 text-center font-semibold whitespace-nowrap w-20">
+                            Qty
+                          </th>
+                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap hidden md:table-cell w-24">
+                            Unit
+                          </th>
+                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap w-32">
+                            Total
+                          </th>
+                          <th className="px-2 md:px-3 py-3 text-right font-semibold whitespace-nowrap w-12">
+                            <span className="sr-only">Remove</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {displayItems.map((item) => (
+                          <tr
+                            key={`${item.id}-${item.variantId ?? "base"}`}
+                            className={!item.inStock ? "opacity-50" : undefined}
+                          >
+                            <td className="px-3 md:px-4 py-3 align-top">
+                              <div className="flex items-start gap-3">
+                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border border-black bg-gray-50 shrink-0">
+                                  {item.imageUrl ? (
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.currentTarget.src =
+                                          'data:image/svg+xml,%3Csvg width="112" height="112" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="112" height="112" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="14" text-anchor="middle" dy=".3em" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                                      No Image
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-bold text-gray-900 break-words">{item.name}</div>
+                                  {(item.variantName || item.weight) && (
+                                    <div className="text-xs text-gray-600 mt-0.5">
+                                      {item.variantName || item.weight}
+                                    </div>
+                                  )}
+                                  {!item.inStock && (
+                                    <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-lg text-xs font-semibold">
+                                      Out of Stock
+                                    </div>
+                                  )}
+                                  <div className="md:hidden text-xs text-gray-600 mt-2">
+                                    Unit: <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
                                   </div>
-                                )}
+                                </div>
                               </div>
-                              
-                              {/* Remove Button */}
+                            </td>
+                            <td className="px-3 md:px-4 py-3 align-top">
+                              <div className="flex items-center justify-center">
+                                <div className="flex items-center border border-black rounded-xl overflow-hidden">
+                                  <button
+                                    onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
+                                    disabled={!item.inStock || item.quantity <= 1}
+                                    className="px-2.5 md:px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    aria-label="Decrease quantity"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <span className="px-3 md:px-4 py-1.5 text-gray-900 font-semibold min-w-[44px] text-center border-x border-black">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
+                                    disabled={!item.inStock}
+                                    className="px-2.5 md:px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    aria-label="Increase quantity"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-3 md:px-4 py-3 text-right align-top hidden md:table-cell">
+                              <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
+                            </td>
+                            <td className="px-3 md:px-4 py-3 text-right align-top whitespace-nowrap">
+                              {item.originalPrice && (
+                                <div className="text-gray-500 line-through text-xs">
+                                  {formatCurrency(item.originalPrice * item.quantity)}
+                                </div>
+                              )}
+                              <div className="text-base md:text-lg font-bold text-gray-900">
+                                {formatCurrency(item.price * item.quantity)}
+                              </div>
+                              {item.originalPrice && (
+                                <div className="text-[#266000] text-xs font-semibold mt-0.5">
+                                  Save {formatCurrency((item.originalPrice - item.price) * item.quantity)}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-2 md:px-3 py-3 text-right align-top">
                               <button
                                 onClick={() => removeFromCart(item.id, item.variantId)}
-                                className="p-1.5 md:p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 shrink-0"
+                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
                                 title="Remove item"
+                                aria-label="Remove item"
                               >
                                 <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                               </button>
-                            </div>
-                            
-                            {/* Quantity and Price Row */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3 md:mt-4">
-                              {/* Quantity Controls */}
-                              <div className="flex items-center border border-black rounded-xl overflow-hidden">
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
-                                  disabled={!item.inStock || item.quantity <= 1}
-                                  className="px-3 md:px-4 py-1.5 md:py-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                  <Minus className="w-4 h-4 md:w-5 md:h-5" />
-                                </button>
-                                
-                                <span className="px-4 md:px-6 py-1.5 md:py-2 text-gray-900 font-semibold min-w-[50px] md:min-w-[60px] text-center border-x border-black text-sm md:text-base">
-                                  {item.quantity}
-                                </span>
-                                
-                                <button
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
-                                  disabled={!item.inStock}
-                                  className="px-3 md:px-4 py-1.5 md:py-2 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                >
-                                  <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                                </button>
-                              </div>
-                              
-                              {/* Price */}
-                              <div className="text-left sm:text-right w-full sm:w-auto">
-                                {item.originalPrice && (
-                                  <p className="text-gray-500 line-through text-xs md:text-sm mb-1">
-                                    {formatCurrency(item.originalPrice * item.quantity)}
-                                  </p>
-                                )}
-                                <p className="text-xl md:text-2xl font-bold text-gray-900">
-                                  {formatCurrency(item.price * item.quantity)}
-                                </p>
-                                {item.originalPrice && (
-                                  <p className="text-[#266000] text-xs md:text-sm font-semibold mt-1">
-                                    Save {formatCurrency((item.originalPrice - item.price) * item.quantity)}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
                 
                 {/* Continue Shopping Link - Mobile */}
