@@ -58,8 +58,9 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
               className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl focus:outline-none transition-colors text-sm ${
                 isEditing 
                   ? "focus:border-[#266000]" 
-                  : "bg-gray-100 cursor-not-allowed text-gray-500"
+                  : "bg-gray-100 cursor-not-allowed text-gray-900"
               }`}
+              placeholder="Your name"
             />
           </div>
           
@@ -75,6 +76,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                   ? "focus:border-[#266000]" 
                   : "bg-gray-100 cursor-not-allowed"
               }`}
+              placeholder="you@example.com"
             />
           </div>
           
@@ -90,6 +92,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                   ? "focus:border-[#266000]" 
                   : "bg-gray-100 cursor-not-allowed"
               }`}
+              placeholder="+32 ..."
             />
           </div>
           

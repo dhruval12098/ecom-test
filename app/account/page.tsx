@@ -70,6 +70,8 @@ function AccountPageInner() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ordersPageSize = 10;
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
@@ -121,12 +123,34 @@ function AccountPageInner() {
     if (authUser) {
       setUser((prev) => ({
         ...prev,
-        email: authUser.email || "",
-        phone: authUser.phone || "",
-        name: prev.name || authUser.email?.split("@")[0] || ""
+        email: authUser.email || prev.email || "",
+        phone: authUser.phone || prev.phone || "",
+        name: prev.name || authUser.email?.split("@")[0] || authUser.phone || ""
       }));
     }
   }, [authUser]);
+
+  const handleUserUpdate = async (updatedUser: typeof user) => {
+    if (!authUser) return;
+    try {
+      const saved = await ApiService.upsertCustomer({
+        auth_user_id: authUser.id,
+        full_name: updatedUser.name,
+        email: updatedUser.email,
+        phone: updatedUser.phone
+      });
+      setUser((prev) => ({
+        ...prev,
+        name: saved?.full_name || updatedUser.name || prev.name,
+        email: saved?.email || updatedUser.email || prev.email,
+        phone: saved?.phone || updatedUser.phone || prev.phone
+      }));
+      toast.success("Profile updated");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update profile");
+      setUser((prev) => ({ ...prev, ...updatedUser }));
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -200,6 +224,7 @@ function AccountPageInner() {
         setOrdersError(null);
         if (!authUser) return;
         const data = await ApiService.getOrdersByContact({
+          customerId,
           email: user.email || authUser.email,
           phone: user.phone || authUser.phone
         });
@@ -212,6 +237,7 @@ function AccountPageInner() {
             items: Number(order.items_count || 0)
           }));
         setOrders(mapped);
+        setOrdersPage(1);
       } catch (e: any) {
         setOrdersError(e?.message || 'Failed to load orders');
       } finally {
@@ -219,7 +245,7 @@ function AccountPageInner() {
       }
     };
     loadOrders();
-  }, [authUser]);
+  }, [authUser, customerId, user.email, user.phone]);
 
   useEffect(() => {
     const loadAddresses = async () => {
@@ -237,6 +263,18 @@ function AccountPageInner() {
     };
     loadAddresses();
   }, [customerId]);
+
+  useEffect(() => {
+    if (user.phone) return;
+    if (!addresses || addresses.length === 0) return;
+    const defaultAddr = addresses.find((a) => a.is_default) || addresses[0];
+    const fallbackPhone = String(defaultAddr?.phone || "").trim();
+    if (!fallbackPhone) return;
+    setUser((prev) => ({
+      ...prev,
+      phone: prev.phone || fallbackPhone
+    }));
+  }, [addresses, user.phone]);
 
     const handleAddressSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -369,7 +407,7 @@ function AccountPageInner() {
         return (
           <ProfileSection 
             user={user} 
-            onUserUpdate={setUser} 
+            onUserUpdate={handleUserUpdate} 
           />
         );
       
@@ -397,45 +435,100 @@ function AccountPageInner() {
                 {!ordersLoading && !ordersError && orders.length === 0 && (
                   <div className="text-sm text-gray-600">No orders found.</div>
                 )}
-                {orders.map((order) => (
-                  <div key={order.id} className="bg-white border border-black rounded-2xl p-4 sm:p-6 hover:border-[#266000] transition-colors">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                      <div className="flex-grow">
-                        <div className="flex items-center gap-3 mb-2">
-                            <h4 className="text-base sm:text-lg font-bold text-gray-900">Order #{order.orderNumber}</h4>
-                            <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold border ${statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"}`}>
-                              {order.status}
-                            </span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <Package size={16} className="mr-1" />
-                            {order.items} {order.items === 1 ? 'item' : 'items'}
-                          </span>
-                          <span>Placed on {order.date}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col md:items-end gap-4">
-                        <div className="text-xl sm:text-2xl font-bold text-gray-900">{formatCurrency(order.total)}</div>
-                          <div className="flex gap-3">
-                            <Link href={`/orders/${order.id}`} className="text-[#266000] font-semibold hover:underline text-sm">
-                              View Details
-                            </Link>
-                            <button
-                              onClick={() => handleReorder(order.id)}
-                              disabled={reorderLoadingId === order.id}
-                              className={`bg-white border border-black text-gray-900 px-4 py-2 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm ${
-                                reorderLoadingId === order.id ? "opacity-70 cursor-not-allowed" : ""
-                              }`}
-                            >
-                              {reorderLoadingId === order.id ? "Reordering..." : "Reorder"}
-                            </button>
-                          </div>
-                      </div>
+                {!ordersLoading && !ordersError && orders.length > 0 && (() => {
+                  const totalItems = orders.length;
+                  const totalPages = Math.max(1, Math.ceil(totalItems / ordersPageSize));
+                  const safePage = Math.min(ordersPage, totalPages);
+                  const startIndex = (safePage - 1) * ordersPageSize;
+                  const paged = orders.slice(startIndex, startIndex + ordersPageSize);
+                  return (
+                    <div className="space-y-4">
+                      <div className="overflow-hidden rounded-2xl border border-black">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-700">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Order</th>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Date</th>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Items</th>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Status</th>
+                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">Total</th>
+                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {paged.map((order) => (
+                            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
+                                #{order.orderNumber}
+                              </td>
+                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{order.date}</td>
+                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                                {order.items} {order.items === 1 ? "item" : "items"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold border ${
+                                    statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"
+                                  }`}
+                                >
+                                  {order.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-gray-900 whitespace-nowrap">
+                                {formatCurrency(order.total)}
+                              </td>
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
+                                <div className="flex justify-end items-center gap-3">
+                                  <Link href={`/orders/${order.id}`} className="text-[#266000] font-semibold hover:underline">
+                                    View
+                                  </Link>
+                                  <button
+                                    onClick={() => handleReorder(order.id)}
+                                    disabled={reorderLoadingId === order.id}
+                                    className={`bg-white border border-black text-gray-900 px-3 py-1.5 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm ${
+                                      reorderLoadingId === order.id ? "opacity-70 cursor-not-allowed" : ""
+                                    }`}
+                                  >
+                                    {reorderLoadingId === order.id ? "..." : "Reorder"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                ))}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-gray-600">
+                    <div>
+                      Showing {startIndex + 1}-{Math.min(startIndex + ordersPageSize, totalItems)} of {totalItems}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                        disabled={safePage === 1}
+                        className="px-4 py-2 rounded-lg border border-black bg-white font-semibold text-gray-900 disabled:opacity-50"
+                      >
+                        Prev
+                      </button>
+                      <div className="min-w-[90px] text-center">
+                        Page {safePage} of {totalPages}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOrdersPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={safePage === totalPages}
+                        className="px-4 py-2 rounded-lg border border-black bg-white font-semibold text-gray-900 disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

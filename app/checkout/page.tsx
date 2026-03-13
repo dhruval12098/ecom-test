@@ -1485,103 +1485,109 @@ function CheckoutPageContent() {
                           Order Summary
                         </h2>
 
-                        <div className="mb-6 bg-gray-50 border border-gray-200 shadow-sm rounded-xl p-4">
-                          <div className="flex items-center justify-between">
+                        <div className="mb-6 bg-white border border-gray-200 shadow-sm rounded-xl p-4">
+                          <div className="flex items-start justify-between gap-4">
                             <div className="text-sm text-gray-700">
                               Items:{" "}
                               <span className="font-semibold text-gray-900">{displayItems.length}</span>
+                              <button
+                                type="button"
+                                onClick={() => setReviewStep(1)}
+                                className="ml-3 text-[#266000] font-semibold hover:underline"
+                              >
+                                Edit Order
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setReviewStep(1)}
-                              className="text-[#266000] text-sm font-semibold hover:underline"
-                            >
-                              Edit Order
-                            </button>
-                          </div>
-
-                          <div className="border-t border-gray-200 pt-3 mt-3">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={couponCode}
-                                onChange={(e) => setCouponCode(e.target.value)}
-                                placeholder="Coupon code"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#266000]"
-                              />
-                              {appliedCoupon ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setAppliedCoupon(null);
-                                    setCouponError("");
-                                  }}
-                                  className="px-3 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-                                >
-                                  Remove
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={applyCoupon}
-                                  disabled={couponLoading}
-                                  className="px-3 py-2 text-sm font-semibold text-white bg-black rounded-lg disabled:opacity-60"
-                                >
-                                  {couponLoading ? "Applying..." : "Apply"}
-                                </button>
-                              )}
-                            </div>
-                            {couponError && (
-                              <div className="text-xs text-red-600 mt-2">{couponError}</div>
-                            )}
-                            {appliedCoupon && (
-                              <div className="text-xs text-green-700 mt-2">
-                                Applied: {String(appliedCoupon.code || "").toUpperCase()}
+                            <div className="text-right">
+                              <div className="text-xs text-gray-600">Total</div>
+                              <div className="text-2xl font-bold text-gray-900 leading-tight">
+                                {formatCurrency(total)}
                               </div>
-                            )}
+                            </div>
                           </div>
 
-                          <div className="border-t border-gray-300 pt-3 mt-3 space-y-2">
-                            <div className="flex justify-between text-sm text-gray-600">
-                              <span>Subtotal</span>
-                              <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
-                            </div>
-
-                            <div className="flex justify-between text-sm text-gray-600">
-                              <span>Shipping</span>
-                              <span className="font-semibold text-gray-900">
-                                {shippingCost === 0 ? (
-                                  <span className="text-[#266000]">FREE</span>
+                          <details className="mt-4 border-t border-gray-200 pt-3">
+                            <summary className="cursor-pointer select-none text-sm font-semibold text-gray-900">
+                              Show charges & coupon
+                            </summary>
+                            <div className="mt-3">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={couponCode}
+                                  onChange={(e) => setCouponCode(e.target.value)}
+                                  placeholder="Coupon code"
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#266000]"
+                                />
+                                {appliedCoupon ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setAppliedCoupon(null);
+                                      setCouponError("");
+                                    }}
+                                    className="px-3 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                  >
+                                    Remove
+                                  </button>
                                 ) : (
-                                  `${formatCurrency(shippingCost)}`
+                                  <button
+                                    type="button"
+                                    onClick={applyCoupon}
+                                    disabled={couponLoading}
+                                    className="px-3 py-2 text-sm font-semibold text-white bg-black rounded-lg disabled:opacity-60"
+                                  >
+                                    {couponLoading ? "Applying..." : "Apply"}
+                                  </button>
                                 )}
-                              </span>
-                            </div>
-
-                            {orderDiscount > 0 && (
-                              <div className="flex justify-between text-sm text-[#266000]">
-                                <span>Order Discount</span>
-                                <span className="font-semibold">-{formatCurrency(orderDiscount)}</span>
                               </div>
-                            )}
+                              {couponError && (
+                                <div className="text-xs text-red-600 mt-2">{couponError}</div>
+                              )}
+                              {appliedCoupon && (
+                                <div className="text-xs text-green-700 mt-2">
+                                  Applied: {String(appliedCoupon.code || "").toUpperCase()}
+                                </div>
+                              )}
 
-                            {couponDiscount > 0 && (
-                              <div className="flex justify-between text-sm text-[#266000]">
-                                <span>Coupon</span>
-                                <span className="font-semibold">-{formatCurrency(couponDiscount)}</span>
+                              <div className="mt-4 space-y-2">
+                                <div className="flex justify-between text-sm text-gray-600">
+                                  <span>Subtotal</span>
+                                  <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
+                                </div>
+
+                                <div className="flex justify-between text-sm text-gray-600">
+                                  <span>Shipping</span>
+                                  <span className="font-semibold text-gray-900">
+                                    {shippingCost === 0 ? (
+                                      <span className="text-[#266000]">FREE</span>
+                                    ) : (
+                                      `${formatCurrency(shippingCost)}`
+                                    )}
+                                  </span>
+                                </div>
+
+                                {orderDiscount > 0 && (
+                                  <div className="flex justify-between text-sm text-[#266000]">
+                                    <span>Order Discount</span>
+                                    <span className="font-semibold">-{formatCurrency(orderDiscount)}</span>
+                                  </div>
+                                )}
+
+                                {couponDiscount > 0 && (
+                                  <div className="flex justify-between text-sm text-[#266000]">
+                                    <span>Coupon</span>
+                                    <span className="font-semibold">-{formatCurrency(couponDiscount)}</span>
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between text-sm text-gray-600">
+                                  <span>{taxLabel}</span>
+                                  <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
+                                </div>
                               </div>
-                            )}
-
-                            <div className="flex justify-between text-sm text-gray-600">
-                              <span>{taxLabel}</span>
-                              <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                             </div>
-
-                            <div className="border-t border-gray-300 pt-3 mt-3 flex justify-between text-lg">
-                              <span className="font-bold text-gray-900">Total</span>
-                              <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
-                            </div>
-                          </div>
+                          </details>
                         </div>
 
                         <div className="flex flex-col sm:flex-row justify-between gap-3">
@@ -1788,6 +1794,7 @@ function CheckoutPageContent() {
                     Order Summary
                   </h2>
                   
+                  <div className="max-h-[calc(100vh-170px)] overflow-y-auto pr-1">
                   <div className="space-y-3 mb-4 md:mb-6">
                     <div className="text-xs text-gray-600">
                       Items: <span className="font-semibold text-gray-900">{displayItems.length}</span>
@@ -1895,6 +1902,7 @@ function CheckoutPageContent() {
                       <Package className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
                       <span className="text-gray-700">100% freshness guarantee</span>
                     </div>
+                  </div>
                   </div>
                 </div>
 
