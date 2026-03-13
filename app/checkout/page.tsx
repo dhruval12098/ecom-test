@@ -1516,7 +1516,9 @@ function CheckoutPageContent() {
                             </div>
                             <div className="flex-grow min-w-0">
                               <h4 className="font-bold text-gray-900 text-sm md:text-base line-clamp-1">{item.name}</h4>
-                              <p className="text-gray-600 text-xs md:text-sm">{item.weight}</p>
+                              <p className="text-gray-600 text-xs md:text-sm">
+                                {item.variantName || item.weight}
+                              </p>
                               <p className="text-gray-900 text-xs md:text-sm mt-1">Quantity: {item.quantity}</p>
                             </div>
                             <div className="text-right shrink-0">
@@ -1551,7 +1553,11 @@ function CheckoutPageContent() {
                           {displayItems.map((item) => (
                             <div key={item.id} className="flex justify-between text-sm">
                               <div className="flex-grow pr-2">
-                                <span className="text-gray-600 line-clamp-1">{item.name} ×{item.quantity}</span>
+                                <span className="text-gray-600 line-clamp-1">
+                                  {item.name}
+                                  {(item.variantName || item.weight) ? ` - ${item.variantName || item.weight}` : ''}
+                                  {' '}×{item.quantity}
+                                </span>
                               </div>
                               <div className="shrink-0">
                                 <span className="font-semibold text-gray-900">{formatCurrency(item.price * item.quantity)}</span>
@@ -1677,7 +1683,11 @@ function CheckoutPageContent() {
                     {displayItems.map((item) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <div className="flex-grow pr-2">
-                          <span className="text-gray-600 line-clamp-1">{item.name} ×{item.quantity}</span>
+                          <span className="text-gray-600 line-clamp-1">
+                            {item.name}
+                            {(item.variantName || item.weight) ? ` - ${item.variantName || item.weight}` : ''}
+                            {' '}×{item.quantity}
+                          </span>
                         </div>
                         <div className="shrink-0">
                           <span className="font-semibold text-gray-900">{formatCurrency(item.price * item.quantity)}</span>

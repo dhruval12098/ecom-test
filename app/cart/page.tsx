@@ -6,11 +6,19 @@ import { useCart } from "@/contexts/CartContext";
 import { formatCurrency } from "@/lib/currency";
 import ApiService from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const { user: authUser } = useAuth();
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [shippingZone, setShippingZone] = useState<any | null>(null);
+  const [postalCode, setPostalCode] = useState("");
+  const [deliveryCountry, setDeliveryCountry] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [postalLoading, setPostalLoading] = useState(false);
+  const [postalError, setPostalError] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
 
@@ -75,9 +83,20 @@ export default function CartPage() {
   const activeRates = shippingRates.filter((r) => r.active);
   const freeRate = activeRates.find((r) => r.type === 'free');
   const basicRate = activeRates.find((r) => r.type === 'basic');
-  const freeThreshold = freeRate?.min_order ? Number(freeRate.min_order) : null;
+  const zoneThreshold =
+    shippingZone?.conditional !== undefined && shippingZone?.conditional !== null
+      ? Number(shippingZone.conditional)
+      : null;
+  const freeThreshold = zoneThreshold !== null && Number.isFinite(zoneThreshold)
+    ? zoneThreshold
+    : (freeRate?.min_order ? Number(freeRate.min_order) : null);
   const shippingCost = (() => {
     if (hasFreeShippingItem) return 0;
+    if (shippingZone) {
+      const zoneFee = Number(shippingZone.delivery_fee ?? 0);
+      if (freeThreshold !== null && eligibleSubtotal >= freeThreshold) return 0;
+      return Number.isFinite(zoneFee) ? zoneFee : 0;
+    }
     if (freeRate) {
       if (freeThreshold === null) return 0;
       if (eligibleSubtotal >= freeThreshold) return 0;
@@ -146,12 +165,92 @@ export default function CartPage() {
         const raw = settings?.excluded_free_shipping_category_ids || [];
         const parsed = Array.isArray(raw) ? raw : [];
         setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
+        if (!postalCode && typeof settings?.address === "string") {
+          const match = settings.address.match(/\b\d{4,6}\b/);
+          if (match?.[0]) {
+            setPostalCode(match[0]);
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("deliveryPostalCode", match[0]);
+            }
+          }
+        }
       } catch (e) {
         setTaxRate(5);
       }
     };
     loadSettings();
-  }, []);
+  }, [postalCode]);
+
+  useEffect(() => {
+    const bootstrapPostal = async () => {
+      if (typeof window === "undefined") return;
+      const stored = window.localStorage.getItem("deliveryPostalCode") || "";
+      if (stored) {
+        setPostalCode(stored);
+        const storedCountry = window.localStorage.getItem("deliveryCountry") || "";
+        const storedCity = window.localStorage.getItem("deliveryCity") || "";
+        if (storedCountry) setDeliveryCountry(storedCountry);
+        if (storedCity) setDeliveryCity(storedCity);
+        return;
+      }
+      if (!authUser) return;
+      try {
+        const profile = await ApiService.getCustomerProfile(authUser.id);
+        if (!profile?.id) return;
+        const addresses = await ApiService.getCustomerAddresses(profile.id);
+        const list = Array.isArray(addresses) ? addresses : [];
+        const preferred = list.find((addr: any) => addr.is_default) || list[0];
+        if (preferred?.postal_code) {
+          const next = String(preferred.postal_code);
+          setPostalCode(next);
+          window.localStorage.setItem("deliveryPostalCode", next);
+        }
+        if (preferred?.country) {
+          const nextCountry = String(preferred.country);
+          setDeliveryCountry(nextCountry);
+          window.localStorage.setItem("deliveryCountry", nextCountry);
+        }
+        if (preferred?.city) {
+          const nextCity = String(preferred.city);
+          setDeliveryCity(nextCity);
+          window.localStorage.setItem("deliveryCity", nextCity);
+        }
+      } catch (e) {
+        // ignore profile failures
+      }
+    };
+    bootstrapPostal();
+  }, [authUser]);
+
+  useEffect(() => {
+    const validate = async () => {
+      if (!postalCode || postalCode.trim().length < 3) {
+        setShippingZone(null);
+        return;
+      }
+      setPostalLoading(true);
+      setPostalError(null);
+      try {
+        const result = await ApiService.validateDeliveryZone({
+          country: deliveryCountry || undefined,
+          city: deliveryCity || undefined,
+          postal_code: postalCode.trim()
+        });
+        if (result?.allowed) {
+          setShippingZone(result.zone || null);
+        } else {
+          setShippingZone(null);
+          setPostalError("Delivery not available for this postal code.");
+        }
+      } catch (e) {
+        setShippingZone(null);
+        setPostalError("Unable to validate postal code.");
+      } finally {
+        setPostalLoading(false);
+      }
+    };
+    validate();
+  }, [postalCode]);
 
   return (
     <div className="min-h-screen bg-white fade-in">
@@ -246,6 +345,7 @@ export default function CartPage() {
                   </div>
                 </div>
 
+
                 {/* Cart Items */}
                 <div className="space-y-4">
                   {displayItems.map((item) => (
@@ -280,7 +380,9 @@ export default function CartPage() {
                             <div className="flex justify-between items-start gap-2 mb-2 md:mb-3">
                               <div className="flex-grow min-w-0">
                                 <h3 className="text-base md:text-xl font-bold text-gray-900 mb-1 line-clamp-1">{item.name}</h3>
-                                <p className="text-gray-600 text-xs md:text-sm">{item.weight}</p>
+                                <p className="text-gray-600 text-xs md:text-sm">
+                                  {item.variantName || item.weight}
+                                </p>
                                 
                                 {!item.inStock && (
                                   <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 md:px-3 py-1 rounded-lg text-xs font-semibold">
@@ -362,6 +464,37 @@ export default function CartPage() {
               <div className="lg:col-span-1">
                 <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:sticky lg:top-6">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Order Summary</h2>
+
+                  <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mb-4 md:mb-5">
+                    <div className="text-xs md:text-sm font-semibold text-gray-900 mb-2">
+                      Check delivery & free shipping
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={postalCode}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setPostalCode(next);
+                          if (typeof window !== "undefined") {
+                            window.localStorage.setItem("deliveryPostalCode", next);
+                          }
+                        }}
+                        placeholder="Enter postal code"
+                        className="w-full rounded-md border border-black px-3 py-2 text-sm"
+                      />
+                      {postalLoading && (
+                        <span className="text-xs text-gray-500">Checking...</span>
+                      )}
+                    </div>
+                    {postalError && (
+                      <div className="mt-2 text-xs text-red-600">{postalError}</div>
+                    )}
+                    {!postalError && shippingZone && freeThreshold !== null && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Free shipping above {formatCurrency(freeThreshold)} for your area.
+                      </div>
+                    )}
+                  </div>
                   
                   <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
