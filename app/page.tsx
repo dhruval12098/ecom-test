@@ -72,7 +72,7 @@ interface ApiHeroSlide {
 }
 
 export default function HeroSection() {
-  const HOME_CACHE_KEY = "home:v1";
+  const HOME_CACHE_KEY = "home:v2";
   const HOME_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
 
   const [active, setActive] = useState(0);
@@ -163,7 +163,7 @@ export default function HeroSection() {
         }));
         setCurrentTrends(transformedTrends);
         
-        const categoriesData = await ApiService.getCategories();
+        const categoriesData = await ApiService.getCategories({ bypassCache: true });
         setShopCategories(categoriesData || []);
 
         // Extract all products from categories
