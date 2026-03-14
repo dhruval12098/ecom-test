@@ -13,6 +13,7 @@ import MainCategories from "@/components/home/MainCategories";
 import FAQ from "@/components/common/FAQ";
 import ApiService from "@/lib/api";
 import { readCache, writeCache } from "@/lib/storageCache";
+import Link from "next/link";
 
 interface Product {
   id: number;
@@ -55,6 +56,7 @@ interface HeroSlide {
   id: number;
   imageUrl: string;
   mobileImageUrl?: string;
+  linkUrl?: string | null;
 }
 interface HomeCategory {
   id: number;
@@ -69,6 +71,8 @@ interface ApiHeroSlide {
   id: number;
   image_url: string;
   mobile_image_url?: string | null;
+  link_url?: string | null;
+  button_link?: string | null;
 }
 
 export default function HeroSection() {
@@ -130,7 +134,8 @@ export default function HeroSection() {
         const transformedHeroSlides: HeroSlide[] = heroSlidesData.map((slide: any) => ({
           id: slide.id,
           imageUrl: slide.image_url || slide.imageUrl,
-          mobileImageUrl: slide.mobile_image_url || slide.mobileImageUrl || null
+          mobileImageUrl: slide.mobile_image_url || slide.mobileImageUrl || null,
+          linkUrl: slide.link_url || slide.button_link || slide.buttonLink || null
         }));
         
         // For other data, we'll keep using JSON files for now
@@ -390,15 +395,41 @@ export default function HeroSection() {
                 <div
                   key={slide.id}
                   className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                    index === active ? "opacity-100" : "opacity-0"
+                    index === active ? "opacity-100" : "opacity-0 pointer-events-none"
                   }`}
                 >
-                  <div
-                    className="w-full h-full bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')`
-                    }}
-                  />
+                  {slide.linkUrl ? (
+                    slide.linkUrl.startsWith("http") ? (
+                      <a
+                        href={slide.linkUrl}
+                        className="block w-full h-full cursor-pointer"
+                        rel="noreferrer"
+                      >
+                        <div
+                          className="w-full h-full bg-cover bg-center"
+                          style={{
+                            backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')`
+                          }}
+                        />
+                      </a>
+                    ) : (
+                      <Link href={slide.linkUrl} className="block w-full h-full cursor-pointer">
+                        <div
+                          className="w-full h-full bg-cover bg-center"
+                          style={{
+                            backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')`
+                          }}
+                        />
+                      </Link>
+                    )
+                  ) : (
+                    <div
+                      className="w-full h-full bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url('${isMobile && slide.mobileImageUrl ? slide.mobileImageUrl : slide.imageUrl}')`
+                      }}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -429,14 +460,14 @@ export default function HeroSection() {
           <div className="relative">
             <button
               onClick={() => scrollCategories("left")}
-              className="absolute -left-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronLeft />
             </button>
 
             <div
               ref={categoryRef}
-              className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
+              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
                 {(shopCategories.length > 0
@@ -474,7 +505,7 @@ export default function HeroSection() {
 
             <button
               onClick={() => scrollCategories("right")}
-              className="absolute -right-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronRight />
             </button>
@@ -490,14 +521,14 @@ export default function HeroSection() {
           <div className="relative">
             <button
               onClick={() => scrollTopSeller("left")}
-              className="absolute -left-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronLeft />
             </button>
 
             <div
               ref={topSellerRef}
-              className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
+              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
                   {topSellers.length > 0 ? (
@@ -527,7 +558,7 @@ export default function HeroSection() {
 
             <button
               onClick={() => scrollTopSeller("right")}
-              className="absolute -right-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronRight />
             </button>
@@ -543,14 +574,14 @@ export default function HeroSection() {
           <div className="relative">
             <button
               onClick={() => scrollBestDeals("left")}
-              className="absolute -left-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronLeft />
             </button>
 
             <div
               ref={bestDealsRef}
-              className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
+              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
                   {bestDealsProducts.length > 0 ? (
@@ -580,7 +611,7 @@ export default function HeroSection() {
 
             <button
               onClick={() => scrollBestDeals("right")}
-              className="absolute -right-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronRight />
             </button>
@@ -596,14 +627,14 @@ export default function HeroSection() {
           <div className="relative">
             <button
               onClick={() => scrollNewArrivals("left")}
-              className="absolute -left-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronLeft />
             </button>
 
             <div
               ref={newArrivalsRef}
-              className="overflow-x-scroll pb-4 scrollbar-hide flex justify-start sm:justify-center"
+              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
             >
               <div className="flex gap-4 sm:gap-6 min-w-max">
                   {newArrivalsProducts.length > 0 ? (
@@ -633,7 +664,7 @@ export default function HeroSection() {
 
             <button
               onClick={() => scrollNewArrivals("right")}
-              className="absolute -right-6 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
+              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
             >
               <ChevronRight />
             </button>
