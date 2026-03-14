@@ -450,10 +450,10 @@ function AccountPageInner() {
                           <tr>
                             <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Order</th>
                             <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Date</th>
-                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Items</th>
-                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Status</th>
-                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">Total</th>
-                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">Actions</th>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap hidden sm:table-cell">Items</th>
+                            <th className="px-4 py-3 text-left font-semibold whitespace-nowrap hidden sm:table-cell">Status</th>
+                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap hidden sm:table-cell">Total</th>
+                            <th className="px-4 py-3 text-right font-semibold whitespace-nowrap">View</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -463,10 +463,10 @@ function AccountPageInner() {
                                 #{order.orderNumber}
                               </td>
                               <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{order.date}</td>
-                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                              <td className="px-4 py-3 text-gray-700 whitespace-nowrap hidden sm:table-cell">
                                 {order.items} {order.items === 1 ? "item" : "items"}
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 hidden sm:table-cell">
                                 <span
                                   className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold border ${
                                     statusStyles[order.status] || "bg-gray-50 text-gray-700 border-gray-200"
@@ -475,7 +475,7 @@ function AccountPageInner() {
                                   {order.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right font-bold text-gray-900 whitespace-nowrap">
+                              <td className="px-4 py-3 text-right font-bold text-gray-900 whitespace-nowrap hidden sm:table-cell">
                                 {formatCurrency(order.total)}
                               </td>
                               <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -486,7 +486,7 @@ function AccountPageInner() {
                                   <button
                                     onClick={() => handleReorder(order.id)}
                                     disabled={reorderLoadingId === order.id}
-                                    className={`bg-white border border-black text-gray-900 px-3 py-1.5 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm ${
+                                    className={`bg-white border border-black text-gray-900 px-3 py-1.5 rounded-lg font-semibold hover:border-[#266000] hover:text-[#266000] transition-colors text-sm hidden sm:inline-flex ${
                                       reorderLoadingId === order.id ? "opacity-70 cursor-not-allowed" : ""
                                     }`}
                                   >
