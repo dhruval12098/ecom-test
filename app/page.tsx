@@ -50,6 +50,7 @@ interface TrendItem {
   buttonText: string;
   cardType: "wide" | "narrow";
   position: "left" | "right";
+  linkUrl?: string | null;
 }
 
 interface HeroSlide {
@@ -156,15 +157,16 @@ export default function HeroSection() {
         setHeroSlides(transformedHeroSlides);
         setNewArrivals(newArrivalsData);
         setBestDeals(bestDealsData);
-        const trendsData = await ApiService.getTrends();
-        const transformedTrends: TrendItem[] = trendsData.map((trend: any, index: number) => ({
+        const trendsData = await ApiService.getTrends({ bypassCache: true });
+        const transformedTrends: TrendItem[] = trendsData.map((trend: any) => ({
           id: trend.id,
           title: trend.title || '',
           subtitle: trend.description || '',
           imageUrl: trend.image_url || '',
+          linkUrl: trend.link_url || trend.linkUrl || null,
           buttonText: 'Shop Now',
-          cardType: index % 2 === 0 ? 'wide' : 'narrow',
-          position: index % 2 === 0 ? 'left' : 'right'
+          cardType: 'wide',
+          position: 'left'
         }));
         setCurrentTrends(transformedTrends);
         
@@ -672,16 +674,15 @@ export default function HeroSection() {
         </div>
       </section>
 
-      {showDeferred && (
       <>
       {/* ================= CURRENT TRENDS SECTION ================= */}
       <section className="w-full py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-4xl font-bold mb-10 text-center text-black">Current Trends</h2>
+          <h2 className="text-4xl font-bold mb-10 text-center text-black">Current offers</h2>
           
           <div className="space-y-6">
             {currentTrends.length > 0 ? (
-              /* Render trends in pairs - wide/narrow alternating */
+              /* Render trends in fixed pairs - wide + narrow alternating per row */
               currentTrends.reduce((pairs: TrendItem[][], item: TrendItem, index: number) => {
                 if (index % 2 === 0) {
                   pairs.push([item]);
@@ -689,42 +690,81 @@ export default function HeroSection() {
                   pairs[pairs.length - 1].push(item);
                 }
                 return pairs;
-              }, []).map((pair, pairIndex) => (
-                <div key={pairIndex} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {pair.map((trend) => (
+              }, []).map((pair, pairIndex) => {
+                const wideFirst = pairIndex % 2 === 0;
+                const first = pair[0];
+                const second = pair[1] || null;
+
+                const renderCard = (trend: TrendItem, isWide: boolean) => {
+                  const spanClass = isWide ? 'md:col-span-2' : 'md:col-span-1';
+                  const card = (
                     <WobbleCard 
                       key={trend.id} 
-                      containerClassName={`${trend.cardType === 'wide' ? 'md:col-span-2' : 'md:col-span-1'} h-64 overflow-hidden relative`}
+                      containerClassName={`h-64 overflow-hidden relative ${trend.linkUrl ? 'cursor-pointer' : ''}`}
                     >
-                      {/* FULL IMAGE */}
                       <div
                         className="absolute inset-0 bg-cover bg-center"
                         style={{
                           backgroundImage: `url('${trend.imageUrl}')`,
                         }}
                       />
-                      
-                      {/* DARKER DIAGONAL GRADIENT */}
                       <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/70 to-transparent" />
-                      
-                      {/* CONTENT - True Top Left Corner */}
                       <div className="absolute top-0 left-0 z-10 p-6">
-                        <div className={trend.cardType === 'wide' ? 'max-w-xs' : 'max-w-[200px]'}>
-                          <h2 className={`${trend.cardType === 'wide' ? 'text-3xl' : 'text-xl'} font-bold text-white mb-2`}>
+                        <div className={isWide ? 'max-w-xs' : 'max-w-[200px]'}>
+                          <h2 className={`${isWide ? 'text-3xl' : 'text-xl'} font-bold text-white mb-2`}>
                             {trend.title}
                           </h2>
                           <p className="text-slate-200 text-sm mb-3">
                             {trend.subtitle}
                           </p>
-                          <button className="bg-white text-green-800 px-4 py-2 rounded-lg font-medium">
-                            {trend.buttonText}
-                          </button>
                         </div>
                       </div>
                     </WobbleCard>
-                  ))}
-                </div>
-              ))
+                  );
+                  if (!trend.linkUrl) {
+                    return (
+                      <div key={trend.id} className={spanClass}>
+                        {card}
+                      </div>
+                    );
+                  }
+                  if (trend.linkUrl.startsWith('http')) {
+                    return (
+                      <a
+                        key={trend.id}
+                        href={trend.linkUrl}
+                        rel="noreferrer"
+                        className={`block ${spanClass}`}
+                      >
+                        {card}
+                      </a>
+                    );
+                  }
+                  return (
+                    <Link key={trend.id} href={trend.linkUrl} className={`block ${spanClass}`}>
+                      {card}
+                    </Link>
+                  );
+                };
+
+                return (
+                  <div key={pairIndex} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {wideFirst
+                      ? (
+                        <>
+                          {first && renderCard(first, true)}
+                          {second ? renderCard(second, false) : <div className="hidden md:block md:col-span-1 h-64" />}
+                        </>
+                      )
+                      : (
+                        <>
+                          {first && renderCard(first, false)}
+                          {second ? renderCard(second, true) : <div className="hidden md:block md:col-span-2 h-64" />}
+                        </>
+                      )}
+                  </div>
+                );
+              })
             ) : (
               /* Fallback loading state for trends */
               <>
@@ -787,7 +827,6 @@ export default function HeroSection() {
         <FAQ />
       </section>
       </>
-      )}
      
     </>
   );

@@ -16,10 +16,10 @@ declare module "@/lib/api" {
     static getAboutStory(): Promise<any>;
     static getFounders(): Promise<any>;
     static getLeadership(): Promise<any>;
-    static getTrends(): Promise<any>;
+    static getTrends(options?: { bypassCache?: boolean }): Promise<any>;
     static getCategories(options?: any): Promise<any>;
     static getHomepageSection(sectionKey: any): Promise<any>;
-    static getActiveSchedule(productId: any): Promise<any>;
+    static getActiveSchedule(productId: any, variantId?: any): Promise<any>;
     static getAnnouncementBar(): Promise<any>;
     static getContactInfo(): Promise<any>;
     static getSettings(): Promise<any>;

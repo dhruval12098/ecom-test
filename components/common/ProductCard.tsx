@@ -54,7 +54,7 @@ export default function ProductCard({
   originalPrice,
   rating = 4.5,
   imageUrl,
-  discountPercentage = "10% Off",
+  discountPercentage,
   discountColor = "bg-red-500",
   productId,
   categorySlug,
@@ -125,6 +125,12 @@ export default function ProductCard({
   const displayDiscountPercentage = product?.discountPercentage || discountPercentage;
   const displayDiscountColor = product?.discountColor || discountColor;
   const displayImageUrl = product?.imageUrl || imageUrl || "";
+  const discountValue = displayDiscountPercentage
+    ? Number(String(displayDiscountPercentage).replace(/[^0-9.]/g, ""))
+    : NaN;
+  const hasDiscount =
+    Boolean(displayDiscountPercentage && String(displayDiscountPercentage).trim()) &&
+    (!Number.isFinite(discountValue) || discountValue > 0);
 
   // Generate product ID for cart lookup
   const productIdForCart =
@@ -181,10 +187,12 @@ export default function ProductCard({
     >
       
       {/* ===== LABEL ===== */}
-      <div className={`absolute top-0 left-0 z-10 ${displayDiscountColor} text-white text-[11px] sm:text-sm px-3 sm:px-4 py-0.5 sm:py-1 
+      {hasDiscount && (
+        <div className={`absolute top-0 left-0 z-10 ${displayDiscountColor} text-white text-[11px] sm:text-sm px-3 sm:px-4 py-0.5 sm:py-1 
                       rounded-tl-xl rounded-br-lg`}>
-        {displayDiscountPercentage}
-      </div>
+          {displayDiscountPercentage}
+        </div>
+      )}
 
       {/* ===== IMAGE AREA (70% on mobile, 75% on desktop) ===== */}
       <div className="relative w-full h-[60%] sm:h-[70%]">

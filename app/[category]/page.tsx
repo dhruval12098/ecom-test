@@ -229,7 +229,7 @@ export default function CategoryPage() {
     <div className="min-h-screen bg-gray-50 fade-in">
       {/* Breadcrumb */}
       <div className="bg-white pt-6">
-        <div className="max-w-7xl mx-auto px-4 py-4 border-b border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 py-4 border-b border-gray-300">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Link href="/" className="hover:text-green-600">
               <Home size={16} />
@@ -266,7 +266,7 @@ export default function CategoryPage() {
               <Link
                 key={sub.slug}
                 href={`/${category}/${sub.slug}`}
-                className={`whitespace-nowrap pb-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`whitespace-nowrap pb-2 px-1 border-b border-gray-200 font-medium text-sm transition-colors ${
                   activeSubcategory === sub.slug
                     ? "border-green-600 text-green-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -285,7 +285,7 @@ export default function CategoryPage() {
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8">
-        <div className="bg-white border border-black rounded-t-2xl p-6 mb-6">
+        <div className="bg-white border border-black rounded-2xl p-6 mb-6">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-bold text-gray-900">
               {activeSubcategory === "all"

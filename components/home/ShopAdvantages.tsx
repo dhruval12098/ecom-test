@@ -12,8 +12,8 @@ const advantages = [
   {
     id: 2,
     icon: <FaTruck className="text-green-800 text-3xl" />,
-    title: 'Free shipping in Europe',
-    description: 'for orders over €69',
+    title: 'Free delivery in Belgium',
+    description: 'for orders over EUR 100',
   },
   {
     id: 3,
@@ -67,3 +67,4 @@ const ShopAdvantages = () => {
 };
 
 export default ShopAdvantages;
+

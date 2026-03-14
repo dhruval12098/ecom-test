@@ -6,16 +6,16 @@ const WelcomeSection = () => {
     <section className="w-[95%] mx-auto my-12 py-8">
       <div className="max-w-4xl mx-auto text-center space-y-6">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
-          Your online Indian food store in Europe
+         Tulsi — Belgium-based Indian grocery store
         </h1>
         
         <div className="space-y-4 text-gray-700 leading-relaxed">
           <p className="text-lg">
-            Welcome to <span className="font-semibold text-green-800">GRD FOOD</span>, your one-stop shop for authentic Indian food throughout Europe. Discover a wide selection of traditional and modern products, designed to bring the unique taste of India directly to your kitchen. With over 200 products available, our online shop offers everything you need to prepare delicious and authentic Indian dishes without leaving home.
+            Welcome to Tulsi Indian Grocery Store, your trusted destination for authentic Indian groceries in Ghent. Visit our physical store in Ghent or shop online from a wide selection of more than 500 products including spices, basmati rice, snacks and traditional Indian ingredients.
           </p>
           
           <p className="text-lg">
-            We offer fast and secure shipping throughout Europe, with reliable deliveries right to your door. Whether you're looking to try new recipes or simply rediscover the authentic flavors of India, <span className="font-semibold text-green-800">GRD FOOD</span> is the perfect choice.
+           Our mission is to bring the real taste of India to your kitchen with high-quality products and a friendly shopping experience. We offer fast delivery directly to your door in selected areas, making it easy and convenient to enjoy authentic Indian groceries at home.
           </p>
         </div>
       </div>

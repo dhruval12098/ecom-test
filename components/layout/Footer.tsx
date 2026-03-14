@@ -56,7 +56,7 @@ const Footer = () => {
           <div className="lg:col-span-4">
             <h2 className="text-3xl font-bold mb-6">Tulsi | Indian Grocery</h2>
             <p className="text-gray-300 text-sm leading-relaxed mb-8">
-              Your trusted source for authentic Indian foods throughout Europe. Bringing the taste of India to your kitchen.
+              Tulsi is a Belgium-based Indian grocery store bringing the taste of India to your kitchen.
             </p>
             
             {/* Social Media Icons */}

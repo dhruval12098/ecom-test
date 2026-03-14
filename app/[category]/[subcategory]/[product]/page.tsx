@@ -149,7 +149,10 @@ export default function ProductDetailsPage() {
         }
         let nextSchedule = null;
         try {
-          const schedule = await ApiService.getActiveSchedule(foundProduct.id);
+          const variantForSchedule = foundProduct.variants && foundProduct.variants.length > 0
+            ? foundProduct.variants[0].id
+            : null;
+          const schedule = await ApiService.getActiveSchedule(foundProduct.id, variantForSchedule);
           nextSchedule = schedule;
           setActiveSchedule(schedule);
         } catch (e) {
@@ -176,6 +179,19 @@ export default function ProductDetailsPage() {
 
     fetchProductData();
   }, [category, subcategory, productSlug]);
+
+  useEffect(() => {
+    const refreshSchedule = async () => {
+      if (!product?.id) return;
+      try {
+        const schedule = await ApiService.getActiveSchedule(product.id, selectedVariantId);
+        setActiveSchedule(schedule);
+      } catch {
+        setActiveSchedule(null);
+      }
+    };
+    refreshSchedule();
+  }, [product?.id, selectedVariantId]);
 
   if (missing) {
     return (
