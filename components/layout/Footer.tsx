@@ -202,7 +202,7 @@ const Footer = () => {
       <div className="bg-white py-5 px-4 md:px-8 lg:px-16">
         <div className="text-center">
           <p className="text-black text-sm font-medium">
-            Copyright © 2024 My Company FOOD. All Rights Reserved.
+            Copyright © 2026 Tulsi. All Rights Reserved.
           </p>
         </div>
       </div>
