@@ -19,6 +19,7 @@ export default function CartPage() {
   const [deliveryCity, setDeliveryCity] = useState("");
   const [postalLoading, setPostalLoading] = useState(false);
   const [postalError, setPostalError] = useState<string | null>(null);
+  const [postalChecked, setPostalChecked] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
 
@@ -222,35 +223,35 @@ export default function CartPage() {
     bootstrapPostal();
   }, [authUser]);
 
-  useEffect(() => {
-    const validate = async () => {
-      if (!postalCode || postalCode.trim().length < 3) {
+  const validatePostalCode = async () => {
+    if (!postalCode || postalCode.trim().length < 3) {
+      setShippingZone(null);
+      setPostalError("Please enter a valid postal code.");
+      setPostalChecked(true);
+      return;
+    }
+    setPostalLoading(true);
+    setPostalError(null);
+    try {
+      const result = await ApiService.validateDeliveryZone({
+        country: deliveryCountry || undefined,
+        city: deliveryCity || undefined,
+        postal_code: postalCode.trim()
+      });
+      if (result?.allowed) {
+        setShippingZone(result.zone || null);
+      } else {
         setShippingZone(null);
-        return;
+        setPostalError("Delivery not available for this postal code.");
       }
-      setPostalLoading(true);
-      setPostalError(null);
-      try {
-        const result = await ApiService.validateDeliveryZone({
-          country: deliveryCountry || undefined,
-          city: deliveryCity || undefined,
-          postal_code: postalCode.trim()
-        });
-        if (result?.allowed) {
-          setShippingZone(result.zone || null);
-        } else {
-          setShippingZone(null);
-          setPostalError("Delivery not available for this postal code.");
-        }
-      } catch (e) {
-        setShippingZone(null);
-        setPostalError("Unable to validate postal code.");
-      } finally {
-        setPostalLoading(false);
-      }
-    };
-    validate();
-  }, [postalCode]);
+    } catch (e) {
+      setShippingZone(null);
+      setPostalError("Unable to validate postal code.");
+    } finally {
+      setPostalLoading(false);
+      setPostalChecked(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white fade-in">
@@ -495,23 +496,34 @@ export default function CartPage() {
                         onChange={(e) => {
                           const next = e.target.value;
                           setPostalCode(next);
+                          setPostalChecked(false);
                           if (typeof window !== "undefined") {
                             window.localStorage.setItem("deliveryPostalCode", next);
                           }
                         }}
                         placeholder="Enter postal code"
-                        className="w-full rounded-md border border-black px-3 py-2 text-sm"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
                       />
-                      {postalLoading && (
-                        <span className="text-xs text-gray-500">Checking...</span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={validatePostalCode}
+                        disabled={postalLoading}
+                        className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {postalLoading ? "Checking..." : "Check"}
+                      </button>
                     </div>
-                    {postalError && (
+                    {postalChecked && postalError && (
                       <div className="mt-2 text-xs text-red-600">{postalError}</div>
                     )}
-                    {!postalError && shippingZone && freeThreshold !== null && (
+                    {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
                       <div className="mt-2 text-xs text-gray-600">
                         Free shipping above {formatCurrency(freeThreshold)} for your area.
+                      </div>
+                    )}
+                    {postalChecked && !postalError && !shippingZone && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        Delivery availability confirmed.
                       </div>
                     )}
                   </div>
