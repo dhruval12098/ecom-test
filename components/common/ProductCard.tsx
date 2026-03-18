@@ -97,6 +97,7 @@ export default function ProductCard({
   // Use product data if provided, otherwise use props
   const displayTitle = product?.name || title;
   const displayWeight = (product?.weight ?? weight ?? "").trim();
+  const titleWithWeight = displayWeight ? `${displayTitle} - ${displayWeight}` : displayTitle;
   const parsedPrice = product ? undefined : parsePrice(price);
   const parsedOriginalPrice = product ? undefined : parsePrice(originalPrice);
   const productVariants = product?.variants ?? [];
@@ -225,8 +226,8 @@ export default function ProductCard({
         layout === "carousel"
           ? "w-48 sm:w-72 shrink-0 h-[290px] sm:h-[420px]"
           : size === "compact"
-            ? "w-full min-w-0 h-60 sm:h-68 md:h-72 lg:h-80"
-            : "w-full min-w-0 h-48 sm:h-56 md:h-60 lg:h-72"
+            ? "w-full min-w-0 h-[240px] sm:h-68 md:h-72 lg:h-80"
+            : "w-full min-w-0 h-[240px] sm:h-56 md:h-60 lg:h-72"
       }`}
     >
       
@@ -238,8 +239,16 @@ export default function ProductCard({
         </div>
       )}
 
-      {/* ===== IMAGE AREA (70% on mobile, 75% on desktop) ===== */}
-      <div className={`relative w-full ${layout === "carousel" ? "h-[60%] sm:h-[70%]" : size === "compact" ? "h-[58%]" : "h-[62%]"}`}>
+      {/* ===== IMAGE AREA (fixed on mobile to prevent content clipping) ===== */}
+      <div
+        className={`relative w-full shrink-0 ${
+          layout === "carousel"
+            ? "h-40 sm:h-[70%]"
+            : size === "compact"
+              ? "h-[130px] sm:h-[58%]"
+              : "h-[130px] sm:h-[62%]"
+        }`}
+      >
         <img
           src={displayImageUrl}
           alt={displayTitle}
@@ -253,41 +262,39 @@ export default function ProductCard({
         />
       </div>
 
-      {/* ===== CONTENT AREA (30% on mobile, 25% on desktop) ===== */}
-      <div className={`px-2 sm:px-3 pt-2 pb-3 sm:pt-2.5 sm:pb-3 flex flex-col gap-1.5 ${layout === "carousel" ? "h-[40%] sm:h-[30%]" : size === "compact" ? "h-[42%]" : "h-[38%]"}`}>
+      {/* ===== CONTENT AREA ===== */}
+      <div
+        className={`px-2 sm:px-3 pt-2 pb-2.5 sm:pt-2.5 sm:pb-3 flex flex-col justify-between gap-1 min-h-0 flex-1 ${
+          layout === "carousel" ? "sm:h-[30%]" : size === "compact" ? "sm:h-[42%]" : "sm:h-[38%]"
+        }`}
+      >
         
         {/* Title + Rating */}
         <div className="flex items-start justify-between min-h-[2.25rem] sm:min-h-[2.5rem]">
           <div className="min-w-0 w-full">
-            <h3 className={`font-semibold text-black ${layout === "carousel" ? "text-[13px] sm:text-lg" : size === "compact" ? "text-[11px] sm:text-sm md:text-base" : "text-[10px] sm:text-xs md:text-sm"} leading-snug line-clamp-1 break-words min-w-0 ${titleClassName ?? ""}`}>
-              {displayTitle}
+            <h3 className={`font-semibold text-black ${layout === "carousel" ? "text-[13px] sm:text-lg" : size === "compact" ? "text-[11px] sm:text-sm md:text-base" : "text-[11px] sm:text-xs md:text-sm"} leading-snug line-clamp-2 break-words min-w-0 min-h-[2.25rem] ${titleClassName ?? ""}`}>
+              {titleWithWeight}
             </h3>
           </div>
 
           <div className="shrink-0" />
         </div>
-        {displayWeight ? (
-          <p className={`${layout === "carousel" ? "text-[11px] sm:text-xs" : size === "compact" ? "text-[10px] sm:text-xs md:text-sm" : "text-[9px] sm:text-[10px] md:text-xs"} text-gray-600 leading-tight line-clamp-1`}>
-            {displayWeight}
-          </p>
-        ) : null}
-
         {/* Divider */}
         <div className="h-px w-full bg-gray-200" />
 
         {/* Price + Cart */}
-        <div className="flex items-center justify-between gap-2 mt-auto pt-0.5">
+        <div className="flex items-center justify-between gap-2 mt-auto pt-0.5 px-2 pb-0.5 sm:px-0 sm:pb-0">
           <div className="flex flex-col">
-            <p className={`${layout === "carousel" ? "text-sm sm:text-xl" : size === "compact" ? "text-base sm:text-lg md:text-xl" : "text-[10px] sm:text-xs md:text-sm"} font-bold text-black`}>{displayPrice}</p>
             {displayOriginalPrice && (
-              <p className={`${layout === "carousel" ? "text-[11px] sm:text-sm" : size === "compact" ? "text-[10px] sm:text-xs" : "text-[9px] sm:text-[10px]"} text-gray-500 line-through`}>{displayOriginalPrice}</p>
+              <p className={`${layout === "carousel" ? "text-[11px] sm:text-sm" : "text-[10px] sm:text-xs"} text-gray-500 line-through`}>{displayOriginalPrice}</p>
             )}
+            <p className={`${layout === "carousel" ? "text-sm sm:text-xl" : "text-[13px] sm:text-lg md:text-xl"} font-medium text-black`}>{displayPrice}</p>
           </div>
 
           <button 
             onClick={handleAddToCart}
             disabled={isInCart}
-            className={`rounded-full shrink-0 ${layout === "carousel" ? "w-9 h-9 sm:w-10 sm:h-10" : size === "compact" ? "w-9 h-9 sm:w-10 sm:h-10" : "w-7 h-7 sm:w-8 sm:h-8"} transition-all duration-200 flex items-center justify-center ${
+            className={`${layout === "carousel" ? "rounded-full w-9 h-9 sm:w-10 sm:h-10" : "rounded-lg w-7 h-7 sm:w-8 sm:h-8"} shrink-0 transition-all duration-200 flex items-center justify-center ${
               isInCart 
                 ? "bg-green-800 text-white scale-105" 
                 : "bg-white border border-gray-300 hover:bg-gray-100 hover:shadow-md cursor-pointer"

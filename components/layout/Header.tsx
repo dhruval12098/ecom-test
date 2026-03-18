@@ -167,6 +167,7 @@ export default function Header() {
   }, []);
 
   const handleMouseEnter = (slug: string) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) return;
     setOpenDropdown(slug);
   };
 
@@ -338,7 +339,7 @@ export default function Header() {
                     {/* Dropdown Menu */}
                     {openDropdown === item.slug && item.subcategories.length > 0 && (
                       <div 
-                        className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-50 border border-gray-200"
+                        className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-50 border border-gray-200 hidden sm:block"
                         onMouseEnter={() => handleMouseEnter(item.slug)}
                         onMouseLeave={handleMouseLeave}
                       >

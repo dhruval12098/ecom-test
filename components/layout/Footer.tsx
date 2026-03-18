@@ -97,12 +97,6 @@ const Footer = () => {
                     <ArrowUpRight className="w-3 h-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
                   </Link>
                 </li>
-                <li>
-                  <a href="#" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm inline-flex items-center gap-2 group">
-                    <span>Career</span>
-                    <ArrowUpRight className="w-3 h-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200" />
-                  </a>
-                </li>
               </ul>
             </div>
 

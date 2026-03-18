@@ -165,26 +165,9 @@ export default function AboutPage() {
     }
   ]);
 
-  const [team, setTeam] = useState([
-    {
-      name: "Priya Sharma",
-      role: "Head of Operations",
-      image: "/team/priya.jpg",
-      bio: "Supply chain expert ensuring quality and freshness in every delivery"
-    },
-    {
-      name: "David Kumar",
-      role: "Head of Sourcing",
-      image: "/team/david.jpg",
-      bio: "Building relationships with local farmers and ensuring product quality"
-    },
-    {
-      name: "Emma Williams",
-      role: "Customer Experience Lead",
-      image: "/team/emma.jpg",
-      bio: "Dedicated to creating exceptional customer journeys and satisfaction"
-    }
-  ]);
+  const [team, setTeam] = useState<
+    Array<{ name: string; role: string; image: string; bio: string }>
+  >([]);
 
   return (
     <div className="min-h-screen bg-white fade-in">
@@ -323,55 +306,56 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Leadership Team Section */}
-      <section className="w-full py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Our Leadership Team</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {team.map((member, index) => (
-              <div key={index} className="text-center">
-                <div className="w-32 h-32 rounded-full border border-black mx-auto mb-4 overflow-hidden">
-                  <img 
-                    src={member.image}
-                    alt={member.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="128" height="128" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="64" cy="64" r="64" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="48" text-anchor="middle" dy=".3em" fill="%239ca3af"%3E' + member.name.charAt(0) + '%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
+      {team.length > 0 && (
+        <section className="w-full py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-6">
+            <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">Our Leadership Team</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {team.map((member, index) => (
+                <div key={index} className="text-center">
+                  <div className="w-32 h-32 rounded-full border border-black mx-auto mb-4 overflow-hidden">
+                    <img 
+                      src={member.image}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="128" height="128" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="64" cy="64" r="64" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="48" text-anchor="middle" dy=".3em" fill="%239ca3af"%3E' + member.name.charAt(0) + '%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h3>
+                  <p className="text-[#266000] font-medium mb-3">{member.role}</p>
+                  <p className="text-gray-600 text-sm">{member.bio}</p>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-1">{member.name}</h3>
-                <p className="text-[#266000] font-medium mb-3">{member.role}</p>
-                <p className="text-gray-600 text-sm">{member.bio}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Our Impact Section */}
       <section className="w-full py-20">
         <div className="max-w-7xl mx-auto px-6">
           <div className="bg-[#266000] rounded-2xl p-12 mx-auto" style={{width: '95%'}}>
-            <h2 className="text-3xl font-bold text-white text-center mb-12">Our Impact</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">Our Impact</h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              <div>
-                <div className="text-5xl font-bold text-white mb-2 animate-countup" data-target="500">0</div>
-                <div className="text-green-100">Local Farmers Supported</div>
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 text-center">
+              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+                <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="18">0</div>
+                <div className="text-xs sm:text-base text-green-100">Local Suppliers Partnered</div>
               </div>
-              <div>
-                <div className="text-5xl font-bold text-white mb-2 animate-countup" data-target="50000">0</div>
-                <div className="text-green-100">Happy Customers</div>
+              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+                <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="1200">0</div>
+                <div className="text-xs sm:text-base text-green-100">Orders Delivered Fresh</div>
               </div>
-              <div>
-                <div className="text-5xl font-bold text-white mb-2 animate-countup" data-target="2000000">0</div>
-                <div className="text-green-100">Products Delivered</div>
+              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+                <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="600">0</div>
+                <div className="text-xs sm:text-base text-green-100">Repeat Weekly Customers</div>
               </div>
-              <div>
-                <div className="text-5xl font-bold text-white mb-2 animate-countup" data-target="98">0%</div>
-                <div className="text-green-100">Satisfaction Rate</div>
+              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+                <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="24">0</div>
+                <div className="text-xs sm:text-base text-green-100">Neighborhood Jobs Created</div>
               </div>
             </div>
           </div>

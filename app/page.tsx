@@ -13,6 +13,7 @@ import FAQ from "@/components/common/FAQ";
 import ApiService from "@/lib/api";
 import { readCache, writeCache } from "@/lib/storageCache";
 import Link from "next/link";
+import ReviewCardsSection, { PublicReview } from "@/components/reviews/ReviewCardsSection";
 
 interface Product {
   id: number;
@@ -110,6 +111,7 @@ export default function HeroSection() {
   const [loading, setLoading] = useState(true);
   const [showDeferred, setShowDeferred] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [homeReviews, setHomeReviews] = useState<PublicReview[]>([]);
   
   useEffect(() => {
     const cached = readCache<{
@@ -235,6 +237,7 @@ export default function HeroSection() {
           ApiService.getHomepageSection('best_deal'),
           ApiService.getHomepageSection('new_arrivals')
         ]);
+        const reviewsData = await ApiService.getPublicReviews({ limit: 6, offset: 0 });
 
         const productMap = new Map(allProducts.map((product) => [product.id, product]));
         const mapSectionProducts = (items: HomepageSectionItem[]) => {
@@ -289,6 +292,7 @@ export default function HeroSection() {
         setTopSellers(nextTop);
         setNewArrivalsProducts(nextNew);
         setBestDealsProducts(nextBest);
+        setHomeReviews(reviewsData?.reviews || []);
         
         console.log('Top sellers count:', pickConsistentProducts(allProducts, 6).length);
         console.log('New arrivals count:', pickConsistentProducts(allProducts, 6).length);
@@ -439,10 +443,10 @@ export default function HeroSection() {
       </section>
 
       {/* ================= GAP ================= */}
-      <div className="h-24" />
+      <div className="h-10 sm:h-14 md:h-24" />
 
       {/* ================= CATEGORY SECTION ================= */}
-      <section className="w-full py-16 bg-white">
+      <section className="w-full py-10 sm:py-14 md:py-16 bg-white">
         <div className="max-w-6xl mx-auto px-3 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Shop By Category</h2>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 sm:gap-1 md:gap-3">
@@ -481,7 +485,7 @@ export default function HeroSection() {
       </section>
 
       {/* ================= TOP SELLER SECTION ================= */}
-      <section className="w-full py-20 bg-white">
+      <section className="w-full py-10 sm:py-14 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Our Top Seller</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
@@ -511,7 +515,7 @@ export default function HeroSection() {
       </section>
 
       {/* ================= BEST DEALS SECTION ================= */}
-      <section className="w-full py-20 bg-white">
+      <section className="w-full py-10 sm:py-14 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Best Deals</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
@@ -541,7 +545,7 @@ export default function HeroSection() {
       </section>
 
       {/* ================= NEW ARRIVALS SECTION ================= */}
-      <section className="w-full py-20 bg-white">
+      <section className="w-full py-10 sm:py-14 md:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">New Arrivals</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
@@ -570,9 +574,20 @@ export default function HeroSection() {
         </div>
       </section>
 
+      <section className="w-full py-10 sm:py-14 md:py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-8 lg:px-10">
+          <h2 className="text-4xl font-bold mb-8 sm:mb-10 text-center text-black">Customer Reviews</h2>
+          {homeReviews.length > 0 ? (
+            <ReviewCardsSection reviews={homeReviews} mobileSlider={true} />
+          ) : (
+            <div className="text-center text-sm text-gray-600">No reviews yet.</div>
+          )}
+        </div>
+      </section>
+
       <>
       {/* ================= CURRENT TRENDS SECTION ================= */}
-      <section className="w-full py-20 bg-gray-50">
+      <section className="w-full py-10 sm:py-14 md:py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Current offers</h2>
           
