@@ -16,6 +16,7 @@ interface Product {
   subcategory: string;
   price: number;
   originalPrice: number;
+  mainVariantId?: number | null;
   imageUrl: string;
   discountPercentage: string;
   discountColor: string;
@@ -26,7 +27,13 @@ interface Product {
   weight: string;
   origin: string;
   variants?: Array<{
+    id?: number | string;
+    name?: string | null;
+    type?: string | null;
     price?: number | string;
+    originalPrice?: number | string | null;
+    discountPercentage?: string | null;
+    discountColor?: string | null;
   }>;
 }
 
@@ -96,6 +103,8 @@ export default function CategoryPage() {
               price: Number(product.price || 0),
               originalPrice:
                 product.originalPrice ?? product.original_price ?? null,
+              mainVariantId:
+                product.mainVariantId ?? product.main_variant_id ?? null,
               variants: Array.isArray(product.variants) ? product.variants : [],
               imageUrl:
                 product.imageUrl ||
@@ -303,16 +312,18 @@ export default function CategoryPage() {
             <div className="text-gray-500 text-lg">No products found</div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.map((product: Product) => (
               <ProductCard
                 key={product.id}
                 titleClassName="line-clamp-2"
+                size="compact"
                 product={{
                   id: product.id,
                   name: product.name,
                   price: product.price,
                   originalPrice: product.originalPrice,
+                  mainVariantId: product.mainVariantId,
                   variants: product.variants,
                   imageUrl: product.imageUrl,
                   discountPercentage: product.discountPercentage,

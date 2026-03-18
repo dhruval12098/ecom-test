@@ -184,7 +184,7 @@ export default function Header() {
   return (
     <>
       <div className="w-full font-sans">
-        {announcement?.is_active !== false && (announcement?.message || 'Free shipping on orders over EUR 69') && (
+        {announcement?.is_active !== false && (announcement?.message || '🚚 Fast delivery in Ghent | Authentic Indian groceries | Fresh products available every weekend') && (
           <div className="announcement-bar" style={{ backgroundColor: '#173A00' }}>
             <div
               className="announcement-marquee"
@@ -195,7 +195,7 @@ export default function Header() {
                   <div className="announcement-group" key={groupIdx}>
                     {[0, 1, 2, 3].map((idx) => (
                       <div className="announcement-item" key={`${groupIdx}-${idx}`}>
-                        <span>{announcement?.message || 'Free shipping on orders over EUR 69'}</span>
+                        <span>{announcement?.message || '🚚 Fast delivery in Ghent | Authentic Indian groceries | Fresh products available every weekend'}</span>
                         {announcement?.link_url && announcement?.link_text && (
                           <a href={announcement.link_url} className="announcement-link">
                             {announcement.link_text}
@@ -215,12 +215,12 @@ export default function Header() {
           <div className="hidden sm:flex max-w-7xl mx-auto px-4 py-5 items-center gap-10 relative">
             <Link href="/" className="flex items-center">
               <img 
-                src={logoUrl || "/brands/fmod.svg"} 
+                src={logoUrl || "/logo/logo.jpeg"} 
                 alt="Fmod Logo" 
                 className="h-15 w-auto"
                 onError={(e) => {
-                  // Fallback if logo.png doesn't exist
-                  e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
+                  if (e.currentTarget.src.includes('/logo/logo.jpeg')) return;
+                  e.currentTarget.src = '/logo/logo.jpeg';
                 }}
               />
             </Link>
@@ -268,13 +268,13 @@ export default function Header() {
               {/* Logo */}
               <Link href="/" className="shrink-0">
                 <img 
-                  src={logoUrl || "/brands/fmod.svg"} 
-                  alt="Fmod Logo" 
-                  className="h-12 w-auto"
-                  onError={(e) => {
-                    // Fallback if logo.png doesn't exist
-                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="32" height="32" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="32" height="32" fill="%23266000"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="12" text-anchor="middle" dy=".3em" fill="white"%3EF%3C/text%3E%3C/svg%3E';
-                  }}
+                src={logoUrl || "/logo/logo.jpeg"} 
+                alt="Fmod Logo" 
+                className="h-12 w-auto"
+                onError={(e) => {
+                    if (e.currentTarget.src.includes('/logo/logo.jpeg')) return;
+                    e.currentTarget.src = '/logo/logo.jpeg';
+                }}
                 />
               </Link>
               

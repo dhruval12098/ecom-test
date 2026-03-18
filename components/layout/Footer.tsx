@@ -116,7 +116,7 @@ const Footer = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/my-orders" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm">
+                  <Link href="/account?tab=orders" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm">
                     Track Your Order
                   </Link>
                 </li>

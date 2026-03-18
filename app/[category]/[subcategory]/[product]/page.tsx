@@ -13,6 +13,9 @@ interface ProductVariant {
   id: number;
   name: string;
   price: number;
+  originalPrice?: number | null;
+  discountPercentage?: string | null;
+  discountColor?: string | null;
   stockQuantity?: number;
 }
 
@@ -34,6 +37,7 @@ interface ProductDetails {
   weight: string;
   origin: string;
   imageGallery?: string[];
+  mainVariantId?: number | null;
   variants?: ProductVariant[];
 }
 
@@ -103,7 +107,9 @@ export default function ProductDetailsPage() {
       setActiveSchedule(cached.activeSchedule ?? null);
       setReviewSummary(cached.reviewSummary || { count: 0, avg_rating: 0 });
       if (cached.product.variants && cached.product.variants.length > 0) {
-        setSelectedVariantId(cached.product.variants[0].id);
+        const preferred = cached.product.mainVariantId ?? (cached.product as any).main_variant_id ?? null;
+        const fallback = cached.product.variants[0].id;
+        setSelectedVariantId(preferred ?? fallback);
       }
       setLoading(false);
       setMissing(false);
@@ -145,13 +151,20 @@ export default function ProductDetailsPage() {
           setReviewSummary(nextReviewSummary);
         }
         if (foundProduct.variants && foundProduct.variants.length > 0) {
-          setSelectedVariantId(foundProduct.variants[0].id);
+          const preferred = foundProduct.mainVariantId ?? foundProduct.main_variant_id ?? null;
+          const fallback = foundProduct.variants[0].id;
+          setSelectedVariantId(preferred ?? fallback);
         }
         let nextSchedule = null;
         try {
-          const variantForSchedule = foundProduct.variants && foundProduct.variants.length > 0
-            ? foundProduct.variants[0].id
-            : null;
+          const variantForSchedule =
+            foundProduct.mainVariantId ??
+            foundProduct.main_variant_id ??
+            (
+              foundProduct.variants && foundProduct.variants.length > 0
+                ? foundProduct.variants[0].id
+                : null
+            );
           const schedule = await ApiService.getActiveSchedule(foundProduct.id, variantForSchedule);
           nextSchedule = schedule;
           setActiveSchedule(schedule);
@@ -245,14 +258,18 @@ export default function ProductDetailsPage() {
     ? Number(selectedVariant.stockQuantity ?? 0) > 0
     : product.inStock;
   const basePrice = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
-  const discountPercent = product.discountPercentage
-    ? Number(String(product.discountPercentage).replace(/[^0-9.]/g, ""))
+  const effectiveDiscountPercentage = selectedVariant?.discountPercentage || product.discountPercentage;
+  const effectiveDiscountColor = selectedVariant?.discountColor || product.discountColor || "bg-yellow-500";
+  const discountPercent = effectiveDiscountPercentage
+    ? Number(String(effectiveDiscountPercentage).replace(/[^0-9.]/g, ""))
     : 0;
   const displayPrice = activeSchedule?.scheduled_price !== undefined && activeSchedule?.scheduled_price !== null
     ? Number(activeSchedule.scheduled_price)
     : basePrice;
   const normalPrice = activeSchedule?.normal_price !== undefined && activeSchedule?.normal_price !== null
     ? Number(activeSchedule.normal_price)
+    : selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
+      ? Number(selectedVariant.originalPrice)
     : discountPercent > 0
       ? basePrice + (basePrice * discountPercent) / 100
       : Number(product.originalPrice ?? basePrice);
@@ -452,14 +469,14 @@ export default function ProductDetailsPage() {
             {/* Right Column - Product Info */}
             <div className="space-y-4">
               {/* Discount Badge */}
-              {(product.discountPercentage || activeSchedule?.discount_percent !== null || activeSchedule?.schedule_type) && (
+              {(effectiveDiscountPercentage || activeSchedule?.discount_percent != null || activeSchedule?.schedule_type) && (
                 <div className="inline-block">
                   <div className="flex flex-wrap items-center gap-2">
-                    {(product.discountPercentage || activeSchedule?.discount_percent !== null) && (
-                      <span className="bg-yellow-500 text-white px-3 py-1 text-xs font-bold block rounded-tl-lg rounded-br-lg">
+                    {(effectiveDiscountPercentage || activeSchedule?.discount_percent != null) && (
+                      <span className={`${effectiveDiscountColor} text-white px-3 py-1 text-xs font-bold block rounded-tl-lg rounded-br-lg`}>
                         {activeSchedule?.discount_percent
                           ? `${Number(activeSchedule.discount_percent).toFixed(0)}%`
-                          : product.discountPercentage}
+                          : effectiveDiscountPercentage}
                       </span>
                     )}
                     {activeSchedule?.schedule_type && (

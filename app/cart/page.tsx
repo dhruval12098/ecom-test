@@ -6,11 +6,9 @@ import { useCart } from "@/contexts/CartContext";
 import { formatCurrency } from "@/lib/currency";
 import ApiService from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
-  const { user: authUser } = useAuth();
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [shippingRates, setShippingRates] = useState<any[]>([]);
   const [shippingZone, setShippingZone] = useState<any | null>(null);
@@ -30,6 +28,9 @@ export default function CartPage() {
       const variantPrice = item.variantId && Array.isArray(live.variants)
         ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
         : null;
+      const selectedVariant = item.variantId && Array.isArray(live.variants)
+        ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))
+        : null;
       const inStock =
         live.inStock !== undefined
           ? Boolean(live.inStock)
@@ -43,7 +44,13 @@ export default function CartPage() {
           ? Number(variantPrice)
           : Number(live.sale_price || live.price || item.price),
         originalPrice: variantPrice !== null && variantPrice !== undefined
-          ? item.originalPrice
+          ? (
+              selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
+                ? Number(selectedVariant.originalPrice)
+                : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
+                  ? Number(selectedVariant.original_price)
+                  : item.originalPrice
+            )
           : live.originalPrice
             ? Number(live.originalPrice)
             : live.original_price
@@ -55,7 +62,13 @@ export default function CartPage() {
     });
   }, [cartItems, liveMap]);
 
-  const subtotal = displayItems.reduce(
+  const purchasableItems = useMemo(
+    () => displayItems.filter((item) => item.inStock),
+    [displayItems]
+  );
+  const purchasableCount = purchasableItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const subtotal = purchasableItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
@@ -65,7 +78,7 @@ export default function CartPage() {
     [excludedCategoryIds]
   );
 
-  const eligibleSubtotal = displayItems.reduce((sum, item) => {
+  const eligibleSubtotal = purchasableItems.reduce((sum, item) => {
     const live = liveMap[item.id];
     const categoryId = Number(
       live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
@@ -76,7 +89,7 @@ export default function CartPage() {
     return sum + item.price * item.quantity;
   }, 0);
 
-  const hasFreeShippingItem = displayItems.some((item) => {
+  const hasFreeShippingItem = purchasableItems.some((item) => {
     const live = liveMap[item.id];
     const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
     return method === 'free';
@@ -108,6 +121,15 @@ export default function CartPage() {
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
   const tax = (subtotal - discount) * (taxRate / 100);
   const total = subtotal + shippingCost - discount + tax;
+  const minOrderAmount = Number(
+    shippingZone?.min_order_amount ?? shippingZone?.minOrderAmount ?? NaN
+  );
+  const hasMinOrderAmount = Number.isFinite(minOrderAmount);
+  const minOrderRemaining = hasMinOrderAmount ? Math.max(0, minOrderAmount - subtotal) : 0;
+  const belowMinOrder = hasMinOrderAmount && subtotal < minOrderAmount;
+  const deliveryValidated = postalChecked && !postalError && Boolean(shippingZone);
+  const hasPurchasableItems = purchasableItems.length > 0;
+  const canProceedCheckout = hasPurchasableItems && deliveryValidated && !belowMinOrder;
 
   useEffect(() => {
     const loadLiveProducts = async () => {
@@ -166,62 +188,12 @@ export default function CartPage() {
         const raw = settings?.excluded_free_shipping_category_ids || [];
         const parsed = Array.isArray(raw) ? raw : [];
         setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
-        if (!postalCode && typeof settings?.address === "string") {
-          const match = settings.address.match(/\b\d{4,6}\b/);
-          if (match?.[0]) {
-            setPostalCode(match[0]);
-            if (typeof window !== "undefined") {
-              window.localStorage.setItem("deliveryPostalCode", match[0]);
-            }
-          }
-        }
       } catch (e) {
         setTaxRate(5);
       }
     };
     loadSettings();
-  }, [postalCode]);
-
-  useEffect(() => {
-    const bootstrapPostal = async () => {
-      if (typeof window === "undefined") return;
-      const stored = window.localStorage.getItem("deliveryPostalCode") || "";
-      if (stored) {
-        setPostalCode(stored);
-        const storedCountry = window.localStorage.getItem("deliveryCountry") || "";
-        const storedCity = window.localStorage.getItem("deliveryCity") || "";
-        if (storedCountry) setDeliveryCountry(storedCountry);
-        if (storedCity) setDeliveryCity(storedCity);
-        return;
-      }
-      if (!authUser) return;
-      try {
-        const profile = await ApiService.getCustomerProfile(authUser.id);
-        if (!profile?.id) return;
-        const addresses = await ApiService.getCustomerAddresses(profile.id);
-        const list = Array.isArray(addresses) ? addresses : [];
-        const preferred = list.find((addr: any) => addr.is_default) || list[0];
-        if (preferred?.postal_code) {
-          const next = String(preferred.postal_code);
-          setPostalCode(next);
-          window.localStorage.setItem("deliveryPostalCode", next);
-        }
-        if (preferred?.country) {
-          const nextCountry = String(preferred.country);
-          setDeliveryCountry(nextCountry);
-          window.localStorage.setItem("deliveryCountry", nextCountry);
-        }
-        if (preferred?.city) {
-          const nextCity = String(preferred.city);
-          setDeliveryCity(nextCity);
-          window.localStorage.setItem("deliveryCity", nextCity);
-        }
-      } catch (e) {
-        // ignore profile failures
-      }
-    };
-    bootstrapPostal();
-  }, [authUser]);
+  }, []);
 
   const validatePostalCode = async () => {
     if (!postalCode || postalCode.trim().length < 3) {
@@ -494,12 +466,8 @@ export default function CartPage() {
                       <input
                         value={postalCode}
                         onChange={(e) => {
-                          const next = e.target.value;
-                          setPostalCode(next);
+                          setPostalCode(e.target.value);
                           setPostalChecked(false);
-                          if (typeof window !== "undefined") {
-                            window.localStorage.setItem("deliveryPostalCode", next);
-                          }
                         }}
                         placeholder="Enter postal code"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
@@ -530,7 +498,7 @@ export default function CartPage() {
                   
                   <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
-                      <span>Subtotal ({displayItems.length} items)</span>
+                      <span>Subtotal ({purchasableCount} purchasable items)</span>
                       <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
                     </div>
                     
@@ -586,13 +554,67 @@ export default function CartPage() {
                       </p>
                     )}
                   </div>
+
+                  {!hasPurchasableItems && (
+                    <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
+                      <p className="text-sm font-semibold text-amber-900">No in-stock items to checkout</p>
+                      <p className="mt-1 text-sm text-amber-800">
+                        Remove out-of-stock products or add available products to continue.
+                      </p>
+                      <Link
+                        href="/"
+                        className="mt-3 inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+                      >
+                        Add more products
+                      </Link>
+                    </div>
+                  )}
+
+                  {hasPurchasableItems && !deliveryValidated && (
+                    <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
+                      <p className="text-sm font-semibold text-amber-900">Delivery check required</p>
+                      <p className="mt-1 text-sm text-amber-800">
+                        Enter your postal code and click Check to validate delivery area before checkout.
+                      </p>
+                    </div>
+                  )}
+
+                  {deliveryValidated && belowMinOrder && (
+                    <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
+                      <p className="text-sm font-semibold text-amber-900">Minimum order amount not met</p>
+                      <p className="mt-1 text-sm text-amber-800">
+                        Minimum order for your area is {formatCurrency(minOrderAmount)}.
+                        Add {formatCurrency(minOrderRemaining)} more to continue.
+                      </p>
+                      <Link
+                        href="/"
+                        className="mt-3 inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+                      >
+                        Add more products
+                      </Link>
+                    </div>
+                  )}
                   
-                  <Link 
-                    href="/checkout"
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 mb-3 md:mb-4"
-                  >
-                    Proceed to Checkout
-                  </Link>
+                  {canProceedCheckout ? (
+                    <Link
+                      href="/checkout"
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 mb-3 md:mb-4"
+                    >
+                      Proceed to Checkout
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full bg-gray-200 text-gray-500 py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base cursor-not-allowed mb-3 md:mb-4"
+                    >
+                      {!hasPurchasableItems
+                        ? "No in-stock items to checkout"
+                        : deliveryValidated
+                          ? "Minimum order not met"
+                          : "Validate delivery to continue"}
+                    </button>
+                  )}
                   
                   <Link
                     href="/"

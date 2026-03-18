@@ -124,6 +124,10 @@ export default function GuestOrdersPage() {
       }));
       setOrders(mapped);
       setIsVerified(true);
+      if (typeof window !== "undefined") {
+        const allowedOrderIds = mapped.map((order: Order) => String(order.id));
+        sessionStorage.setItem("guestOrdersAllowedIds", JSON.stringify(allowedOrderIds));
+      }
       if (!mapped.length) {
         toast.message("No orders found for this email.");
       }

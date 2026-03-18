@@ -50,9 +50,13 @@ export default function LoginPage() {
         <div className="w-full lg:w-1/2 px-2 lg:px-6">
           <div className="h-full rounded-3xl relative overflow-hidden">
             <img
-              src="/auth-left.jpg"
+              src="/logo/loginpageimage.png"
               alt="Welcome"
               className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                if (e.currentTarget.src.includes('/logo/loginpageimage.png')) return;
+                e.currentTarget.src = '/logo/loginpageimage.png';
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/80" />
             <div className="relative h-full p-8 md:p-12 flex flex-col justify-between">

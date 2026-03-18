@@ -16,15 +16,39 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canAccessAsGuest, setCanAccessAsGuest] = useState(false);
+  const [isGuestChecked, setIsGuestChecked] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !authUser) {
-      router.replace("/login");
+    if (typeof window === "undefined") return;
+    if (authLoading) return;
+    if (authUser) {
+      setCanAccessAsGuest(false);
+      setIsGuestChecked(true);
+      return;
     }
-  }, [authLoading, authUser, router]);
+
+    try {
+      const raw = sessionStorage.getItem("guestOrdersAllowedIds");
+      const parsed = raw ? JSON.parse(raw) : [];
+      const allowedIds = Array.isArray(parsed) ? parsed.map((id) => String(id)) : [];
+      const allowed = allowedIds.includes(String(orderId));
+      setCanAccessAsGuest(allowed);
+      setIsGuestChecked(true);
+      if (!allowed) {
+        router.replace("/guest-orders");
+      }
+    } catch {
+      setIsGuestChecked(true);
+      setCanAccessAsGuest(false);
+      router.replace("/guest-orders");
+    }
+  }, [authLoading, authUser, orderId, router]);
 
   useEffect(() => {
     const loadOrder = async () => {
+      if (authLoading || !isGuestChecked) return;
+      if (!authUser && !canAccessAsGuest) return;
       if (!orderId) return;
       try {
         setIsLoading(true);
@@ -39,15 +63,15 @@ export default function OrderDetailsPage() {
       }
     };
     loadOrder();
-  }, [orderId]);
+  }, [orderId, authLoading, authUser, canAccessAsGuest, isGuestChecked]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-4">
         <div className="mb-6">
-          <Link href="/account?tab=orders" className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+          <Link href={authUser ? "/account?tab=orders" : "/guest-orders"} className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Orders
+            {authUser ? "Back to Orders" : "Back to Guest Orders"}
           </Link>
         </div>
 

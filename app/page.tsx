@@ -5,8 +5,7 @@ import ProductCard from "@/components/common/ProductCard";
 import LogoLoop from "@/components/common/LogoLoop";
 import ShopAdvantages from "@/components/home/ShopAdvantages";
 import { WobbleCard } from "@/components/ui/wobble-card";
-import { useState, useRef, RefObject, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Section } from "lucide-react";
+import { useState, useEffect } from "react";
 import { FaCarrot, FaAppleAlt, FaSeedling, FaPepperHot, FaMugHot } from "react-icons/fa";
 import WelcomeSection from "@/components/home/WelcomeSection";
 import MainCategories from "@/components/home/MainCategories";
@@ -28,6 +27,7 @@ interface CategoryProduct {
   name: string;
   price: number;
   originalPrice?: number;
+  mainVariantId?: number | null;
   imageUrl: string;
   discountPercentage: string;
   discountColor: string;
@@ -40,6 +40,17 @@ interface CategoryProduct {
   category: string;
   subcategory: string;
   slug: string;
+  variants?: Array<{
+    id?: number | string;
+    name?: string | null;
+    type?: string | null;
+    price?: number | string;
+    originalPrice?: number | string | null;
+    discountPercentage?: string | null;
+    discountColor?: string | null;
+    stockQuantity?: number;
+    sku?: string | null;
+  }>;
 }
 
 interface TrendItem {
@@ -76,8 +87,14 @@ interface ApiHeroSlide {
   button_link?: string | null;
 }
 
+interface HomepageSectionItem {
+  product_id?: number;
+  variant_id?: number | null;
+  product?: { id?: number };
+}
+
 export default function HeroSection() {
-  const HOME_CACHE_KEY = "home:v2";
+  const HOME_CACHE_KEY = "home:v3";
   const HOME_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
 
   const [active, setActive] = useState(0);
@@ -93,10 +110,6 @@ export default function HeroSection() {
   const [loading, setLoading] = useState(true);
   const [showDeferred, setShowDeferred] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const categoryRef = useRef<HTMLDivElement>(null);
-  const topSellerRef = useRef<HTMLDivElement>(null);
-  const bestDealsRef = useRef<HTMLDivElement>(null);
-  const newArrivalsRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const cached = readCache<{
@@ -185,6 +198,7 @@ export default function HeroSection() {
                   (product.id !== undefined && product.id !== null ? String(product.id) : null);
                 allProducts.push({
                   ...product,
+                  mainVariantId: product.mainVariantId ?? product.main_variant_id ?? null,
                   category: category.slug,
                   subcategory: subcategory.slug,
                   slug: normalizedSlug || ""
@@ -223,11 +237,41 @@ export default function HeroSection() {
         ]);
 
         const productMap = new Map(allProducts.map((product) => [product.id, product]));
-        const mapSectionProducts = (items: any[]) => {
+        const mapSectionProducts = (items: HomepageSectionItem[]) => {
           const mapped = items
             .map((item) => {
               const productId = item?.product_id || item?.product?.id;
-              return productMap.get(productId);
+              if (productId === undefined || productId === null) return null;
+              const baseProduct = productMap.get(productId);
+              if (!baseProduct) return null;
+
+              const variantId =
+                item?.variant_id !== undefined && item?.variant_id !== null
+                  ? Number(item.variant_id)
+                  : null;
+
+              if (variantId === null || Number.isNaN(variantId)) {
+                return baseProduct;
+              }
+
+              const matchedVariant = (baseProduct.variants || []).find(
+                (variant) => Number(variant?.id) === variantId
+              );
+
+              if (!matchedVariant) return baseProduct;
+
+              return {
+                ...baseProduct,
+                price: Number(matchedVariant.price ?? baseProduct.price),
+                originalPrice:
+                  matchedVariant.originalPrice !== undefined && matchedVariant.originalPrice !== null
+                    ? Number(matchedVariant.originalPrice)
+                    : baseProduct.originalPrice,
+                discountPercentage: matchedVariant.discountPercentage || baseProduct.discountPercentage,
+                discountColor: matchedVariant.discountColor || baseProduct.discountColor,
+                weight: matchedVariant.name || matchedVariant.type || baseProduct.weight,
+                variants: [matchedVariant]
+              } as CategoryProduct;
             })
             .filter(Boolean) as CategoryProduct[];
           return mapped;
@@ -290,17 +334,9 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, [heroSlides.length]);
 
-    // Reset carousels to start when screen size changes to mobile
-    useEffect(() => {
-      const handleResize = () => {
-        setIsMobile(window.innerWidth < 640);
-        if (window.innerWidth < 640) {
-          // Reset all carousels to start position on mobile
-          if (categoryRef.current) categoryRef.current.scrollTo({ left: 0 });
-          if (topSellerRef.current) topSellerRef.current.scrollTo({ left: 0 });
-          if (bestDealsRef.current) bestDealsRef.current.scrollTo({ left: 0 });
-        if (newArrivalsRef.current) newArrivalsRef.current.scrollTo({ left: 0 });
-      }
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
     };
 
     // Check on mount
@@ -311,55 +347,6 @@ export default function HeroSection() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
-  const scroll = (ref: React.RefObject<HTMLDivElement>, dir: "left" | "right") => {
-    if (!ref.current) return;
-    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
-    ref.current.scrollBy({
-      left: dir === "left" ? -cardWidth : cardWidth,
-      behavior: "smooth",
-    });
-  };
-  
-  const scrollTopSeller = (dir: "left" | "right") => {
-    if (!topSellerRef.current) return;
-    // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
-    topSellerRef.current.scrollBy({
-      left: dir === "left" ? -cardWidth : cardWidth,
-      behavior: "smooth",
-    });
-  };
-  
-  const scrollBestDeals = (dir: "left" | "right") => {
-    if (!bestDealsRef.current) return;
-    // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
-    bestDealsRef.current.scrollBy({
-      left: dir === "left" ? -cardWidth : cardWidth,
-      behavior: "smooth",
-    });
-  };
-  
-  const scrollCategories = (dir: "left" | "right") => {
-    if (!categoryRef.current) return;
-    // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx CategoryCard width + gap
-    categoryRef.current.scrollBy({
-      left: dir === "left" ? -cardWidth : cardWidth,
-      behavior: "smooth",
-    });
-  };
-  
-  const scrollNewArrivals = (dir: "left" | "right") => {
-    if (!newArrivalsRef.current) return;
-    // Reset to start on small screens, scroll normally on larger screens
-    const cardWidth = window.innerWidth < 640 ? 210 : 300; // approx ProductCard width + gap
-    newArrivalsRef.current.scrollBy({
-      left: dir === "left" ? -cardWidth : cardWidth,
-      behavior: "smooth",
-    });
-  };
-
   const showHeroSkeleton = loading && heroSlides.length === 0;
 
   return (
@@ -456,220 +443,129 @@ export default function HeroSection() {
 
       {/* ================= CATEGORY SECTION ================= */}
       <section className="w-full py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Shop By Category</h2>
-
-          <div className="relative">
-            <button
-              onClick={() => scrollCategories("left")}
-              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronLeft />
-            </button>
-
-            <div
-              ref={categoryRef}
-              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
-            >
-              <div className="flex gap-4 sm:gap-6 min-w-max">
-                {(shopCategories.length > 0
-                  ? shopCategories
-                  : [
-                      { id: 1, name: 'Vegetables', slug: 'vegetables' },
-                      { id: 2, name: 'Fruits', slug: 'fruits' },
-                      { id: 3, name: 'Grains', slug: 'grains' },
-                      { id: 4, name: 'Spices', slug: 'spices' },
-                      { id: 5, name: 'Tea', slug: 'tea' }
-                    ]
-                ).map((category, index) => {
-                  const fallbackIcons = [
-                    <FaCarrot key="veg" className="w-12 h-12 text-white" />,
-                    <FaAppleAlt key="fruit" className="w-12 h-12 text-white" />,
-                    <FaSeedling key="grain" className="w-12 h-12 text-white" />,
-                    <FaPepperHot key="spice" className="w-12 h-12 text-white" />,
-                    <FaMugHot key="tea" className="w-12 h-12 text-white" />
-                  ];
-                  const fallbackColors = ['#9ca308', '#6b0f6b', '#007a4d', '#8b0000', '#1b0b4f'];
-                  return (
-                    <CategoryCard
-                      key={category.id || category.slug}
-                      title={category.name}
-                      prefix=""
-                      bgColor={fallbackColors[index % fallbackColors.length]}
-                      icon={fallbackIcons[index % fallbackIcons.length]}
-                      slug={category.slug}
-                      imageUrl={(category as any).image || (category as any).image_url || null}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-            <button
-              onClick={() => scrollCategories("right")}
-              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronRight />
-            </button>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 sm:gap-1 md:gap-3">
+            {(shopCategories.length > 0
+              ? shopCategories
+              : [
+                  { id: 1, name: 'Vegetables', slug: 'vegetables' },
+                  { id: 2, name: 'Fruits', slug: 'fruits' },
+                  { id: 3, name: 'Grains', slug: 'grains' },
+                  { id: 4, name: 'Spices', slug: 'spices' },
+                  { id: 5, name: 'Tea', slug: 'tea' }
+                ]
+            ).map((category, index) => {
+              const fallbackIcons = [
+                <FaCarrot key="veg" className="w-12 h-12 text-white" />,
+                <FaAppleAlt key="fruit" className="w-12 h-12 text-white" />,
+                <FaSeedling key="grain" className="w-12 h-12 text-white" />,
+                <FaPepperHot key="spice" className="w-12 h-12 text-white" />,
+                <FaMugHot key="tea" className="w-12 h-12 text-white" />
+              ];
+              const fallbackColors = ['#9ca308', '#6b0f6b', '#007a4d', '#8b0000', '#1b0b4f'];
+              return (
+                <CategoryCard
+                  key={category.id || category.slug}
+                  title={category.name}
+                  prefix=""
+                  bgColor={fallbackColors[index % fallbackColors.length]}
+                  icon={fallbackIcons[index % fallbackIcons.length]}
+                  slug={category.slug}
+                  imageUrl={(category as any).image || (category as any).image_url || null}
+                />
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* ================= TOP SELLER SECTION ================= */}
       <section className="w-full py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Our Top Seller</h2>
-
-          <div className="relative">
-            <button
-              onClick={() => scrollTopSeller("left")}
-              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronLeft />
-            </button>
-
-            <div
-              ref={topSellerRef}
-              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
-            >
-              <div className="flex gap-4 sm:gap-6 min-w-max">
-                  {topSellers.length > 0 ? (
-                    topSellers.map((product, index) => (
-                      <ProductCard 
-                        key={`${product.id}-${index}`}
-                        product={product}
-                        imageUrl={product.imageUrl} 
-                      title={product.name} 
-                      weight={product.weight}
-                      price={`€${product.price}`}
-                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
-                      rating={product.rating}
-                      discountPercentage={product.discountPercentage} 
-                      discountColor={product.discountColor} 
-                      layout="carousel"
-                    />
-                  ))
-                ) : (
-                  // Fallback content while loading
-                  Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="w-72 h-80 bg-gray-200 rounded-xl animate-pulse" />
-                  ))
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => scrollTopSeller("right")}
-              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronRight />
-            </button>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
+            {topSellers.length > 0 ? (
+              topSellers.map((product, index) => (
+                <ProductCard
+                  key={`${product.id}-${index}`}
+                  product={product}
+                  imageUrl={product.imageUrl}
+                  title={product.name}
+                  weight={product.weight}
+                  price={`€${product.price}`}
+                  originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
+                  rating={product.rating}
+                  discountPercentage={product.discountPercentage}
+                  discountColor={product.discountColor}
+                  layout="grid"
+                />
+              ))
+            ) : (
+              Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="w-full h-48 sm:h-56 md:h-64 bg-gray-200 rounded-xl animate-pulse" />
+              ))
+            )}
           </div>
         </div>
       </section>
 
       {/* ================= BEST DEALS SECTION ================= */}
       <section className="w-full py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">Best Deals</h2>
-
-          <div className="relative">
-            <button
-              onClick={() => scrollBestDeals("left")}
-              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronLeft />
-            </button>
-
-            <div
-              ref={bestDealsRef}
-              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
-            >
-              <div className="flex gap-4 sm:gap-6 min-w-max">
-                  {bestDealsProducts.length > 0 ? (
-                    bestDealsProducts.map((product, index) => (
-                      <ProductCard 
-                        key={`${product.id}-${index}`}
-                        product={product}
-                        imageUrl={product.imageUrl} 
-                      title={product.name} 
-                      weight={product.weight}
-                      price={`€${product.price}`}
-                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
-                      rating={product.rating}
-                      discountPercentage={product.discountPercentage} 
-                      discountColor={product.discountColor} 
-                      layout="carousel"
-                    />
-                  ))
-                ) : (
-                  // Fallback content while loading
-                  Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="w-72 h-80 bg-gray-200 rounded-xl animate-pulse" />
-                  ))
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => scrollBestDeals("right")}
-              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronRight />
-            </button>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
+            {bestDealsProducts.length > 0 ? (
+              bestDealsProducts.map((product, index) => (
+                <ProductCard
+                  key={`${product.id}-${index}`}
+                  product={product}
+                  imageUrl={product.imageUrl}
+                  title={product.name}
+                  weight={product.weight}
+                  price={`€${product.price}`}
+                  originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
+                  rating={product.rating}
+                  discountPercentage={product.discountPercentage}
+                  discountColor={product.discountColor}
+                  layout="grid"
+                />
+              ))
+            ) : (
+              Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="w-full h-48 sm:h-56 md:h-64 bg-gray-200 rounded-xl animate-pulse" />
+              ))
+            )}
           </div>
         </div>
       </section>
 
       {/* ================= NEW ARRIVALS SECTION ================= */}
       <section className="w-full py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10">
           <h2 className="text-4xl font-bold mb-10 text-center text-black">New Arrivals</h2>
-
-          <div className="relative">
-            <button
-              onClick={() => scrollNewArrivals("left")}
-              className="absolute left-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronLeft />
-            </button>
-
-            <div
-              ref={newArrivalsRef}
-              className="overflow-x-scroll pb-4 pr-8 pl-8 scroll-pl-8 scrollbar-hide flex justify-start"
-            >
-              <div className="flex gap-4 sm:gap-6 min-w-max">
-                  {newArrivalsProducts.length > 0 ? (
-                    newArrivalsProducts.map((product, index) => (
-                      <ProductCard 
-                        key={`${product.id}-${index}`}
-                        product={product}
-                        imageUrl={product.imageUrl} 
-                        title={product.name} 
-                        weight={product.weight}
-                      price={`€${product.price}`}
-                      originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
-                      rating={product.rating}
-                      discountPercentage={product.discountPercentage} 
-                      discountColor={product.discountColor} 
-                      layout="carousel"
-                    />
-                  ))
-                ) : (
-                  // Fallback content while loading
-                  Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="w-72 h-80 bg-gray-200 rounded-xl animate-pulse" />
-                  ))
-                )}
-              </div>
-            </div>
-
-            <button
-              onClick={() => scrollNewArrivals("right")}
-              className="absolute right-0 z-10 bg-white shadow-md rounded-full p-2 top-1/2 -translate-y-1/2"
-            >
-              <ChevronRight />
-            </button>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2 md:gap-2.5 lg:gap-x-5 lg:gap-y-5">
+            {newArrivalsProducts.length > 0 ? (
+              newArrivalsProducts.map((product, index) => (
+                <ProductCard
+                  key={`${product.id}-${index}`}
+                  product={product}
+                  imageUrl={product.imageUrl}
+                  title={product.name}
+                  weight={product.weight}
+                  price={`€${product.price}`}
+                  originalPrice={product.originalPrice ? `€${product.originalPrice}` : undefined}
+                  rating={product.rating}
+                  discountPercentage={product.discountPercentage}
+                  discountColor={product.discountColor}
+                  layout="grid"
+                />
+              ))
+            ) : (
+              Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="w-full h-48 sm:h-56 md:h-64 bg-gray-200 rounded-xl animate-pulse" />
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -708,9 +604,9 @@ export default function HeroSection() {
                           backgroundImage: `url('${trend.imageUrl}')`,
                         }}
                       />
-                      <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/70 to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-br from-black/95 via-black/70 to-transparent" />
                       <div className="absolute top-0 left-0 z-10 p-6">
-                        <div className={isWide ? 'max-w-xs' : 'max-w-[200px]'}>
+                        <div className={isWide ? 'max-w-xs' : 'max-w-50'}>
                           <h2 className={`${isWide ? 'text-3xl' : 'text-xl'} font-bold text-white mb-2`}>
                             {trend.title}
                           </h2>
@@ -819,7 +715,7 @@ export default function HeroSection() {
         <WelcomeSection />
       </section>
 
-      <section className="w-full border-black border-t-1  bg-gray-50  py-10">
+      <section className="w-full border-black border-t  bg-gray-50  py-10">
         <MainCategories />
       </section>
 

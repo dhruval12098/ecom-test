@@ -777,6 +777,18 @@ function AccountPageInner() {
               {/* Session */}
               <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
                 <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Session</h4>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-5">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">Reset Password</p>
+                    <p className="text-xs sm:text-sm text-gray-600">Get a secure reset link by email</p>
+                  </div>
+                  <Link
+                    href="/forgot-password"
+                    className="inline-flex items-center justify-center bg-white border border-black text-gray-900 px-5 sm:px-6 py-2 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
+                  >
+                    Reset Password
+                  </Link>
+                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <p className="font-semibold text-gray-900 text-sm sm:text-base">Log out</p>

@@ -208,6 +208,9 @@ function CheckoutPageContent() {
     const variantPrice = item.variantId && Array.isArray(live.variants)
       ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
       : null;
+    const selectedVariant = item.variantId && Array.isArray(live.variants)
+      ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))
+      : null;
     const inStock =
       live.inStock !== undefined
         ? Boolean(live.inStock)
@@ -221,7 +224,13 @@ function CheckoutPageContent() {
         ? Number(variantPrice)
         : Number(live.sale_price || live.price || item.price),
       originalPrice: variantPrice !== null && variantPrice !== undefined
-        ? item.originalPrice
+        ? (
+            selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
+              ? Number(selectedVariant.originalPrice)
+              : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
+                ? Number(selectedVariant.original_price)
+                : item.originalPrice
+          )
         : live.originalPrice
           ? Number(live.originalPrice)
           : live.original_price
@@ -341,6 +350,12 @@ function CheckoutPageContent() {
     return 'Tax (mixed rates)';
   })();
   const total = subtotal + shippingCost - discountTotal + tax;
+  const minOrderAmount = Number(
+    shippingZone?.min_order_amount ?? shippingZone?.minOrderAmount ?? NaN
+  );
+  const hasMinOrderAmount = Number.isFinite(minOrderAmount);
+  const minOrderRemaining = hasMinOrderAmount ? Math.max(0, minOrderAmount - subtotal) : 0;
+  const belowMinOrder = hasMinOrderAmount && subtotal < minOrderAmount;
   const displayTotal = confirmedTotal ?? total;
   const scheduleDeliveryDays = deliveryDays.length > 0 ? deliveryDays : orderAcceptDays;
   const scheduleAcceptLabel = orderAcceptDays.length ? orderAcceptDays.join(", ") : "Daily";
@@ -513,6 +528,14 @@ function CheckoutPageContent() {
         }
         const zone = result?.zone || null;
         setShippingZone(zone);
+        const zoneMinOrder = Number(zone?.min_order_amount ?? zone?.minOrderAmount ?? NaN);
+        if (Number.isFinite(zoneMinOrder) && subtotal < zoneMinOrder) {
+          const remaining = Math.max(0, zoneMinOrder - subtotal);
+          const message = `Minimum order for your area is ${formatCurrency(zoneMinOrder)}. Add ${formatCurrency(remaining)} more.`;
+          setDeliveryCheckError(message);
+          toast.error("Minimum order amount not met", { description: message });
+          return;
+        }
       } catch (err: any) {
         const msg = err?.message || 'Unable to validate delivery area.';
         setDeliveryCheckError(msg);
@@ -1375,6 +1398,23 @@ function CheckoutPageContent() {
                               <p className="font-semibold">Delivery Unavailable</p>
                               <p>{deliveryCheckError}</p>
                             </div>
+                          </div>
+                        </div>
+                      )}
+                      {shippingStep === 2 && shippingInfo.postalCode && belowMinOrder && (
+                        <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                          <div className="text-sm text-amber-900">
+                            <p className="font-semibold">Minimum order amount not met</p>
+                            <p className="mt-1">
+                              Minimum order for your area is {formatCurrency(minOrderAmount)}.
+                              Add {formatCurrency(minOrderRemaining)} more to continue.
+                            </p>
+                            <Link
+                              href="/"
+                              className="mt-3 inline-flex items-center rounded-lg bg-black px-4 py-2 font-semibold text-white hover:bg-gray-900"
+                            >
+                              Add more products
+                            </Link>
                           </div>
                         </div>
                       )}
