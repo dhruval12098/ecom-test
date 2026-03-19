@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -73,6 +74,14 @@ export default function LoginPage() {
 
         <div className="w-full lg:w-1/2 flex items-center justify-center px-2 lg:px-8">
           <div className="w-full max-w-md">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
             <div className="text-black text-4xl mb-4 md:mb-6">✽</div>
             <h1 className="text-3xl md:text-4xl font-bold text-black mb-2 md:mb-3">
               Login to your account
@@ -180,3 +189,7 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+
+

@@ -80,15 +80,29 @@ function AccountPageInner() {
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    if (!window.confirm("Are you sure you want to log out?")) return;
+  const openLogoutDialog = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const closeLogoutDialog = () => {
+    if (isLoggingOut) return;
+    setShowLogoutDialog(false);
+  };
+
+  const handleLogoutConfirm = async () => {
     try {
+      setIsLoggingOut(true);
       await supabase.auth.signOut();
       toast.success("Logged out");
       router.replace("/login");
     } catch (e) {
       toast.error("Failed to log out");
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutDialog(false);
     }
   };
   const [addressForm, setAddressForm] = useState({
@@ -795,7 +809,7 @@ function AccountPageInner() {
                     <p className="text-xs sm:text-sm text-gray-600">Sign out from this device</p>
                   </div>
                   <button
-                    onClick={handleLogout}
+                    onClick={openLogoutDialog}
                     className="bg-white border border-black text-gray-900 px-5 sm:px-6 py-2 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
                   >
                     Log out
@@ -917,7 +931,7 @@ function AccountPageInner() {
             activeTab={activeTab} 
             onTabChange={setActiveTab} 
             user={user}
-            onLogout={handleLogout}
+            onLogout={openLogoutDialog}
           />
           
           {/* Main Content */}
@@ -926,6 +940,41 @@ function AccountPageInner() {
           </div>
         </div>
       </div>
+
+      {showLogoutDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button
+            type="button"
+            aria-label="Close logout dialog"
+            onClick={closeLogoutDialog}
+            className="absolute inset-0 bg-black/40"
+          />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white border border-gray-200 p-5 sm:p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Log out?</h3>
+            <p className="text-sm text-gray-600 mb-5">
+              Are you sure you want to log out from this device?
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeLogoutDialog}
+                disabled={isLoggingOut}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirm}
+                disabled={isLoggingOut}
+                className="px-4 py-2 rounded-lg bg-[#266000] text-white text-sm font-semibold hover:bg-[#1f4f00] disabled:opacity-60"
+              >
+                {isLoggingOut ? "Logging out..." : "Log out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

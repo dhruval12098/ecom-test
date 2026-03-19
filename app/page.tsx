@@ -237,7 +237,7 @@ export default function HeroSection() {
           ApiService.getHomepageSection('best_deal'),
           ApiService.getHomepageSection('new_arrivals')
         ]);
-        const reviewsData = await ApiService.getPublicReviews({ limit: 6, offset: 0 });
+        const reviewsData = await ApiService.getPublicReviews({ limit: 9, offset: 0 });
 
         const productMap = new Map(allProducts.map((product) => [product.id, product]));
         const mapSectionProducts = (items: HomepageSectionItem[]) => {
@@ -582,6 +582,14 @@ export default function HeroSection() {
           ) : (
             <div className="text-center text-sm text-gray-600">No reviews yet.</div>
           )}
+          <div className="mt-6 sm:mt-8 text-center">
+            <Link
+              href="/reviews"
+              className="inline-flex items-center justify-center rounded-lg bg-[#266000] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f00] transition-colors"
+            >
+              View All Reviews
+            </Link>
+          </div>
         </div>
       </section>
 
