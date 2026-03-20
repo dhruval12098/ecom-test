@@ -200,6 +200,62 @@ function CheckoutPageContent() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    if (shippingStep !== 2) return;
+
+    const country = shippingInfo.country?.trim();
+    const city = shippingInfo.city?.trim();
+    const postalCode = shippingInfo.postalCode?.trim();
+
+    // Clear stale zone state when address is incomplete.
+    if (!country || !city || !postalCode || postalCode.length < 3) {
+      setShippingZone(null);
+      setDeliveryCheckError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const result = await ApiService.validateDeliveryZone({
+          country,
+          city,
+          postal_code: postalCode
+        });
+        if (cancelled) return;
+
+        if (!result?.allowed) {
+          setShippingZone(null);
+          setDeliveryCheckError("Delivery is not available in your area.");
+          return;
+        }
+
+        const zone = result?.zone || null;
+        setShippingZone(zone);
+
+        const zoneMinOrder = Number(zone?.min_order_amount ?? zone?.minOrderAmount ?? NaN);
+        if (Number.isFinite(zoneMinOrder) && subtotal < zoneMinOrder) {
+          const remaining = Math.max(0, zoneMinOrder - subtotal);
+          const message = `Minimum order for your area is ${formatCurrency(zoneMinOrder)}. Add ${formatCurrency(remaining)} more.`;
+          setDeliveryCheckError(message);
+          return;
+        }
+
+        setDeliveryCheckError(null);
+      } catch {
+        if (cancelled) return;
+        // Keep UX quiet during typing; submit-time validation still handles errors explicitly.
+        setShippingZone(null);
+        setDeliveryCheckError(null);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [shippingStep, shippingInfo.country, shippingInfo.city, shippingInfo.postalCode, subtotal]);
+
   const sourceItems = isBuyNow ? (buyNowItem ? [buyNowItem] : []) : cartItems;
 
   const displayItems = sourceItems.map((item) => {
@@ -430,6 +486,9 @@ function CheckoutPageContent() {
         ...prev,
         [name]: value
       }));
+      if (name === "postalCode" || name === "city" || name === "country") {
+        setShippingZone(null);
+      }
     }
   };
 

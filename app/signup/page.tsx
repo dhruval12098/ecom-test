@@ -88,7 +88,7 @@ export default function SignupPage() {
               <div className="text-white">
                 <p className="text-base md:text-lg mb-3 opacity-90">Join</p>
                 <h2 className="text-2xl md:text-3xl font-bold leading-tight">
-                  GRD FOOD<br />Your Indian Pantry
+                  Tulsi Grocery<br />Your Indian Pantry
                 </h2>
               </div>
             </div>

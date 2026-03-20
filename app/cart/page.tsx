@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Package, Truck, Shield } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, Package, Truck, Shield, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
 import { formatCurrency } from "@/lib/currency";
@@ -20,6 +20,7 @@ export default function CartPage() {
   const [postalChecked, setPostalChecked] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
+  const [showTaxDetails, setShowTaxDetails] = useState(false);
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -119,7 +120,52 @@ export default function CartPage() {
     return subtotal > 500 ? 0 : 50;
   })();
   const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
-  const tax = (subtotal - discount) * (taxRate / 100);
+  const tax = (() => {
+    if (subtotal <= 0) return 0;
+    return purchasableItems.reduce((sum, item) => {
+      const live = liveMap[item.id];
+      const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
+      const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+      const itemSubtotal = item.price * item.quantity;
+      const discountShare = subtotal > 0 ? (discount * (itemSubtotal / subtotal)) : 0;
+      const itemTaxable = Math.max(0, itemSubtotal - discountShare);
+      return sum + itemTaxable * (rate / 100);
+    }, 0);
+  })();
+  const taxLabel = (() => {
+    const rates = purchasableItems.map((item) => {
+      const live = liveMap[item.id];
+      const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
+      const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+      return Number.isFinite(rate) ? rate : Number(taxRate);
+    });
+    if (rates.length === 0) return `Tax (VAT ${taxRate}%)`;
+    const first = rates[0];
+    const allSame = rates.every((r) => Math.abs(r - first) < 0.0001);
+    if (allSame) return `Tax (VAT ${first}%)`;
+    return 'Tax (mixed rates)';
+  })();
+  const vatSummary = (() => {
+    const buckets: Record<string, { rate: number; net: number; vat: number; gross: number }> = {};
+    purchasableItems.forEach((item) => {
+      const live = liveMap[item.id];
+      const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
+      const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+      const itemSubtotal = item.price * item.quantity;
+      const discountShare = subtotal > 0 ? (discount * (itemSubtotal / subtotal)) : 0;
+      const net = Math.max(0, itemSubtotal - discountShare);
+      const safeRate = Number.isFinite(rate) ? rate : Number(taxRate);
+      const vat = net * (safeRate / 100);
+      const key = String(safeRate);
+      if (!buckets[key]) {
+        buckets[key] = { rate: safeRate, net: 0, vat: 0, gross: 0 };
+      }
+      buckets[key].net += net;
+      buckets[key].vat += vat;
+      buckets[key].gross += net + vat;
+    });
+    return Object.values(buckets).sort((a, b) => a.rate - b.rate);
+  })();
   const total = subtotal + shippingCost - discount + tax;
   const minOrderAmount = Number(
     shippingZone?.min_order_amount ?? shippingZone?.minOrderAmount ?? NaN
@@ -332,6 +378,9 @@ export default function CartPage() {
                           <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap hidden md:table-cell w-24">
                             Unit
                           </th>
+                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap hidden md:table-cell w-20">
+                            VAT
+                          </th>
                           <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap w-32">
                             Total
                           </th>
@@ -410,6 +459,15 @@ export default function CartPage() {
                             </td>
                             <td className="px-3 md:px-4 py-3 text-right align-top hidden md:table-cell">
                               <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
+                            </td>
+                            <td className="px-3 md:px-4 py-3 text-right align-top hidden md:table-cell whitespace-nowrap">
+                              {(() => {
+                                const live = liveMap[item.id];
+                                const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
+                                const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+                                const safeRate = Number.isFinite(rate) ? rate : Number(taxRate);
+                                return `${safeRate.toFixed(2)}%`;
+                              })()}
                             </td>
                             <td className="px-3 md:px-4 py-3 text-right align-top whitespace-nowrap">
                               {item.originalPrice && (
@@ -521,9 +579,36 @@ export default function CartPage() {
                     )}
                     
                     <div className="flex justify-between text-sm md:text-base text-gray-600">
-                      <span>Tax (VAT {taxRate}%)</span>
+                      <span>{taxLabel}</span>
                       <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                     </div>
+                    {vatSummary.length > 1 && (
+                      <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+                        <button
+                          type="button"
+                          onClick={() => setShowTaxDetails((prev) => !prev)}
+                          className="w-full flex items-center justify-between font-semibold text-gray-800"
+                          aria-expanded={showTaxDetails}
+                        >
+                          <span>VAT summary</span>
+                          {showTaxDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                        {showTaxDetails && (
+                          <div className="mt-2 space-y-2">
+                            {vatSummary.length > 0 && (
+                              <div className="space-y-1">
+                                {vatSummary.map((row) => (
+                                  <div key={row.rate} className="flex justify-between">
+                                    <span>VAT {row.rate.toFixed(2)}%</span>
+                                    <span className="font-semibold text-gray-900">{formatCurrency(row.vat)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Free shipping progress bar */}
                     {shippingCost > 0 && freeThreshold !== null && (

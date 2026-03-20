@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Star, Home, ChevronRight, ShoppingCart, Heart } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
@@ -60,6 +60,7 @@ export default function ProductDetailsPage() {
   const PRODUCT_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const category = params.category as string;
   const subcategory = params.subcategory as string;
   const productSlug = params.product as string;
@@ -192,6 +193,17 @@ export default function ProductDetailsPage() {
 
     fetchProductData();
   }, [category, subcategory, productSlug]);
+
+  useEffect(() => {
+    const variantParam = searchParams.get('variant');
+    if (!variantParam || !product?.variants || product.variants.length === 0) return;
+    const desiredId = Number(variantParam);
+    if (!Number.isFinite(desiredId)) return;
+    const exists = product.variants.find((v) => Number(v.id) === desiredId);
+    if (exists) {
+      setSelectedVariantId(desiredId);
+    }
+  }, [product?.id, searchParams]);
 
   useEffect(() => {
     const refreshSchedule = async () => {

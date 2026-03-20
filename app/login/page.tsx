@@ -65,7 +65,7 @@ export default function LoginPage() {
               <div className="text-white">
                 <p className="text-base md:text-lg mb-3 opacity-90">Welcome to</p>
                 <h2 className="text-2xl md:text-3xl font-bold leading-tight">
-                  GRD FOOD<br />Taste Of India
+                  Tulsi Grocery<br />Taste Of India
                 </h2>
               </div>
             </div>

@@ -11,7 +11,8 @@ const Footer = () => {
   const [contactInfo, setContactInfo] = useState({
     visitStoreLines: ["8502 Preston Rd.", "Inglewood, Maine", "98380"],
     emailLines: ["example@gmail.com"],
-    phoneLines: ["+0123-456-789"]
+    phoneLines: ["+0123-456-789"],
+    vatNumber: ""
   });
 
   useEffect(() => {
@@ -37,7 +38,8 @@ const Footer = () => {
         setContactInfo({
           visitStoreLines: addressLines,
           emailLines,
-          phoneLines
+          phoneLines,
+          vatNumber: settings.vat_number || ''
         });
       } catch (error) {
         console.error('Error fetching contact info:', error);
@@ -159,6 +161,7 @@ const Footer = () => {
                 {contactInfo.emailLines.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
+                {contactInfo.vatNumber ? <li>VAT: {contactInfo.vatNumber}</li> : null}
                 <li className="leading-relaxed">
                   {contactInfo.visitStoreLines.map((line, idx) => (
                     <span key={`${line}-${idx}`}>
