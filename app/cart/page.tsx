@@ -412,7 +412,92 @@ export default function CartPage() {
 
                 {/* Cart Items */}
                 <div className="bg-white border border-black rounded-2xl overflow-hidden">
-                  <div className="overflow-x-auto">
+                  <div className="sm:hidden divide-y divide-gray-200">
+                    {displayItems.map((item) => (
+                      <div
+                        key={`${item.id}-${item.variantId ?? "base"}-mobile`}
+                        className={`p-3 ${!item.inStock ? "opacity-50" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0">
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src =
+                                    'data:image/svg+xml,%3Csvg width="80" height="80" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="80" height="80" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" font-size="12" text-anchor="middle" dy=".3em" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">
+                                No Image
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-gray-900 truncate">
+                              {item.name}
+                            </div>
+                            {(item.variantName || item.weight) && (
+                              <div className="text-[11px] text-gray-600 truncate">
+                                {item.variantName || item.weight}
+                              </div>
+                            )}
+                            {!item.inStock && (
+                              <div className="mt-1 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-0.5 rounded-md text-[10px] font-semibold">
+                                Out of Stock
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => removeFromCart(item.id, item.variantId)}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-200"
+                            title="Remove item"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center border border-black rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
+                              disabled={!item.inStock || item.quantity <= 1}
+                              className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="px-2.5 py-1 text-gray-900 text-xs font-semibold min-w-[32px] text-center border-x border-black">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
+                              disabled={!item.inStock}
+                              className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <div className="text-right">
+                            {item.originalPrice && (
+                              <div className="text-[10px] text-gray-500 line-through">
+                                {formatCurrency(item.originalPrice * item.quantity)}
+                              </div>
+                            )}
+                            <div className="text-sm font-bold text-gray-900">
+                              {formatCurrency(item.price * item.quantity)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden sm:block overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50 text-gray-700">
                         <tr>
@@ -440,13 +525,13 @@ export default function CartPage() {
                             key={`${item.id}-${item.variantId ?? "base"}`}
                             className={!item.inStock ? "opacity-50" : undefined}
                           >
-                              <td className="px-3 md:px-4 py-2 md:py-3 align-top">
-                                <div className="flex items-start gap-3">
-                                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl overflow-hidden border border-black bg-gray-50 shrink-0">
-                                    {item.imageUrl ? (
-                                      <img
-                                        src={item.imageUrl}
-                                        alt={item.name}
+                            <td className="px-3 md:px-4 py-2 align-top">
+                              <div className="flex items-start gap-2">
+                                <div className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0">
+                                  {item.imageUrl ? (
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.name}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
                                         e.currentTarget.src =
@@ -460,69 +545,73 @@ export default function CartPage() {
                                   )}
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="font-bold text-gray-900 text-sm md:text-base truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]">
+                                    <div className="font-semibold text-gray-900 text-sm truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px]">
                                       {item.name}
                                     </div>
                                     {(item.variantName || item.weight) && (
-                                      <div className="text-[11px] md:text-xs text-gray-600 mt-0.5 truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]">
+                                      <div className="text-[11px] text-gray-600 mt-0.5 truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px]">
                                         {item.variantName || item.weight}
                                       </div>
                                     )}
                                     {!item.inStock && (
-                                      <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-lg text-[11px] font-semibold">
+                                      <div className="mt-1 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-0.5 rounded-md text-[10px] font-semibold">
                                         Out of Stock
                                       </div>
                                     )}
                                     <div className="md:hidden text-xs text-gray-600 mt-2">
                                       Unit: <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
                                     </div>
-                                </div>
+                                  </div>
                               </div>
                             </td>
-                              <td className="px-3 md:px-4 py-2 md:py-3 align-top">
+                              <td className="px-3 md:px-4 py-2 align-top">
                                 <div className="flex items-center justify-center">
-                                  <div className="flex items-center border border-black rounded-xl overflow-hidden">
+                                  <div className="flex items-center border border-black rounded-lg overflow-hidden">
                                     <button
                                       onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
-                                    disabled={!item.inStock || item.quantity <= 1}
-                                    className="px-2.5 md:px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                    aria-label="Decrease quantity"
-                                  >
-                                    <Minus className="w-4 h-4" />
-                                  </button>
-                                  <span className="px-3 md:px-4 py-1.5 text-gray-900 font-semibold min-w-[44px] text-center border-x border-black">
-                                    {item.quantity}
-                                  </span>
-                                  <button
-                                    onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
-                                    disabled={!item.inStock}
-                                    className="px-2.5 md:px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                    aria-label="Increase quantity"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </button>
+                                      disabled={!item.inStock || item.quantity <= 1}
+                                      className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                      aria-label="Decrease quantity"
+                                    >
+                                      <Minus className="w-4 h-4" />
+                                    </button>
+                                    <span className="px-2.5 py-1 text-gray-900 text-sm font-semibold min-w-[36px] text-center border-x border-black">
+                                      {item.quantity}
+                                    </span>
+                                    <button
+                                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
+                                      disabled={!item.inStock}
+                                      className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                      aria-label="Increase quantity"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top hidden md:table-cell">
-                                <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
                               </td>
-                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top hidden md:table-cell whitespace-nowrap">
+                              <td className="px-3 md:px-4 py-2 text-right align-top hidden md:table-cell">
+                                <span className="font-semibold text-gray-900 text-sm">{formatCurrency(item.price)}</span>
+                              </td>
+                              <td className="px-3 md:px-4 py-2 text-right align-top hidden md:table-cell whitespace-nowrap">
                                 {(() => {
                                   const live = liveMap[item.id];
                                   const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
                                   const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
                                   const safeRate = Number.isFinite(rate) ? rate : Number(taxRate);
-                                  return `${safeRate.toFixed(2)}%`;
+                                  return (
+                                    <span className="text-sm text-gray-700">
+                                      {safeRate.toFixed(2)}%
+                                    </span>
+                                  );
                                 })()}
                               </td>
-                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top whitespace-nowrap">
+                              <td className="px-3 md:px-4 py-2 text-right align-top whitespace-nowrap">
                                 {item.originalPrice && (
                                   <div className="text-gray-500 line-through text-xs">
                                     {formatCurrency(item.originalPrice * item.quantity)}
                                   </div>
                                 )}
-                                <div className="text-sm md:text-lg font-bold text-gray-900">
+                                <div className="text-base font-bold text-gray-900">
                                   {formatCurrency(item.price * item.quantity)}
                                 </div>
                                 {item.originalPrice && (
@@ -531,13 +620,13 @@ export default function CartPage() {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-2 md:px-3 py-2 md:py-3 text-right align-top">
+                              <td className="px-2 md:px-3 py-2 text-right align-top">
                                 <button
                                   onClick={() => removeFromCart(item.id, item.variantId)}
-                                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-                                title="Remove item"
-                                aria-label="Remove item"
-                              >
+                                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-200"
+                                  title="Remove item"
+                                  aria-label="Remove item"
+                                >
                                 <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                               </button>
                             </td>
@@ -599,11 +688,7 @@ export default function CartPage() {
                         Delivery availability confirmed.
                       </div>
                     )}
-                    {hasExcludedFreeShippingItems && (
-                      <div className="mt-2 text-xs text-amber-800">
-                        Some items in your cart are excluded from the free shipping threshold.
-                      </div>
-                    )}
+                   
                   </div>
                   
                   <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
