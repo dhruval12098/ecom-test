@@ -36,7 +36,9 @@ export default function CartPage() {
         ? Number(selectedVariant.stock_quantity ?? selectedVariant.stockQuantity ?? 0)
         : null;
       const variantInStock = selectedVariant
-        ? (Number.isFinite(variantQty) ? variantQty > 0 : Boolean(selectedVariant.in_stock ?? selectedVariant.inStock))
+        ? (variantQty !== null && Number.isFinite(variantQty)
+            ? variantQty > 0
+            : Boolean(selectedVariant.in_stock ?? selectedVariant.inStock))
         : null;
       const inStock =
         selectedVariant
@@ -438,13 +440,13 @@ export default function CartPage() {
                             key={`${item.id}-${item.variantId ?? "base"}`}
                             className={!item.inStock ? "opacity-50" : undefined}
                           >
-                            <td className="px-3 md:px-4 py-3 align-top">
-                              <div className="flex items-start gap-3">
-                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border border-black bg-gray-50 shrink-0">
-                                  {item.imageUrl ? (
-                                    <img
-                                      src={item.imageUrl}
-                                      alt={item.name}
+                              <td className="px-3 md:px-4 py-2 md:py-3 align-top">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl overflow-hidden border border-black bg-gray-50 shrink-0">
+                                    {item.imageUrl ? (
+                                      <img
+                                        src={item.imageUrl}
+                                        alt={item.name}
                                       className="w-full h-full object-cover"
                                       onError={(e) => {
                                         e.currentTarget.src =
@@ -456,30 +458,32 @@ export default function CartPage() {
                                       No Image
                                     </div>
                                   )}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="font-bold text-gray-900 break-words">{item.name}</div>
-                                  {(item.variantName || item.weight) && (
-                                    <div className="text-xs text-gray-600 mt-0.5">
-                                      {item.variantName || item.weight}
-                                    </div>
-                                  )}
-                                  {!item.inStock && (
-                                    <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-lg text-xs font-semibold">
-                                      Out of Stock
-                                    </div>
-                                  )}
-                                  <div className="md:hidden text-xs text-gray-600 mt-2">
-                                    Unit: <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
                                   </div>
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-gray-900 text-sm md:text-base truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]">
+                                      {item.name}
+                                    </div>
+                                    {(item.variantName || item.weight) && (
+                                      <div className="text-[11px] md:text-xs text-gray-600 mt-0.5 truncate max-w-[170px] sm:max-w-[260px] md:max-w-[340px]">
+                                        {item.variantName || item.weight}
+                                      </div>
+                                    )}
+                                    {!item.inStock && (
+                                      <div className="mt-2 inline-block bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-lg text-[11px] font-semibold">
+                                        Out of Stock
+                                      </div>
+                                    )}
+                                    <div className="md:hidden text-xs text-gray-600 mt-2">
+                                      Unit: <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
+                                    </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 md:px-4 py-3 align-top">
-                              <div className="flex items-center justify-center">
-                                <div className="flex items-center border border-black rounded-xl overflow-hidden">
-                                  <button
-                                    onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
+                              <td className="px-3 md:px-4 py-2 md:py-3 align-top">
+                                <div className="flex items-center justify-center">
+                                  <div className="flex items-center border border-black rounded-xl overflow-hidden">
+                                    <button
+                                      onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
                                     disabled={!item.inStock || item.quantity <= 1}
                                     className="px-2.5 md:px-3 py-1.5 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     aria-label="Decrease quantity"
@@ -500,37 +504,37 @@ export default function CartPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 md:px-4 py-3 text-right align-top hidden md:table-cell">
-                              <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
-                            </td>
-                            <td className="px-3 md:px-4 py-3 text-right align-top hidden md:table-cell whitespace-nowrap">
-                              {(() => {
-                                const live = liveMap[item.id];
-                                const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
-                                const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
-                                const safeRate = Number.isFinite(rate) ? rate : Number(taxRate);
-                                return `${safeRate.toFixed(2)}%`;
-                              })()}
-                            </td>
-                            <td className="px-3 md:px-4 py-3 text-right align-top whitespace-nowrap">
-                              {item.originalPrice && (
-                                <div className="text-gray-500 line-through text-xs">
-                                  {formatCurrency(item.originalPrice * item.quantity)}
+                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top hidden md:table-cell">
+                                <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
+                              </td>
+                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top hidden md:table-cell whitespace-nowrap">
+                                {(() => {
+                                  const live = liveMap[item.id];
+                                  const rawRate = live?.tax_percent ?? live?.taxPercent ?? (item as any)?.tax_percent ?? (item as any)?.taxPercent ?? null;
+                                  const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
+                                  const safeRate = Number.isFinite(rate) ? rate : Number(taxRate);
+                                  return `${safeRate.toFixed(2)}%`;
+                                })()}
+                              </td>
+                              <td className="px-3 md:px-4 py-2 md:py-3 text-right align-top whitespace-nowrap">
+                                {item.originalPrice && (
+                                  <div className="text-gray-500 line-through text-xs">
+                                    {formatCurrency(item.originalPrice * item.quantity)}
+                                  </div>
+                                )}
+                                <div className="text-sm md:text-lg font-bold text-gray-900">
+                                  {formatCurrency(item.price * item.quantity)}
                                 </div>
-                              )}
-                              <div className="text-base md:text-lg font-bold text-gray-900">
-                                {formatCurrency(item.price * item.quantity)}
-                              </div>
-                              {item.originalPrice && (
-                                <div className="text-[#266000] text-xs font-semibold mt-0.5">
-                                  Save {formatCurrency((item.originalPrice - item.price) * item.quantity)}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-2 md:px-3 py-3 text-right align-top">
-                              <button
-                                onClick={() => removeFromCart(item.id, item.variantId)}
-                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                                {item.originalPrice && (
+                                  <div className="text-[#266000] text-xs font-semibold mt-0.5">
+                                    Save {formatCurrency((item.originalPrice - item.price) * item.quantity)}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-2 md:px-3 py-2 md:py-3 text-right align-top">
+                                <button
+                                  onClick={() => removeFromCart(item.id, item.variantId)}
+                                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
                                 title="Remove item"
                                 aria-label="Remove item"
                               >
