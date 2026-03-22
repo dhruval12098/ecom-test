@@ -877,7 +877,7 @@ export default function CartPage() {
             </div>
           </div>
           {/* Mobile Order Summary Bottom Bar */}
-          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
+          <div className="sm:hidden fixed bottom-14 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
             <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
               <div>
                 <div className="text-xs text-gray-600">Total</div>
@@ -892,7 +892,7 @@ export default function CartPage() {
               </button>
             </div>
           </div>
-          <div className="sm:hidden h-16" />
+          <div className="sm:hidden h-28" />
         </section>
       )}
       
