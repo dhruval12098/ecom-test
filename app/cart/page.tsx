@@ -32,12 +32,20 @@ export default function CartPage() {
       const selectedVariant = item.variantId && Array.isArray(live.variants)
         ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))
         : null;
+      const variantQty = selectedVariant
+        ? Number(selectedVariant.stock_quantity ?? selectedVariant.stockQuantity ?? 0)
+        : null;
+      const variantInStock = selectedVariant
+        ? (Number.isFinite(variantQty) ? variantQty > 0 : Boolean(selectedVariant.in_stock ?? selectedVariant.inStock))
+        : null;
       const inStock =
-        live.inStock !== undefined
-          ? Boolean(live.inStock)
-          : live.in_stock !== undefined
-            ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
-            : item.inStock ?? true;
+        selectedVariant
+          ? Boolean(variantInStock)
+          : live.inStock !== undefined
+            ? Boolean(live.inStock)
+            : live.in_stock !== undefined
+              ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
+              : item.inStock ?? true;
       return {
         ...item,
         name: live.name || item.name,
@@ -395,7 +403,7 @@ export default function CartPage() {
                     <span className="font-semibold">Free shipping notice:</span>{" "}
                     {excludedCategoryNames.length > 0
                       ? `Items in ${excludedCategoryNames.join(", ")} are excluded from the free shipping threshold.`
-                      : "Some items in your cart are excluded from the free shipping threshold."}
+                      : ""}
                   </div>
                 )}
 
