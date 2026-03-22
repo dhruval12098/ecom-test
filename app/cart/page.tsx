@@ -89,6 +89,13 @@ export default function CartPage() {
     }
     return sum + item.price * item.quantity;
   }, 0);
+  const hasExcludedFreeShippingItems = purchasableItems.some((item) => {
+    const live = liveMap[item.id];
+    const categoryId = Number(
+      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+    );
+    return Number.isFinite(categoryId) && excludedCategorySet.has(categoryId);
+  });
 
   const hasFreeShippingItem = purchasableItems.some((item) => {
     const live = liveMap[item.id];
@@ -271,50 +278,6 @@ export default function CartPage() {
     }
   };
 
-  useEffect(() => {
-    const trimmed = postalCode.trim();
-    if (!trimmed || trimmed.length < 3) {
-      setShippingZone(null);
-      setPostalError(null);
-      setPostalChecked(false);
-      return;
-    }
-
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setPostalLoading(true);
-      setPostalError(null);
-      try {
-        const result = await ApiService.validateDeliveryZone({
-          country: deliveryCountry || undefined,
-          city: deliveryCity || undefined,
-          postal_code: trimmed
-        });
-        if (cancelled) return;
-        if (result?.allowed) {
-          setShippingZone(result.zone || null);
-          setPostalError(null);
-        } else {
-          setShippingZone(null);
-          setPostalError("Delivery not available for this postal code.");
-        }
-      } catch {
-        if (cancelled) return;
-        setShippingZone(null);
-        setPostalError("Unable to validate postal code.");
-      } finally {
-        if (!cancelled) {
-          setPostalLoading(false);
-          setPostalChecked(true);
-        }
-      }
-    }, 450);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [postalCode, deliveryCountry, deliveryCity]);
 
   return (
     <div className="min-h-screen bg-white fade-in">
@@ -595,6 +558,11 @@ export default function CartPage() {
                     {postalChecked && !postalError && !shippingZone && (
                       <div className="mt-2 text-xs text-gray-600">
                         Delivery availability confirmed.
+                      </div>
+                    )}
+                    {hasExcludedFreeShippingItems && (
+                      <div className="mt-2 text-xs text-amber-800">
+                        Some items in your cart are excluded from the free shipping threshold.
                       </div>
                     )}
                   </div>
