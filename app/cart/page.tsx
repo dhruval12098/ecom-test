@@ -96,6 +96,25 @@ export default function CartPage() {
     );
     return Number.isFinite(categoryId) && excludedCategorySet.has(categoryId);
   });
+  const excludedCategoryNames = useMemo(() => {
+    const names = new Set<string>();
+    purchasableItems.forEach((item) => {
+      const live = liveMap[item.id];
+      const categoryId = Number(
+        live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+      );
+      if (!Number.isFinite(categoryId) || !excludedCategorySet.has(categoryId)) return;
+      const rawName =
+        live?.category_name ??
+        live?.categoryName ??
+        (item as any)?.category_name ??
+        (item as any)?.categoryName ??
+        null;
+      const name = String(rawName || "").trim();
+      if (name) names.add(name);
+    });
+    return Array.from(names);
+  }, [purchasableItems, liveMap, excludedCategorySet]);
 
   const hasFreeShippingItem = purchasableItems.some((item) => {
     const live = liveMap[item.id];
@@ -371,6 +390,14 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
+                {hasExcludedFreeShippingItems && (
+                  <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 md:p-4 text-amber-800 text-xs md:text-sm">
+                    <span className="font-semibold">Free shipping notice:</span>{" "}
+                    {excludedCategoryNames.length > 0
+                      ? `Items in ${excludedCategoryNames.join(", ")} are excluded from the free shipping threshold.`
+                      : "Some items in your cart are excluded from the free shipping threshold."}
+                  </div>
+                )}
 
 
                 {/* Cart Items */}
