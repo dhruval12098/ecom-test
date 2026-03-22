@@ -21,6 +21,7 @@ export default function CartPage() {
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
   const [showTaxDetails, setShowTaxDetails] = useState(false);
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -309,7 +310,8 @@ export default function CartPage() {
 
 
   return (
-    <div className="min-h-screen bg-white fade-in">
+    <>
+      <div className="min-h-screen bg-white fade-in">
       {/* Header Section */}
       <section className="w-full py-8 md:py-12 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
@@ -648,7 +650,7 @@ export default function CartPage() {
               </div>
               
               {/* Order Summary Column */}
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 hidden sm:block">
                 <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:sticky lg:top-6">
                   <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Order Summary</h2>
 
@@ -752,13 +754,13 @@ export default function CartPage() {
                       <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mt-3 md:mt-4">
                         <div className="flex justify-between text-xs md:text-sm mb-2">
                           <span className="text-gray-600">
-                            Add {formatCurrency(Math.max(0, freeThreshold - eligibleSubtotal))} more for free shipping
+                            Add {formatCurrency(Math.max(0, (freeThreshold ?? 0) - eligibleSubtotal))} more for free shipping
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 border border-gray-300">
                           <div 
                             className="bg-[#266000] h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min((eligibleSubtotal / freeThreshold) * 100, 100)}%` }}
+                            style={{ width: `${Math.min((eligibleSubtotal / (freeThreshold ?? 1)) * 100, 100)}%` }}
                           />
                         </div>
                       </div>
@@ -805,7 +807,7 @@ export default function CartPage() {
                     <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
                       <p className="text-sm font-semibold text-amber-900">Minimum order amount not met</p>
                       <p className="mt-1 text-sm text-amber-800">
-                        Minimum order for your area is {formatCurrency(minOrderAmount)}.
+                        Minimum order for your area is {formatCurrency(minOrderAmount || 0)}.
                         Add {formatCurrency(minOrderRemaining)} more to continue.
                       </p>
                       <Link
@@ -874,6 +876,23 @@ export default function CartPage() {
               </div>
             </div>
           </div>
+          {/* Mobile Order Summary Bottom Bar */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-600">Total</div>
+                <div className="text-lg font-bold text-gray-900">{formatCurrency(total)}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileSummaryOpen(true)}
+                className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold"
+              >
+                View Summary
+              </button>
+            </div>
+          </div>
+          <div className="sm:hidden h-16" />
         </section>
       )}
       
@@ -916,5 +935,208 @@ export default function CartPage() {
         </section>
       )}
     </div>
+    
+    {/* Mobile Summary Fullscreen */}
+    {mobileSummaryOpen && (
+      <div className="sm:hidden fixed inset-0 z-50 bg-white">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+          <div className="text-lg font-bold text-gray-900">Order Summary</div>
+          <button
+            type="button"
+            onClick={() => setMobileSummaryOpen(false)}
+            className="text-sm font-semibold text-gray-700"
+          >
+            Back to Cart
+          </button>
+        </div>
+        <div className="px-4 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-72px)]">
+          <div className="bg-gray-50 border border-black rounded-xl p-3">
+            <div className="text-xs font-semibold text-gray-900 mb-2">Check delivery & free shipping</div>
+            <div className="flex items-center gap-2">
+              <input
+                value={postalCode}
+                onChange={(e) => {
+                  setPostalCode(e.target.value);
+                  setPostalChecked(false);
+                }}
+                placeholder="Enter postal code"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
+              />
+              <button
+                type="button"
+                onClick={validatePostalCode}
+                disabled={postalLoading}
+                className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+              >
+                {postalLoading ? "Checking..." : "Check"}
+              </button>
+            </div>
+            {postalChecked && postalError && (
+              <div className="mt-2 text-xs text-red-600">{postalError}</div>
+            )}
+            {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
+              <div className="mt-2 text-xs text-gray-600">
+                Free shipping above {formatCurrency(freeThreshold)} for your area.
+              </div>
+            )}
+            {postalChecked && !postalError && !shippingZone && (
+              <div className="mt-2 text-xs text-gray-600">
+                Delivery availability confirmed.
+              </div>
+            )}
+            {hasExcludedFreeShippingItems && (
+              <div className="mt-2 text-xs text-amber-800">
+                {excludedCategoryNames.length > 0
+                  ? `Items in ${excludedCategoryNames.join(", ")} are excluded from the free shipping threshold.`
+                  : ""}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Subtotal ({purchasableCount} purchasable items)</span>
+              <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>Shipping</span>
+              <span className="font-semibold text-gray-900">
+                {shippingCost === 0 ? (
+                  <span className="text-[#266000]">FREE</span>
+                ) : (
+                  `${formatCurrency(shippingCost)}`
+                )}
+              </span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-sm text-[#266000]">
+                <span>Discount (10%)</span>
+                <span className="font-semibold">-{formatCurrency(discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm text-gray-600">
+              <span>{taxLabel}</span>
+              <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
+            </div>
+            {vatSummary.length > 1 && (
+              <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setShowTaxDetails((prev) => !prev)}
+                  className="w-full flex items-center justify-between font-semibold text-gray-800"
+                  aria-expanded={showTaxDetails}
+                >
+                  <span>VAT summary</span>
+                  {showTaxDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                {showTaxDetails && (
+                  <div className="mt-2 space-y-2">
+                    {vatSummary.length > 0 && (
+                      <div className="space-y-1">
+                        {vatSummary.map((row) => (
+                          <div key={row.rate} className="flex justify-between">
+                            <span>VAT {row.rate.toFixed(2)}%</span>
+                            <span className="font-semibold text-gray-900">{formatCurrency(row.vat)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {shippingCost > 0 && freeThreshold !== null && (
+              <div className="bg-gray-50 border border-black rounded-xl p-3">
+                <div className="flex justify-between text-xs mb-2 text-gray-600">
+                  <span>
+                    Add {formatCurrency(Math.max(0, (freeThreshold ?? 0) - eligibleSubtotal))} more for free shipping
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 border border-gray-300">
+                    <div
+                      className="bg-[#266000] h-full rounded-full transition-all duration-300"
+                      style={{ width: `${Math.min((eligibleSubtotal / (freeThreshold ?? 1)) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+          </div>
+
+          <div className="border-t border-gray-300 pt-3">
+            <div className="flex justify-between text-lg">
+              <span className="font-bold text-gray-900">Total</span>
+              <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
+            </div>
+            {discount > 0 && (
+              <p className="text-[#266000] text-xs font-semibold mt-2 text-right">
+                You saved {formatCurrency(discount)}!
+              </p>
+            )}
+          </div>
+
+          {!hasPurchasableItems && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-900">No in-stock items to checkout</p>
+              <p className="mt-1 text-sm text-amber-800">
+                Remove out-of-stock products or add available products to continue.
+              </p>
+              <Link
+                href="/"
+                className="mt-3 inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+              >
+                Add more products
+              </Link>
+            </div>
+          )}
+
+          {hasPurchasableItems && !deliveryValidated && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-900">Delivery check required</p>
+              <p className="mt-1 text-sm text-amber-800">
+                Enter your postal code and click Check to validate delivery area before checkout.
+              </p>
+            </div>
+          )}
+
+          {deliveryValidated && belowMinOrder && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm font-semibold text-amber-900">Minimum order amount not met</p>
+              <p className="mt-1 text-sm text-amber-800">
+                Minimum order for your area is {formatCurrency(minOrderAmount || 0)}.
+                Add {formatCurrency(minOrderRemaining)} more to continue.
+              </p>
+              <Link
+                href="/"
+                className="mt-3 inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
+              >
+                Add more products
+              </Link>
+      </div>
+          )}
+
+          {canProceedCheckout ? (
+            <Link
+              href="/checkout"
+              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-4 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              Proceed to Checkout
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="w-full bg-gray-200 text-gray-500 py-3 px-4 rounded-xl font-bold text-sm cursor-not-allowed"
+            >
+              {!hasPurchasableItems
+                ? "No in-stock items to checkout"
+                : deliveryValidated
+                  ? "Minimum order not met"
+                  : "Validate delivery to continue"}
+            </button>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
