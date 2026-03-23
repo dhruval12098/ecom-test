@@ -717,11 +717,11 @@ export default function HeroSection() {
               '/brands/chings-logo.png',
               '/brands/himalaya.png',
               '/brands/priya-logo.png',
-              '/brands/apple.svg',
-              '/brands/samsung.svg',
-              '/brands/hitachi.svg',
-              '/brands/parachute-logo.jpg',
-              '/brands/fmod.svg'
+              '/brands/maggie.png',
+              '/brands/logo.png',
+              '/brands/Annam.png',
+              '/brands/parachute-logo.jpg'
+              
             ]} 
             logoHeight="h-18"  // taller logos
             gap="mx-12"        // wider spacing

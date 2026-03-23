@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
           <div className="prose max-w-none">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
             <p className="text-gray-600 mb-6">
-              FreshMart ("we", "our", or "us") operates the FreshMart e-commerce platform. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service and the choices you have associated with that data.
+              Tulsi ("we", "our", or "us") operates the Tulsi e-commerce platform. This page informs you of our policies regarding the collection, use, and disclosure of personal data when you use our Service and the choices you have associated with that data.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Information Collection and Use</h2>
@@ -38,7 +38,7 @@ export default function PrivacyPolicyPage() {
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Use of Data</h2>
             <p className="text-gray-600 mb-4">
-              FreshMart uses the collected data for various purposes:
+              Tulsi uses the collected data for various purposes:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mb-6">
               <li>To provide and maintain our Service</li>
@@ -61,11 +61,11 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Disclosure of Data</h2>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Legal Requirements</h3>
             <p className="text-gray-600 mb-6">
-              FreshMart may disclose your Personal Data in the good faith belief that such action is necessary to:
+              Tulsi may disclose your Personal Data in the good faith belief that such action is necessary to:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mb-6">
               <li>Comply with a legal obligation</li>
-              <li>Protect and defend the rights or property of FreshMart</li>
+              <li>Protect and defend the rights or property of Tulsi</li>
               <li>Prevent or investigate possible wrongdoing in connection with the Service</li>
               <li>Protect the personal safety of users of the Service or the public</li>
               <li>Protect against legal liability</li>
@@ -110,8 +110,8 @@ export default function PrivacyPolicyPage() {
               If you have any questions about this Privacy Policy, please contact us:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mt-2">
-              <li>By email: privacy@freshmart.com</li>
-              <li>By visiting this page on our website: www.freshmart.com/contact</li>
+              <li>By email: privacy@tulsi.store</li>
+              <li>By visiting this page on our website: www.tulsi.store/contact</li>
               <li>By phone number: +91 98765 43210</li>
             </ul>
           </div>

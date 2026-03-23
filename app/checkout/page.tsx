@@ -892,7 +892,9 @@ function CheckoutPageContent() {
                     <h3 className="font-bold text-gray-900">Estimated Delivery</h3>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Your order will be delivered within <strong>3-5 business days</strong>. You'll receive tracking updates via email and SMS.
+                    You will receive a confirmation email once your order is confirmed from our side.
+                    <br />
+                    Delivery within 1–3 business days (same-day delivery available in some areas).
                   </p>
                 </div>
               </div>
@@ -916,7 +918,7 @@ function CheckoutPageContent() {
               {/* Help Text */}
               <div className="mt-8 pt-8 border-t border-gray-200">
                 <p className="text-sm text-gray-600">
-                  Need help? Contact us at <a href="mailto:support@freshmart.com" className="text-[#266000] font-semibold hover:underline">support@freshmart.com</a> or call <a href="tel:+911800123456" className="text-[#266000] font-semibold hover:underline">+91 1800-123-456</a>
+                  Need help? Contact us at <a href="mailto:support@tulsi.store" className="text-[#266000] font-semibold hover:underline">support@tulsi.store</a> or call <a href="tel:+32000000000" className="text-[#266000] font-semibold hover:underline">+32 000 000 000</a>
                 </p>
               </div>
 

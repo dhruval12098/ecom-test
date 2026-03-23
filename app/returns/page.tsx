@@ -11,7 +11,7 @@ export default function ReturnRefundPolicyPage() {
           <div className="prose max-w-none">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Overview</h2>
             <p className="text-gray-600 mb-6">
-              At FreshMart, we want you to be completely satisfied with your purchase. Due to the nature of our products, our return policy varies depending on the type of item you've purchased. Please read this policy carefully before making a purchase.
+              At Tulsi, we want you to be completely satisfied with your purchase. Due to the nature of our products, our return policy varies depending on the type of item you've purchased. Please read this policy carefully before making a purchase.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Perishable Products</h2>
@@ -117,8 +117,8 @@ export default function ReturnRefundPolicyPage() {
               If you have any questions about our Return & Refund Policy, please contact us:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mt-2">
-              <li>By email: returns@freshmart.com</li>
-              <li>By visiting this page on our website: www.freshmart.com/contact</li>
+              <li>By email: returns@tulsi.store</li>
+              <li>By visiting this page on our website: www.tulsi.store/contact</li>
               <li>By phone number: +91 98765 43210</li>
             </ul>
           </div>

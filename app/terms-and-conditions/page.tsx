@@ -11,10 +11,10 @@ export default function TermsAndConditionsPage() {
           <div className="prose max-w-none">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Introduction</h2>
             <p className="text-gray-600 mb-6">
-              Welcome to FreshMart! These terms and conditions outline the rules and regulations for the use of FreshMart's website and services.
+              Welcome to Tulsi! These terms and conditions outline the rules and regulations for the use of Tulsi's website and services.
             </p>
             <p className="text-gray-600 mb-6">
-              By accessing this website and placing an order, we assume you accept these terms and conditions. Do not continue to use FreshMart if you do not agree to take all of the terms and conditions stated on this page.
+              By accessing this website and placing an order, we assume you accept these terms and conditions. Do not continue to use Tulsi if you do not agree to take all of the terms and conditions stated on this page.
             </p>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Eligibility</h2>
@@ -64,7 +64,7 @@ export default function TermsAndConditionsPage() {
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Intellectual Property</h2>
             <p className="text-gray-600 mb-4">
-              The Service and its original content, features, and functionality are owned by FreshMart and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.
+              The Service and its original content, features, and functionality are owned by Tulsi and are protected by international copyright, trademark, patent, trade secret, and other intellectual property or proprietary rights laws.
             </p>
             <p className="text-gray-600 mb-6">
               You may not reproduce, distribute, modify, create derivative works of, publicly display, publicly perform, republish, download, store, or transmit any of the material on our Service except as specifically permitted by these Terms.
@@ -72,7 +72,7 @@ export default function TermsAndConditionsPage() {
 
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Limitation of Liability</h2>
             <p className="text-gray-600 mb-4">
-              In no event shall FreshMart, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses resulting from your access to or use of or inability to access or use the Service.
+              In no event shall Tulsi, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses resulting from your access to or use of or inability to access or use the Service.
             </p>
             <p className="text-gray-600 mb-6">
               Our aggregate liability to you for any claims arising out of or related to these Terms or the Service shall not exceed the amount you paid to us in the six months preceding the claim.
@@ -96,8 +96,8 @@ export default function TermsAndConditionsPage() {
               If you have any questions about these Terms and Conditions, please contact us:
             </p>
             <ul className="list-disc pl-6 text-gray-600 mt-2">
-              <li>By email: legal@freshmart.com</li>
-              <li>By visiting this page on our website: www.freshmart.com/contact</li>
+              <li>By email: legal@tulsi.store</li>
+              <li>By visiting this page on our website: www.tulsi.store/contact</li>
               <li>By phone number: +91 98765 43210</li>
             </ul>
           </div>

@@ -6,20 +6,20 @@ const advantages = [
   {
     id: 1,
     icon: <FaLeaf className="text-green-800 text-3xl" />,
-    title: 'Authentic Indian Foods',
-    description: 'Over 200 Products in Stock',
+    title: 'Authentic Indian Products',
+    description: 'Over 200 products in stock',
   },
   {
     id: 2,
     icon: <FaTruck className="text-green-800 text-3xl" />,
-    title: 'Free delivery in Belgium',
-    description: 'for orders over EUR 100',
+    title: 'Free delivery from €50 (selected areas)',
+    description: 'Available in selected delivery zones',
   },
   {
     id: 3,
     icon: <FaTags className="text-green-800 text-3xl" />,
-    title: 'Fantastic discounts on the entire range',
-    description: 'Take advantage regularly!',
+    title: 'Great deals across our range',
+    description: 'Enjoy regular discounts',
   },
 ];
 
@@ -33,7 +33,7 @@ const ShopAdvantages = () => {
             Discover the advantages of our shop
           </h2>
           <p className="text-gray-600 mb-8 pb-8 border-b-2 border-gray-200">
-            Discover the variety of India right in your kitchen.
+            Bring the taste of India to your kitchen
           </p>
 
           <div className="space-y-6">

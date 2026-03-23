@@ -24,6 +24,7 @@ function CheckoutConfirmationContent() {
   const [reviewerName, setReviewerName] = useState("");
   const [reviewerEmail, setReviewerEmail] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [showReviewPopup, setShowReviewPopup] = useState(true);
   const [paymentPending, setPaymentPending] = useState(false);
   const { user } = useAuth();
 
@@ -125,98 +126,119 @@ function CheckoutConfirmationContent() {
               </div>
 
               {orderItems.length > 0 && (
-                <div className="w-full bg-white border border-black rounded-2xl p-6 text-left">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gray-50 border border-black rounded-full flex items-center justify-center">
-                      <Star className="h-5 w-5 text-[#266000]" />
-                    </div>
-                    <h3 className="font-bold text-gray-900">Rate Your Purchase</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">Purchased items</label>
-                      <div className="flex flex-wrap gap-2">
-                        {orderItems.map((item: any) => {
-                          const selected = Number(reviewItemId) === Number(item.id);
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => setReviewItemId(Number(item.id))}
-                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                                selected ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-300'
-                              }`}
-                            >
-                              {item.product_name || 'Item'}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
+                <>
+                  {showReviewPopup && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                      <div className="w-full max-w-2xl bg-white border border-black rounded-2xl p-6 text-left relative shadow-xl">
                         <button
-                          key={star}
                           type="button"
-                          onClick={() => setReviewRating(star)}
-                          className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                            reviewRating >= star ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-400'
-                          }`}
+                          aria-label="Close review"
+                          onClick={() => setShowReviewPopup(false)}
+                          className="absolute right-4 top-4 text-gray-500 hover:text-gray-900"
                         >
-                          <Star className="h-4 w-4" />
+                          ✕
                         </button>
-                      ))}
-                    </div>
-                    {reviewSubmitted ? (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                        Review submitted. Thank you!
-                      </div>
-                    ) : (
-                      <>
-                        <textarea
-                          value={reviewText}
-                          onChange={(e) => setReviewText(e.target.value)}
-                          placeholder="Share your experience..."
-                          rows={3}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#266000]"
-                        />
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            disabled={reviewSubmitting || !reviewItemId}
-                            onClick={async () => {
-                              if (!reviewItemId || !orderIdParam) return;
-                              try {
-                                setReviewSubmitting(true);
-                                const item = orderItems.find((i: any) => Number(i.id) === Number(reviewItemId));
-                                await ApiService.submitProductReview({
-                                  auth_user_id: user?.id || null,
-                                  product_id: item?.product_id,
-                                  order_id: Number(orderIdParam),
-                                  order_item_id: reviewItemId,
-                                  reviewer_name: reviewerName || null,
-                                  reviewer_email: reviewerEmail || null,
-                                  rating: reviewRating,
-                                  review_text: reviewText
-                                });
-                                toast.success("Review submitted");
-                                setReviewSubmitted(true);
-                                setReviewText("");
-                              } catch (e: any) {
-                                toast.error(e?.message || "Failed to submit review");
-                              } finally {
-                                setReviewSubmitting(false);
-                              }
-                            }}
-                            className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
-                          >
-                            {reviewSubmitting ? "Submitting..." : "Submit Review"}
-                          </button>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-10 h-10 bg-gray-50 border border-black rounded-full flex items-center justify-center">
+                            <Star className="h-5 w-5 text-[#266000]" />
+                          </div>
+                          <h3 className="font-bold text-gray-900">Rate Your Purchase</h3>
                         </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-900 mb-2">Purchased items</label>
+                            <div className="flex flex-wrap gap-2">
+                              {orderItems.map((item: any) => {
+                                const selected = Number(reviewItemId) === Number(item.id);
+                                return (
+                                  <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => setReviewItemId(Number(item.id))}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                                      selected ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-300'
+                                    }`}
+                                  >
+                                    {item.product_name || 'Item'}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                onClick={() => setReviewRating(star)}
+                                className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                                  reviewRating >= star ? 'bg-yellow-400 text-white' : 'bg-gray-100 text-gray-400'
+                                }`}
+                              >
+                                <Star className="h-4 w-4" />
+                              </button>
+                            ))}
+                          </div>
+                          {reviewSubmitted ? (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                              Review submitted. Thank you!
+                            </div>
+                          ) : (
+                            <>
+                              <textarea
+                                value={reviewText}
+                                onChange={(e) => setReviewText(e.target.value)}
+                                placeholder="Share your experience..."
+                                rows={3}
+                                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#266000]"
+                              />
+                              <div className="flex flex-col sm:flex-row justify-between gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowReviewPopup(false)}
+                                  className="px-5 py-2 rounded-lg border border-black text-gray-900 text-sm font-semibold"
+                                >
+                                  Skip for now
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reviewSubmitting || !reviewItemId}
+                                  onClick={async () => {
+                                    if (!reviewItemId || !orderIdParam) return;
+                                    try {
+                                      setReviewSubmitting(true);
+                                      const item = orderItems.find((i: any) => Number(i.id) === Number(reviewItemId));
+                                      await ApiService.submitProductReview({
+                                        auth_user_id: user?.id || null,
+                                        product_id: item?.product_id,
+                                        order_id: Number(orderIdParam),
+                                        order_item_id: reviewItemId,
+                                        reviewer_name: reviewerName || null,
+                                        reviewer_email: reviewerEmail || null,
+                                        rating: reviewRating,
+                                        review_text: reviewText
+                                      });
+                                      toast.success("Review submitted");
+                                      setReviewSubmitted(true);
+                                      setReviewText("");
+                                    } catch (e: any) {
+                                      toast.error(e?.message || "Failed to submit review");
+                                    } finally {
+                                      setReviewSubmitting(false);
+                                    }
+                                  }}
+                                  className="px-5 py-2 rounded-lg bg-black text-white text-sm font-semibold disabled:opacity-60"
+                                >
+                                  {reviewSubmitting ? "Submitting..." : "Submit Review"}
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               <div className="flex flex-col sm:flex-row gap-3 mt-2">
                 <Link

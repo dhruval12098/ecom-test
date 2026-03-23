@@ -48,9 +48,9 @@ export default function ContactPage() {
   };
 
   const [contactInfo, setContactInfo] = useState({
-    visitStoreLines: ["123 Fresh Street, Andheri West", "Mumbai, Maharashtra 400001", "India"],
-    emailLines: ["General: hello@freshmart.com", "Support: support@freshmart.com", "Partnership: partners@freshmart.com"],
-    phoneLines: ["Customer Service: +91 1800-123-4567", "Order Support: +91 1800-123-4568", "Mon - Sat: 9:00 AM - 8:00 PM"],
+    visitStoreLines: ["Tulsi Indian Grocery", "Ghent, Belgium"],
+    emailLines: ["General: hello@tulsi.store", "Support: support@tulsi.store", "Partnership: partners@tulsi.store"],
+    phoneLines: ["Customer Service: +32 000 000 000", "Order Support: +32 000 000 001", "Mon - Sat: 9:00 AM - 8:00 PM"],
     hoursLines: ["Monday - Saturday: 9:00 AM - 8:00 PM", "Sunday: 10:00 AM - 6:00 PM", "Delivery: 7 Days a Week"]
   });
 
@@ -85,7 +85,9 @@ export default function ContactPage() {
       icon: <Mail className="h-6 w-6 text-[#266000]" />,
       title: "Email Us",
       details: contactInfo.emailLines,
-      link: "mailto:hello@freshmart.com"
+      link: contactInfo.emailLines?.[0]
+        ? `mailto:${String(contactInfo.emailLines[0]).split(':').pop()?.trim() || 'hello@tulsi.store'}`
+        : "mailto:hello@tulsi.store"
     },
     {
       icon: <Phone className="h-6 w-6 text-[#266000]" />,
@@ -271,8 +273,8 @@ export default function ContactPage() {
 
             {/* Right Side - Additional Info */}
             <div className="space-y-8">
-              <div className="bg-white border border-black rounded-2xl p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Why Choose FreshMart?</h3>
+            <div className="bg-white border border-black rounded-2xl p-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-6">Why Choose Tulsi?</h3>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-[#266000] flex items-center justify-center shrink-0 mt-1">
@@ -280,7 +282,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900 mb-1">Fresh & Organic Products</h4>
-                      <p className="text-gray-600 text-sm">Sourced directly from trusted local farmers</p>
+                    <p className="text-gray-600 text-sm">Curated from trusted suppliers for consistent quality</p>
                     </div>
                   </div>
                   
@@ -290,7 +292,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900 mb-1">Fast Delivery</h4>
-                      <p className="text-gray-600 text-sm">Same-day delivery available in select areas</p>
+                    <p className="text-gray-600 text-sm">Same-day delivery available in select areas</p>
                     </div>
                   </div>
                   
@@ -300,7 +302,7 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900 mb-1">Best Prices</h4>
-                      <p className="text-gray-600 text-sm">Competitive pricing with no hidden charges</p>
+                    <p className="text-gray-600 text-sm">Transparent pricing with no hidden charges</p>
                     </div>
                   </div>
                   
@@ -310,31 +312,12 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <h4 className="font-bold text-gray-900 mb-1">24/7 Support</h4>
-                      <p className="text-gray-600 text-sm">Our customer service team is always here to help</p>
+                    <p className="text-gray-600 text-sm">Friendly support whenever you need help</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white border border-black rounded-2xl p-8">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">What are your delivery areas?</h4>
-                    <p className="text-gray-600 text-sm">We currently deliver across Mumbai and surrounding areas. Check your pincode at checkout.</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">How can I track my order?</h4>
-                    <p className="text-gray-600 text-sm">You'll receive a tracking link via SMS and email once your order is dispatched.</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">What is your return policy?</h4>
-                    <p className="text-gray-600 text-sm">We offer a 100% freshness guarantee. Contact us within 24 hours if you're not satisfied.</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -346,21 +329,21 @@ export default function ContactPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Visit Our Store</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Come visit us at our flagship store in Mumbai. Our friendly staff is ready to help you find the freshest products.
+              Visit our store in Ghent. Our friendly staff is ready to help you find authentic Indian essentials.
             </p>
           </div>
 
           <div className="mx-auto" style={{width: '95%'}}>
             <div className="border border-black rounded-2xl overflow-hidden bg-white">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d241317.11609823277!2d72.74109995709658!3d19.082197840383346!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c6306644edc1%3A0x5da4ed8f8d648c69!2sMumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2518.267424611847!2d3.7211793157467485!3d51.0543427795628!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47c3709d7dfd3d9b%3A0x2a2f6a0c9e8b5b69!2sGhent%2C%20Belgium!5e0!3m2!1sen!2sbe!4v1234567890123!5m2!1sen!2sbe"
                 width="100%"
                 className="h-[260px] sm:h-[450px]"
                 style={{ border: 0 }}
                 allowFullScreen={true}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                title="FreshMart Location"
+                title="Tulsi Location"
               />
             </div>
             

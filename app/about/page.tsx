@@ -33,16 +33,14 @@ export default function AboutPage() {
         } else {
           // Fallback to default content
           setStoryContent({
-            description: `Founded in 2020, FreshMart began with a simple mission: to bring fresh, healthy, and organic products 
-                  directly from local farmers to your kitchen. We believe that everyone deserves access to high-quality 
-                  food that's both nutritious and delicious.
+            description: `Tulsi is a Belgium-based Indian grocery store in Ghent, created to bring the real taste of India to your kitchen. 
+                  From spices and basmati rice to snacks and traditional ingredients, we curate a wide range of authentic products for everyday cooking.
                   
-                  Starting as a small online platform connecting local producers with consumers, we've grown into a 
-                  trusted marketplace serving thousands of customers across the country. Our commitment to sustainability, 
-                  quality, and community remains at the heart of everything we do.
+                  What began as a small local shop has grown into a trusted online destination so families across Belgium can access familiar staples with ease. 
+                  Our focus is freshness, fair pricing, and a friendly shopping experience.
                   
-                  Today, we partner with over 500 local farmers and producers, ensuring that our products meet the 
-                  highest standards of freshness and quality while supporting local agriculture and sustainable farming practices.`,
+                  Today, Tulsi partners with reliable suppliers and regional distributors to keep shelves stocked and deliveries quick, while maintaining the care 
+                  and attention you expect from a neighborhood store.`,
             image: '/images/farm-partnership.jpg'
           });
         }
@@ -50,16 +48,14 @@ export default function AboutPage() {
         console.error('Error fetching story content:', error);
         // Fallback to default content on error
         setStoryContent({
-          description: `Founded in 2020, FreshMart began with a simple mission: to bring fresh, healthy, and organic products 
-                directly from local farmers to your kitchen. We believe that everyone deserves access to high-quality 
-                food that's both nutritious and delicious.
+          description: `Tulsi is a Belgium-based Indian grocery store in Ghent, created to bring the real taste of India to your kitchen. 
+                From spices and basmati rice to snacks and traditional ingredients, we curate a wide range of authentic products for everyday cooking.
                 
-                Starting as a small online platform connecting local producers with consumers, we've grown into a 
-                trusted marketplace serving thousands of customers across the country. Our commitment to sustainability, 
-                quality, and community remains at the heart of everything we do.
+                What began as a small local shop has grown into a trusted online destination so families across Belgium can access familiar staples with ease. 
+                Our focus is freshness, fair pricing, and a friendly shopping experience.
                 
-                Today, we partner with over 500 local farmers and producers, ensuring that our products meet the 
-                highest standards of freshness and quality while supporting local agriculture and sustainable farming practices.`,
+                Today, Tulsi partners with reliable suppliers and regional distributors to keep shelves stocked and deliveries quick, while maintaining the care 
+                and attention you expect from a neighborhood store.`,
           image: '/images/farm-partnership.jpg'
         });
       } finally {
@@ -175,10 +171,10 @@ export default function AboutPage() {
       <section className="w-full py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-4xl font-bold text-gray-900 mb-6">About FreshMart</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-6">About Tulsi</h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Delivering fresh, organic, and premium quality products straight to your doorstep since 2020. 
-              We connect local farmers with conscious consumers who care about quality and sustainability.
+              Tulsi is a Belgium-based Indian grocery store in Ghent, offering authentic Indian essentials and a friendly shopping experience.
+              Shop in-store or online for spices, grains, snacks, and daily staples you trust.
             </p>
           </div>
         </div>

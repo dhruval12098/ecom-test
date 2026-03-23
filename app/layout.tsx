@@ -4,7 +4,7 @@ import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
-import SiteChrome from "@/components/layout/SiteChrome";
+import ConditionalChrome from "@/components/layout/ConditionalChrome";
 import RouteLoader from "@/components/ui/RouteLoader";
 import PageTransition from "@/components/ui/PageTransition";
 import { Suspense } from "react";
@@ -54,7 +54,7 @@ export default function RootLayout({
                 <RouteLoader />
                 <PageTransition />
               </Suspense>
-              <SiteChrome>{children}</SiteChrome>
+              <ConditionalChrome>{children}</ConditionalChrome>
               <Toaster />
             </SmoothScrollProvider>
           </CartProvider>
