@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [lastMethod, setLastMethod] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -27,11 +28,20 @@ export default function SignupPage() {
     }
   }, [loading, user, router]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("tulsi_last_auth_method");
+    setLastMethod(stored);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setInfo(null);
     setSubmitting(true);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("tulsi_pending_auth_method", "Email & Password");
+    }
     try {
       if (!phone.trim()) {
         setError("Phone number is required.");
@@ -62,6 +72,25 @@ export default function SignupPage() {
       router.replace("/account");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError(null);
+    setInfo(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("tulsi_pending_auth_method", "Google");
+    }
+    const redirectTo =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/account`
+        : undefined;
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: redirectTo ? { redirectTo } : undefined
+    });
+    if (oauthError) {
+      setError(oauthError.message);
     }
   };
 
@@ -112,6 +141,11 @@ export default function SignupPage() {
             <p className="text-gray-500 mb-6 md:mb-8">
               Save orders, addresses, and faster checkout.
             </p>
+            {lastMethod && (
+              <div className="mb-4 text-xs text-gray-500">
+                Last sign-in method: <span className="font-semibold text-gray-700">{lastMethod}</span>
+              </div>
+            )}
 
             {envMissing && (
               <div className="mb-4 text-sm text-red-600">
@@ -220,11 +254,21 @@ export default function SignupPage() {
               <span className="px-4 text-xs text-gray-400">or sign up with</span>
               <div className="flex-1 border-t border-gray-200" />
             </div>
-            <div className="flex items-center gap-3">
-              <button className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 text-xs">G</button>
-              <button className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 text-xs"></button>
-              <button className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 text-xs">f</button>
-            </div>
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              className="w-full py-3 rounded-full border border-gray-200 bg-white text-black font-semibold text-sm hover:bg-gray-50 hover:shadow-sm transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.7 32.4 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 6 .9 8.4 2.6l5.7-5.7C34.6 6.2 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.6z"/>
+                  <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.1 18.9 12 24 12c3.1 0 6 .9 8.4 2.6l5.7-5.7C34.6 6.2 29.5 4 24 4 16.2 4 9.4 8.3 6.3 14.7z"/>
+                  <path fill="#4CAF50" d="M24 44c5.2 0 10.1-2 13.7-5.3l-6.3-5.2C29.3 36 26.8 37 24 37c-5.2 0-9.7-3.5-11.3-8.3l-6.6 5.1C9.2 39.7 16.1 44 24 44z"/>
+                  <path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.2 3-3.6 5.4-6.6 6.6l6.3 5.2C36 38.8 44 34 44 24c0-1.3-.1-2.6-.4-3.6z"/>
+                </svg>
+              </span>
+              Continue with Google
+            </button>
 
             <p className="text-center text-gray-500 mt-6">
               Already have an account?{" "}

@@ -82,6 +82,7 @@ function AccountPageInner() {
   const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [lastAuthMethod, setLastAuthMethod] = useState<string | null>(null);
 
   const openLogoutDialog = () => {
     setShowLogoutDialog(true);
@@ -125,6 +126,12 @@ function AccountPageInner() {
       router.replace("/login");
     }
   }, [authLoading, authUser, router]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("tulsi_last_auth_method");
+    setLastAuthMethod(stored);
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -171,6 +178,10 @@ function AccountPageInner() {
     const loadProfile = async () => {
       try {
         if (!authUser) return;
+        const storedMethod =
+          typeof window !== "undefined"
+            ? window.localStorage.getItem("tulsi_last_auth_method")
+            : null;
         const profile = await ApiService.getCustomerProfile(authUser.id);
         if (!isMounted) return;
         if (profile) {
@@ -182,6 +193,18 @@ function AccountPageInner() {
             phone: profile.phone || prev.phone,
             avatar: profile.avatar_url || prev.avatar
           }));
+          if (profile.last_auth_method) {
+            setLastAuthMethod(profile.last_auth_method);
+          }
+          if (storedMethod && storedMethod !== profile.last_auth_method) {
+            await ApiService.upsertCustomer({
+              auth_user_id: authUser.id,
+              email: profile.email || authUser.email,
+              phone: profile.phone || authUser.phone,
+              last_auth_method: storedMethod
+            });
+            setLastAuthMethod(storedMethod);
+          }
           const nameParts = String(profile.full_name || "").trim().split(" ");
           const firstName = nameParts.shift() || "";
           const lastName = nameParts.join(" ");
@@ -202,7 +225,8 @@ function AccountPageInner() {
           auth_user_id: authUser.id,
           full_name: fallbackName,
           email: authUser.email,
-          phone: authUser.phone
+          phone: authUser.phone,
+          last_auth_method: storedMethod || null
         });
         if (!isMounted || !created) return;
         setCustomerId(created.id || null);
@@ -212,6 +236,9 @@ function AccountPageInner() {
           email: created.email || prev.email,
           phone: created.phone || prev.phone
         }));
+        if (created.last_auth_method || storedMethod) {
+          setLastAuthMethod(created.last_auth_method || storedMethod || null);
+        }
         const createdParts = String(created.full_name || "").trim().split(" ");
         const createdFirst = createdParts.shift() || "";
         const createdLast = createdParts.join(" ");
@@ -787,6 +814,11 @@ function AccountPageInner() {
           <div className="space-y-4 sm:space-y-6">
             <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Account Settings</h3>
+              {lastAuthMethod && (
+                <div className="mb-5 sm:mb-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs sm:text-sm text-gray-700">
+                  Last sign-in method: <span className="font-semibold text-gray-900">{lastAuthMethod}</span>
+                </div>
+              )}
 
               {/* Session */}
               <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">

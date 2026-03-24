@@ -31,6 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ? { id: sessionUser.id, email: sessionUser.email, phone: sessionUser.phone }
           : null
       );
+      if (typeof window !== "undefined" && sessionUser) {
+        const pending = window.localStorage.getItem("tulsi_pending_auth_method");
+        if (pending) {
+          window.localStorage.setItem("tulsi_last_auth_method", pending);
+          window.localStorage.removeItem("tulsi_pending_auth_method");
+        }
+      }
       setLoading(false);
     };
     init();
@@ -42,6 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ? { id: sessionUser.id, email: sessionUser.email, phone: sessionUser.phone }
           : null
       );
+      if (typeof window !== "undefined" && sessionUser) {
+        const pending = window.localStorage.getItem("tulsi_pending_auth_method");
+        if (pending) {
+          window.localStorage.setItem("tulsi_last_auth_method", pending);
+          window.localStorage.removeItem("tulsi_pending_auth_method");
+        }
+      }
       setLoading(false);
     });
 
