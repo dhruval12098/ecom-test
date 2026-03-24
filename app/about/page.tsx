@@ -336,22 +336,22 @@ export default function AboutPage() {
           <div className="bg-[#266000] rounded-2xl p-12 mx-auto" style={{width: '95%'}}>
             <h2 className="text-2xl sm:text-3xl font-bold text-white text-center mb-8 sm:mb-12">Our Impact</h2>
             
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 text-center">
-              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-center">
+              <div className="border border-green-300 rounded-xl p-4 sm:p-6">
                 <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="18">0</div>
-                <div className="text-xs sm:text-base text-green-100">Local Suppliers Partnered</div>
+                <div className="text-sm sm:text-base text-green-100">Local Suppliers Partnered</div>
               </div>
-              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+              <div className="border border-green-300 rounded-xl p-4 sm:p-6">
                 <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="1200">0</div>
-                <div className="text-xs sm:text-base text-green-100">Orders Delivered Fresh</div>
+                <div className="text-sm sm:text-base text-green-100">Orders Delivered Fresh</div>
               </div>
-              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+              <div className="border border-green-300 rounded-xl p-4 sm:p-6">
                 <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="600">0</div>
-                <div className="text-xs sm:text-base text-green-100">Repeat Weekly Customers</div>
+                <div className="text-sm sm:text-base text-green-100">Repeat Weekly Customers</div>
               </div>
-              <div className="border border-green-300 rounded-xl p-5 sm:p-6">
+              <div className="border border-green-300 rounded-xl p-4 sm:p-6">
                 <div className="text-3xl sm:text-5xl font-bold text-white mb-2 animate-countup" data-target="24">0</div>
-                <div className="text-xs sm:text-base text-green-100">Neighborhood Jobs Created</div>
+                <div className="text-sm sm:text-base text-green-100">Neighborhood Jobs Created</div>
               </div>
             </div>
           </div>

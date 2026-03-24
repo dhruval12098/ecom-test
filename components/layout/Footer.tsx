@@ -25,16 +25,12 @@ const Footer = () => {
           : settings.address
             ? String(settings.address).split('\n')
             : contactInfo.visitStoreLines;
-        const emailLines = Array.isArray(settings.email_lines)
-          ? settings.email_lines
-          : settings.support_email
-            ? [settings.support_email]
-            : contactInfo.emailLines;
-        const phoneLines = Array.isArray(settings.phone_lines)
-          ? settings.phone_lines
-          : settings.support_phone
-            ? [settings.support_phone]
-            : contactInfo.phoneLines;
+        const emailLines = settings.support_email
+          ? [settings.support_email]
+          : contactInfo.emailLines;
+        const phoneLines = settings.phone
+          ? [settings.phone]
+          : contactInfo.phoneLines;
         setContactInfo({
           visitStoreLines: addressLines,
           emailLines,
@@ -140,12 +136,17 @@ const Footer = () => {
                 </li>
                 <li>
                   <Link href="/terms-and-conditions" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm">
-                    User Terms & Condition
+                    Terms & Conditions
                   </Link>
                 </li>
                 <li>
                   <Link href="/returns" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm">
                     Return Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/shipping-delivery-policy" className="text-gray-300 hover:text-white transition-colors duration-200 text-sm">
+                    Shipping & Delivery Policy
                   </Link>
                 </li>
               </ul>

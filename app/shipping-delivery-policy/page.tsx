@@ -13,7 +13,7 @@ const formatDate = (value: string | null | undefined) => {
 
 async function getDoc() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/docs/terms-and-conditions`, {
+    const response = await fetch(`${API_BASE_URL}/api/docs/shipping-delivery-policy`, {
       cache: 'no-store',
     });
     const result = await response.json();
@@ -26,7 +26,7 @@ async function getDoc() {
   return null;
 }
 
-export default async function TermsAndConditionsPage() {
+export default async function ShippingDeliveryPolicyPage() {
   const doc = await getDoc();
   const content = doc?.content || 'Content will be available soon.';
 
@@ -35,7 +35,7 @@ export default async function TermsAndConditionsPage() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            {doc?.title || 'Terms and Conditions'}
+            {doc?.title || 'Shipping & Delivery Policy'}
           </h1>
           <p className="text-gray-600">Last updated: {formatDate(doc?.updated_at)}</p>
         </div>
