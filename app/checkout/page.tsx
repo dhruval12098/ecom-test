@@ -71,6 +71,7 @@ function CheckoutPageContent() {
   const [shippingZone, setShippingZone] = useState<any | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [isEditingSelectedAddress, setIsEditingSelectedAddress] = useState(false);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
@@ -804,6 +805,7 @@ function CheckoutPageContent() {
   useEffect(() => {
     if (!savedAddresses.length) return;
     if (selectedAddressId) return;
+    if (isEditingSelectedAddress) return;
     const defaultAddress = savedAddresses.find((addr: any) => addr.is_default);
     const chosen = defaultAddress || savedAddresses[0];
     if (!chosen) return;
@@ -811,7 +813,7 @@ function CheckoutPageContent() {
     if (!shippingInfo.street || !shippingInfo.postalCode || !shippingInfo.city) {
       applyAddressToForm(chosen);
     }
-  }, [savedAddresses, selectedAddressId, shippingInfo.street, shippingInfo.postalCode, shippingInfo.city]);
+  }, [savedAddresses, selectedAddressId, isEditingSelectedAddress, shippingInfo.street, shippingInfo.postalCode, shippingInfo.city]);
 
     useEffect(() => {
       const loadLiveProducts = async () => {
@@ -1152,32 +1154,53 @@ function CheckoutPageContent() {
                         </h3>
                         {user && savedAddresses.length > 0 && (
                           <div className="mb-6 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-semibold text-gray-900">
-                                Select Delivery Address
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedAddressId(null)}
-                                className="text-[#266000] text-sm font-semibold hover:underline"
-                              >
-                                Add New Address
-                              </button>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              {savedAddresses.map((addr: any) => {
-                                const isSelected = String(addr.id) === String(selectedAddressId);
-                                return (
+                              <div className="flex items-center justify-between">
+                                <label className="block text-sm font-semibold text-gray-900">
+                                  Select Delivery Address
+                                </label>
+                                <div className="flex items-center gap-3">
                                   <button
-                                    key={addr.id}
                                     type="button"
-                                    onClick={() => {
-                                      setSelectedAddressId(String(addr.id));
-                                      applyAddressToForm(addr);
-                                    }}
-                                    className={`text-left border rounded-2xl p-4 shadow-sm transition-colors ${
-                                      isSelected
-                                        ? "border-[#266000] bg-green-50"
+                                    onClick={() => setSelectedAddressId(null)}
+                                    className="text-[#266000] text-sm font-semibold hover:underline"
+                                  >
+                                    Add New Address
+                                  </button>
+                                  {selectedAddressId && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const selected = savedAddresses.find(
+                                          (addr: any) => String(addr.id) === String(selectedAddressId)
+                                        );
+                                        if (selected) {
+                                          applyAddressToForm(selected);
+                                        }
+                                        setIsEditingSelectedAddress(true);
+                                        setSelectedAddressId(null);
+                                      }}
+                                      className="text-gray-700 text-sm font-semibold hover:underline"
+                                    >
+                                      Edit Selected
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {savedAddresses.map((addr: any) => {
+                                  const isSelected = String(addr.id) === String(selectedAddressId);
+                                  return (
+                                    <button
+                                      key={addr.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setIsEditingSelectedAddress(false);
+                                        setSelectedAddressId(String(addr.id));
+                                        applyAddressToForm(addr);
+                                      }}
+                                      className={`text-left border rounded-2xl p-4 shadow-sm transition-colors ${
+                                        isSelected
+                                          ? "border-[#266000] bg-green-50"
                                         : "border-gray-200 bg-white hover:border-[#266000]"
                                     }`}
                                   >
@@ -1204,12 +1227,29 @@ function CheckoutPageContent() {
                                       </div>
                                       <div>{addr.country}</div>
                                     </div>
-                                  </button>
-                                );
-                              })}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              {selectedAddressId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const selected = savedAddresses.find(
+                                      (addr: any) => String(addr.id) === String(selectedAddressId)
+                                    );
+                                    if (selected) {
+                                      applyAddressToForm(selected);
+                                    }
+                                    setSelectedAddressId(null);
+                                  }}
+                                  className="text-[#266000] text-sm font-semibold hover:underline"
+                                >
+                                  Edit selected address
+                                </button>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          )}
                         {(!user || savedAddresses.length === 0 || selectedAddressId === null) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="md:col-span-2">

@@ -338,6 +338,8 @@ function AccountPageInner() {
             setAddresses((prev) =>
               prev.map((addr) => (addr.id === editingAddressId ? updated : addr))
             );
+            const refreshed = await ApiService.getCustomerAddresses(customerId);
+            setAddresses(refreshed || []);
             toast.success("Address updated");
           }
         } else {
