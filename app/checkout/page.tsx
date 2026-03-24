@@ -528,6 +528,15 @@ function CheckoutPageContent() {
     }));
   };
 
+  useEffect(() => {
+    if (!user) return;
+    setShippingInfo((prev) => ({
+      ...prev,
+      email: prev.email || user.email || "",
+      phone: prev.phone || user.phone || ""
+    }));
+  }, [user?.email, user?.phone]);
+
   const validateStep = (currentStep: number) => {
     if (currentStep === 1) {
       const required =
@@ -758,39 +767,51 @@ function CheckoutPageContent() {
   // Shipping rates removed in favor of per-phase delivery zones
 
   useEffect(() => {
-      const loadSavedAddresses = async () => {
-        if (authLoading || !user?.id) return;
-        try {
-          let profile = await ApiService.getCustomerProfile(user.id);
-          if (!profile?.id) {
-            const fallbackName =
-              user.email?.split("@")[0] ||
-              user.phone ||
-              "Customer";
-            profile = await ApiService.upsertCustomer({
-              auth_user_id: user.id,
-              full_name: fallbackName,
-              email: user.email,
-              phone: user.phone
-            });
-          }
-          if (!profile?.id) return;
-          applyProfileToForm(profile);
-          const addresses = await ApiService.getCustomerAddresses(profile.id);
-          setSavedAddresses(addresses || []);
-          const defaultAddress = (addresses || []).find((addr: any) => addr.is_default);
-          const chosen = defaultAddress || (addresses || [])[0];
-          if (chosen) {
-            setSelectedAddressId(String(chosen.id));
-            applyAddressToForm(chosen);
-          }
-        } catch (error) {
-          // keep UI stable on failure
+    const loadSavedAddresses = async () => {
+      if (authLoading || !user?.id) return;
+      try {
+        let profile = await ApiService.getCustomerProfile(user.id);
+        if (!profile?.id) {
+          const fallbackName =
+            user.email?.split("@")[0] ||
+            user.phone ||
+            "Customer";
+          profile = await ApiService.upsertCustomer({
+            auth_user_id: user.id,
+            full_name: fallbackName,
+            email: user.email,
+            phone: user.phone
+          });
         }
-      };
+        if (!profile?.id) return;
+        applyProfileToForm(profile);
+        const addresses = await ApiService.getCustomerAddresses(profile.id);
+        setSavedAddresses(addresses || []);
+        const defaultAddress = (addresses || []).find((addr: any) => addr.is_default);
+        const chosen = defaultAddress || (addresses || [])[0];
+        if (chosen) {
+          setSelectedAddressId(String(chosen.id));
+          applyAddressToForm(chosen);
+        }
+      } catch (error) {
+        // keep UI stable on failure
+      }
+    };
 
-      loadSavedAddresses();
-    }, [user?.id, authLoading]);
+    loadSavedAddresses();
+  }, [user?.id, user?.email, user?.phone, authLoading]);
+
+  useEffect(() => {
+    if (!savedAddresses.length) return;
+    if (selectedAddressId) return;
+    const defaultAddress = savedAddresses.find((addr: any) => addr.is_default);
+    const chosen = defaultAddress || savedAddresses[0];
+    if (!chosen) return;
+    setSelectedAddressId(String(chosen.id));
+    if (!shippingInfo.street || !shippingInfo.postalCode || !shippingInfo.city) {
+      applyAddressToForm(chosen);
+    }
+  }, [savedAddresses, selectedAddressId, shippingInfo.street, shippingInfo.postalCode, shippingInfo.city]);
 
     useEffect(() => {
       const loadLiveProducts = async () => {
