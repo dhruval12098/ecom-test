@@ -280,7 +280,7 @@ function CheckoutPageContent() {
     const digits = trimmed.replace(/[^\d]/g, "");
     if (!digits.startsWith("32")) return false;
     const nationalDigits = digits.slice(2);
-    return nationalDigits.length === 8 || nationalDigits.length === 9;
+    return nationalDigits.length === 10;
   };
 
   const sourceItemIdsKey = useMemo(
@@ -517,13 +517,13 @@ function CheckoutPageContent() {
   const formatBelgianPhone = (value: string) => {
     const digits = value.replace(/[^\d]/g, "");
     const withoutCountry = digits.startsWith("32") ? digits.slice(2) : digits;
-    const national = withoutCountry.slice(0, 9);
+    const national = withoutCountry.slice(0, 10);
     const parts: string[] = [];
-    if (national.length > 0) parts.push(national.slice(0, 1));
-    if (national.length > 1) parts.push(national.slice(1, 3));
-    if (national.length > 3) parts.push(national.slice(3, 5));
-    if (national.length > 5) parts.push(national.slice(5, 7));
-    if (national.length > 7) parts.push(national.slice(7, 9));
+    if (national.length > 0) parts.push(national.slice(0, 2));
+    if (national.length > 2) parts.push(national.slice(2, 4));
+    if (national.length > 4) parts.push(national.slice(4, 6));
+    if (national.length > 6) parts.push(national.slice(6, 8));
+    if (national.length > 8) parts.push(national.slice(8, 10));
     return `+32${parts.length ? " " : ""}${parts.join(" ")}`;
   };
 
@@ -1196,10 +1196,10 @@ function CheckoutPageContent() {
                               name="phone"
                               value={shippingInfo.phone}
                               onChange={handleInputChange}
-                              maxLength={15}
+                              maxLength={18}
                               inputMode="tel"
                               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
-                              placeholder="+32 4XX XX XX XX"
+                              placeholder="+32 4X XX XX XX XX"
                               required
                             />
                         </div>
