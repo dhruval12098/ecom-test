@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { formatCurrency } from "@/lib/currency";
 import ApiService from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export default function CartPage() {
   const { cartItems, updateQuantity, removeFromCart } = useCart();
@@ -49,6 +50,10 @@ export default function CartPage() {
             : live.in_stock !== undefined
               ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
               : item.inStock ?? true;
+      const rawStockQty = selectedVariant
+        ? variantQty
+        : Number(live.stock_quantity ?? live.stockQuantity ?? NaN);
+      const stockQuantity = Number.isFinite(rawStockQty) ? Math.max(0, rawStockQty) : null;
       return {
         ...item,
         name: live.name || item.name,
@@ -70,6 +75,7 @@ export default function CartPage() {
               : item.originalPrice,
         imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
         inStock,
+        stockQuantity
       };
     });
   }, [cartItems, liveMap]);
@@ -475,12 +481,28 @@ export default function CartPage() {
                             <span className="px-2.5 py-1 text-gray-900 text-xs font-semibold min-w-[32px] text-center border-x border-black">
                               {item.quantity}
                             </span>
-                            <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
-                              disabled={!item.inStock}
-                              className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                              aria-label="Increase quantity"
-                            >
+                              <button
+                                onClick={() => {
+                                  if (item.stockQuantity !== null && item.quantity >= item.stockQuantity) {
+                                    toast.info("Maximum stock reached", {
+                                      description: `Only ${item.stockQuantity} available for this item.`
+                                    });
+                                    return;
+                                  }
+                                  const nextQty = item.stockQuantity !== null
+                                    ? Math.min(item.stockQuantity, item.quantity + 1)
+                                    : item.quantity + 1;
+                                  updateQuantity(item.id, nextQty, item.variantId);
+                                  if (item.stockQuantity !== null && nextQty >= item.stockQuantity) {
+                                    toast.info("Maximum stock reached", {
+                                      description: `Only ${item.stockQuantity} available for this item.`
+                                    });
+                                  }
+                                }}
+                                disabled={!item.inStock}
+                                className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                aria-label="Increase quantity"
+                              >
                               <Plus className="w-3 h-3" />
                             </button>
                           </div>
@@ -580,12 +602,28 @@ export default function CartPage() {
                                     <span className="px-2.5 py-1 text-gray-900 text-sm font-semibold min-w-[36px] text-center border-x border-black">
                                       {item.quantity}
                                     </span>
-                                    <button
-                                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
-                                      disabled={!item.inStock}
-                                      className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                      aria-label="Increase quantity"
-                                    >
+                                      <button
+                                        onClick={() => {
+                                          if (item.stockQuantity !== null && item.quantity >= item.stockQuantity) {
+                                            toast.info("Maximum stock reached", {
+                                              description: `Only ${item.stockQuantity} available for this item.`
+                                            });
+                                            return;
+                                          }
+                                          const nextQty = item.stockQuantity !== null
+                                            ? Math.min(item.stockQuantity, item.quantity + 1)
+                                            : item.quantity + 1;
+                                          updateQuantity(item.id, nextQty, item.variantId);
+                                          if (item.stockQuantity !== null && nextQty >= item.stockQuantity) {
+                                            toast.info("Maximum stock reached", {
+                                              description: `Only ${item.stockQuantity} available for this item.`
+                                            });
+                                          }
+                                        }}
+                                        disabled={!item.inStock}
+                                        className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                        aria-label="Increase quantity"
+                                      >
                                       <Plus className="w-4 h-4" />
                                     </button>
                                   </div>

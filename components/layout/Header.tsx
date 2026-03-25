@@ -67,7 +67,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<any>(null);
-  const [deliveryLocation, setDeliveryLocation] = useState('Gujarat, India');
+  const [deliveryLocation, setDeliveryLocation] = useState('Belgium');
   
   const { getTotalItems } = useCart();
   const { user: authUser } = useAuth();

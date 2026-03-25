@@ -8,6 +8,7 @@ import { useCart } from "@/contexts/CartContext";
 import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 import { readCache, writeCache } from "@/lib/storageCache";
+import { toast } from "sonner";
 
 interface ProductVariant {
   id: number;
@@ -269,6 +270,9 @@ export default function ProductDetailsPage() {
   const displayInStock = selectedVariant
     ? Number(selectedVariant.stockQuantity ?? 0) > 0
     : product.inStock;
+  const rawStockQty = selectedVariant?.stockQuantity ?? product.stockQuantity;
+  const maxQuantity = Number.isFinite(Number(rawStockQty)) ? Math.max(1, Number(rawStockQty)) : null;
+  const effectiveQuantity = maxQuantity ? Math.min(quantity, maxQuantity) : quantity;
   const basePrice = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
   const effectiveDiscountPercentage = selectedVariant?.discountPercentage || product.discountPercentage;
   const effectiveDiscountColor = selectedVariant?.discountColor || product.discountColor || "bg-yellow-500";
@@ -330,10 +334,10 @@ export default function ProductDetailsPage() {
     };
 
     // Add all items at once to avoid multiple notifications
-    for (let i = 0; i < quantity; i++) {
-      // Only show notification for the first item
-      addToCart(cartItem, i === 0);
-    }
+      for (let i = 0; i < effectiveQuantity; i++) {
+        // Only show notification for the first item
+        addToCart(cartItem, i === 0);
+      }
 
     // Reset quantity to 1 after adding
     setQuantity(1);
@@ -358,7 +362,7 @@ export default function ProductDetailsPage() {
       category: product.category,
       subcategory: product.subcategory,
       slug: product.slug,
-      quantity
+      quantity: effectiveQuantity
     };
 
     if (typeof window !== "undefined") {
@@ -582,21 +586,35 @@ export default function ProductDetailsPage() {
                 </h4>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center bg-gray-100 rounded-lg">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-l-lg transition-colors text-lg font-bold"
-                    >
-                      -
-                    </button>
+                      <button
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-l-lg transition-colors text-lg font-bold"
+                      >
+                        -
+                      </button>
                     <span className="w-12 text-center font-semibold text-base">
                       {quantity}
                     </span>
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-r-lg transition-colors text-lg font-bold"
-                    >
-                      +
-                    </button>
+                      <button
+                        onClick={() => {
+                          if (maxQuantity && quantity >= maxQuantity) {
+                            toast.info("Maximum stock reached", {
+                              description: `Only ${maxQuantity} available for this item.`
+                            });
+                            return;
+                          }
+                          const nextQty = maxQuantity ? Math.min(maxQuantity, quantity + 1) : quantity + 1;
+                          setQuantity(nextQty);
+                          if (maxQuantity && nextQty >= maxQuantity) {
+                            toast.info("Maximum stock reached", {
+                              description: `Only ${maxQuantity} available for this item.`
+                            });
+                          }
+                        }}
+                        className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-r-lg transition-colors text-lg font-bold"
+                      >
+                        +
+                      </button>
                   </div>
                 </div>
               </div>

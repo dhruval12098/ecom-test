@@ -39,13 +39,14 @@ function CheckoutPageContent() {
   const [orderAcceptDays, setOrderAcceptDays] = useState<string[]>([]);
   const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
   const [deliveryTimeRange, setDeliveryTimeRange] = useState<any | null>(null);
+  const [stockValidationError, setStockValidationError] = useState<string | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
     firstName: "",
     lastName: "",
     email: "",
-    phone: "",
+    phone: "+32 ",
     
     // Shipping Address
     street: "",
@@ -205,13 +206,20 @@ function CheckoutPageContent() {
 
   const displayItems = sourceItems.map((item) => {
     const live = liveMap[item.id];
-    if (!live) return item;
+    if (!live) {
+      return {
+        ...item,
+        stockQuantity: null
+      };
+    }
     const variantPrice = item.variantId && Array.isArray(live.variants)
       ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
       : null;
     const selectedVariant = item.variantId && Array.isArray(live.variants)
       ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))
       : null;
+    const rawStock = selectedVariant?.stockQuantity ?? selectedVariant?.stock_quantity ?? live?.stockQuantity ?? live?.stock_quantity;
+    const stockQuantity = Number.isFinite(Number(rawStock)) ? Number(rawStock) : null;
     const inStock =
       live.inStock !== undefined
         ? Boolean(live.inStock)
@@ -238,9 +246,42 @@ function CheckoutPageContent() {
             ? Number(live.original_price)
             : item.originalPrice,
       imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
-      inStock
+      inStock,
+      stockQuantity
     };
   });
+
+  const stockIssues = useMemo(() => {
+    return displayItems
+      .map((item) => {
+        if (item.stockQuantity === null) return null;
+        if (item.quantity <= item.stockQuantity) return null;
+        return {
+          id: item.id,
+          name: item.name,
+          requested: item.quantity,
+          available: item.stockQuantity
+        };
+      })
+      .filter(Boolean) as Array<{ id: number; name: string; requested: number; available: number }>;
+  }, [displayItems]);
+
+  const hasStockIssues = stockIssues.length > 0;
+
+  const formatStockIssueMessage = (issues: typeof stockIssues) => {
+    const preview = issues.slice(0, 2).map((issue) => `${issue.name} (${issue.available} available)`);
+    const suffix = issues.length > 2 ? ` +${issues.length - 2} more` : "";
+    return `Some items exceed available stock: ${preview.join(", ")}${suffix}.`;
+  };
+
+  const isValidBelgianPhone = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed.startsWith("+32")) return false;
+    const digits = trimmed.replace(/[^\d]/g, "");
+    if (!digits.startsWith("32")) return false;
+    const nationalDigits = digits.slice(2);
+    return nationalDigits.length === 8 || nationalDigits.length === 9;
+  };
 
   const sourceItemIdsKey = useMemo(
     () => sourceItems.map((item) => item.id).join("|"),
@@ -576,6 +617,22 @@ function CheckoutPageContent() {
       });
       return;
     }
+
+    const phoneValue = shippingInfo.phone?.trim() || "";
+    if (!isValidBelgianPhone(phoneValue)) {
+      toast.error("Invalid phone number", {
+        description: "Please enter a Belgian phone number starting with +32."
+      });
+      return;
+    }
+
+    if (hasStockIssues) {
+      const message = formatStockIssueMessage(stockIssues);
+      setStockValidationError(message);
+      toast.error("Insufficient stock", { description: message });
+      return;
+    }
+    setStockValidationError(null);
     
     if (step === 1) {
       if (shippingStep === 1) {
@@ -1126,7 +1183,7 @@ function CheckoutPageContent() {
                             value={shippingInfo.phone}
                             onChange={handleInputChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
-                            placeholder="+91 XXXXX XXXXX"
+                              placeholder="+32 4XX XX XX XX"
                             required
                           />
                         </div>
@@ -1523,6 +1580,17 @@ function CheckoutPageContent() {
                           </div>
                         </div>
                       )}
+                      {stockValidationError && (
+                        <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                          <div className="flex items-start gap-3 text-red-800">
+                            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                            <div className="text-sm">
+                              <p className="font-semibold">Insufficient stock</p>
+                              <p>{stockValidationError}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {shippingStep === 2 && shippingInfo.postalCode && belowMinOrder && (
                         <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                           <div className="text-sm text-amber-900">
@@ -1627,7 +1695,7 @@ function CheckoutPageContent() {
                       <button
                         type="submit"
                         className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                        disabled={isSubmitting}
+                          disabled={isSubmitting || hasStockIssues}
                       >
                         {isSubmitting ? "Placing order..." : "Place Order"}
                       </button>
@@ -1761,9 +1829,10 @@ function CheckoutPageContent() {
                             Back to Review
                           </button>
                           <button
-                            type="submit"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                          >
+                              type="submit"
+                              className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                              disabled={isSubmitting || hasStockIssues}
+                            >
                             Continue to Payment
                           </button>
                         </div>
@@ -1934,10 +2003,11 @@ function CheckoutPageContent() {
                       >
                         Back to Delivery
                       </button>
-                      <button
-                        type="submit"
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                      >
+                        <button
+                          type="submit"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 order-1 sm:order-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                          disabled={isSubmitting || hasStockIssues}
+                        >
                         {isMobile ? "Continue to Summary" : "Continue to Payment"}
                       </button>
                     </div>
