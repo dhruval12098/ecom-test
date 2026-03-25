@@ -35,6 +35,7 @@ interface ProductDetails {
   rating: number;
   reviews: number;
   inStock: boolean;
+  stockQuantity?: number;
   weight: string;
   origin: string;
   imageGallery?: string[];

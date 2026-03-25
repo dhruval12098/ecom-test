@@ -27,7 +27,12 @@ export default function CartPage() {
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
       const live = liveMap[item.id];
-      if (!live) return item;
+      if (!live) {
+        return {
+          ...item,
+          stockQuantity: item.stockQuantity ?? null
+        };
+      }
       const variantPrice = item.variantId && Array.isArray(live.variants)
         ? live.variants.find((v: any) => Number(v?.id) === Number(item.variantId))?.price
         : null;
@@ -52,8 +57,9 @@ export default function CartPage() {
               : item.inStock ?? true;
       const rawStockQty = selectedVariant
         ? variantQty
-        : Number(live.stock_quantity ?? live.stockQuantity ?? NaN);
-      const stockQuantity = Number.isFinite(rawStockQty) ? Math.max(0, rawStockQty) : null;
+        : (live.stock_quantity ?? live.stockQuantity ?? NaN);
+      const rawStockQtyNum = Number(rawStockQty);
+      const stockQuantity = Number.isFinite(rawStockQtyNum) ? Math.max(0, rawStockQtyNum) : null;
       return {
         ...item,
         name: live.name || item.name,
@@ -483,19 +489,20 @@ export default function CartPage() {
                             </span>
                               <button
                                 onClick={() => {
-                                  if (item.stockQuantity !== null && item.quantity >= item.stockQuantity) {
+                                  const maxQty = item.stockQuantity ?? null;
+                                  if (maxQty !== null && item.quantity >= maxQty) {
                                     toast.info("Maximum stock reached", {
-                                      description: `Only ${item.stockQuantity} available for this item.`
+                                      description: `Only ${maxQty} available for this item.`
                                     });
                                     return;
                                   }
-                                  const nextQty = item.stockQuantity !== null
-                                    ? Math.min(item.stockQuantity, item.quantity + 1)
+                                  const nextQty = maxQty !== null
+                                    ? Math.min(maxQty, item.quantity + 1)
                                     : item.quantity + 1;
                                   updateQuantity(item.id, nextQty, item.variantId);
-                                  if (item.stockQuantity !== null && nextQty >= item.stockQuantity) {
+                                  if (maxQty !== null && nextQty >= maxQty) {
                                     toast.info("Maximum stock reached", {
-                                      description: `Only ${item.stockQuantity} available for this item.`
+                                      description: `Only ${maxQty} available for this item.`
                                     });
                                   }
                                 }}
@@ -604,19 +611,20 @@ export default function CartPage() {
                                     </span>
                                       <button
                                         onClick={() => {
-                                          if (item.stockQuantity !== null && item.quantity >= item.stockQuantity) {
+                                          const maxQty = item.stockQuantity ?? null;
+                                          if (maxQty !== null && item.quantity >= maxQty) {
                                             toast.info("Maximum stock reached", {
-                                              description: `Only ${item.stockQuantity} available for this item.`
+                                              description: `Only ${maxQty} available for this item.`
                                             });
                                             return;
                                           }
-                                          const nextQty = item.stockQuantity !== null
-                                            ? Math.min(item.stockQuantity, item.quantity + 1)
+                                          const nextQty = maxQty !== null
+                                            ? Math.min(maxQty, item.quantity + 1)
                                             : item.quantity + 1;
                                           updateQuantity(item.id, nextQty, item.variantId);
-                                          if (item.stockQuantity !== null && nextQty >= item.stockQuantity) {
+                                          if (maxQty !== null && nextQty >= maxQty) {
                                             toast.info("Maximum stock reached", {
-                                              description: `Only ${item.stockQuantity} available for this item.`
+                                              description: `Only ${maxQty} available for this item.`
                                             });
                                           }
                                         }}

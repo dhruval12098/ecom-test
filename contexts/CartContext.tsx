@@ -13,6 +13,7 @@ interface CartItem {
   quantity: number;
   weight: string;
   inStock: boolean;
+  stockQuantity?: number | null;
   variantId?: number | null;
   variantName?: string | null;
   category?: string;
