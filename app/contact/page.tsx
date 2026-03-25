@@ -367,12 +367,7 @@ export default function ContactPage() {
               >
                 Start Shopping
               </Link>
-              <Link
-                href="/search"
-                className="bg-white border border-black hover:border-[#266000] text-gray-900 px-8 py-3 rounded-xl font-bold text-base transition-colors text-center"
-              >
-                Browse Products
-              </Link>
+              
             </div>
           </div>
         </div>
