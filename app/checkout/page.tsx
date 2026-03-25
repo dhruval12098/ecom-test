@@ -514,6 +514,19 @@ function CheckoutPageContent() {
     }
   };
 
+  const formatBelgianPhone = (value: string) => {
+    const digits = value.replace(/[^\d]/g, "");
+    const withoutCountry = digits.startsWith("32") ? digits.slice(2) : digits;
+    const national = withoutCountry.slice(0, 9);
+    const parts: string[] = [];
+    if (national.length > 0) parts.push(national.slice(0, 1));
+    if (national.length > 1) parts.push(national.slice(1, 3));
+    if (national.length > 3) parts.push(national.slice(3, 5));
+    if (national.length > 5) parts.push(national.slice(5, 7));
+    if (national.length > 7) parts.push(national.slice(7, 9));
+    return `+32${parts.length ? " " : ""}${parts.join(" ")}`;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
@@ -526,7 +539,7 @@ function CheckoutPageContent() {
     } else {
       setShippingInfo(prev => ({
         ...prev,
-        [name]: value
+        [name]: name === "phone" ? formatBelgianPhone(value) : value
       }));
       if (name === "postalCode" || name === "city" || name === "country") {
         setShippingZone(null);
@@ -1097,10 +1110,11 @@ function CheckoutPageContent() {
         </div>
       </section>
 
-      <form
-        onSubmit={handleSubmit}
-        className="lg:[&_label]:text-xs lg:[&_label]:mb-1 lg:[&_input]:px-3 lg:[&_input]:py-2 lg:[&_input]:text-sm lg:[&_select]:px-3 lg:[&_select]:py-2 lg:[&_select]:text-sm lg:[&_textarea]:px-3 lg:[&_textarea]:py-2 lg:[&_textarea]:text-sm lg:[&_button]:px-5 lg:[&_button]:py-2 lg:[&_button]:text-sm"
-      >
+        <form
+          onSubmit={handleSubmit}
+          style={{ colorScheme: "light" }}
+          className="lg:[&_label]:text-xs lg:[&_label]:mb-1 lg:[&_input]:px-3 lg:[&_input]:py-2 lg:[&_input]:text-sm lg:[&_select]:px-3 lg:[&_select]:py-2 lg:[&_select]:text-sm lg:[&_textarea]:px-3 lg:[&_textarea]:py-2 lg:[&_textarea]:text-sm lg:[&_button]:px-5 lg:[&_button]:py-2 lg:[&_button]:text-sm"
+        >
         <section className="w-full py-8 md:py-12 lg:py-8">
           <div className="max-w-5xl mx-auto px-4 md:px-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
@@ -1176,16 +1190,18 @@ function CheckoutPageContent() {
                           <label htmlFor="phone" className="block text-sm font-semibold text-gray-900 mb-2">
                             Phone Number *
                           </label>
-                          <input
-                            type="tel"
-                            id="phone"
-                            name="phone"
-                            value={shippingInfo.phone}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
+                            <input
+                              type="tel"
+                              id="phone"
+                              name="phone"
+                              value={shippingInfo.phone}
+                              onChange={handleInputChange}
+                              maxLength={15}
+                              inputMode="tel"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
                               placeholder="+32 4XX XX XX XX"
-                            required
-                          />
+                              required
+                            />
                         </div>
                           </div>
                         </div>

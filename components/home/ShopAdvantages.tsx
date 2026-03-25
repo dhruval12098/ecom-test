@@ -25,7 +25,7 @@ const advantages = [
 
 const ShopAdvantages = () => {
   return (
-    <div className="w-[95%] mx-auto border border-black rounded-3xl my-12">
+    <div className="w-[95%] mx-auto border border-black rounded-3xl my-12 bg-white">
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left side: Heading + Points */}
         <div className="flex-1 p-10">

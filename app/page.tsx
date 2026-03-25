@@ -354,7 +354,7 @@ export default function HeroSection() {
   const showHeroSkeleton = loading && heroSlides.length === 0;
 
   return (
-    <>
+    <div className="bg-white">
       {/* Error State */}
       {error && (
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
@@ -443,7 +443,7 @@ export default function HeroSection() {
       </section>
 
       {/* ================= GAP ================= */}
-      <div className="h-10 sm:h-14 md:h-24" />
+        <div className="h-10 sm:h-14 md:h-24 bg-white" />
 
       {/* ================= CATEGORY SECTION ================= */}
       <section className="w-full py-10 sm:py-14 md:py-16 bg-white">
@@ -747,6 +747,6 @@ export default function HeroSection() {
       </section>
       </>
      
-    </>
+    </div>
   );
 }

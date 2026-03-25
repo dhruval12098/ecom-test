@@ -15,10 +15,24 @@ export default function ContactPage() {
 
   const [formStatus, setFormStatus] = useState("");
 
+  const formatBelgianPhone = (value: string) => {
+    const digits = value.replace(/[^\d]/g, "");
+    const withoutCountry = digits.startsWith("32") ? digits.slice(2) : digits;
+    const national = withoutCountry.slice(0, 9);
+    const parts: string[] = [];
+    if (national.length > 0) parts.push(national.slice(0, 1));
+    if (national.length > 1) parts.push(national.slice(1, 3));
+    if (national.length > 3) parts.push(national.slice(3, 5));
+    if (national.length > 5) parts.push(national.slice(5, 7));
+    if (national.length > 7) parts.push(national.slice(7, 9));
+    return `+32${parts.length ? " " : ""}${parts.join(" ")}`;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: name === "phone" ? formatBelgianPhone(value) : value
     });
   };
 
@@ -156,7 +170,7 @@ export default function ContactPage() {
                 Fill out the form below and our team will get back to you within 24 hours.
               </p>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" style={{ colorScheme: "light" }}>
                 <div>
                   <label htmlFor="name" className="block text-sm font-semibold text-gray-900 mb-2">
                     Full Name *
@@ -202,8 +216,10 @@ export default function ContactPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      maxLength={15}
+                      inputMode="tel"
                       className="w-full bg-white border border-black rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-[#266000] transition-colors"
-                      placeholder="+91 XXXXX XXXXX"
+                      placeholder="+32 4XX XX XX XX"
                     />
                   </div>
                 </div>
