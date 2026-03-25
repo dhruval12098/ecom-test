@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react";
 import { MapPin, Mail, Phone, Clock, Send, User, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import ApiService from "@/lib/api";
 
 export default function ContactPage() {
@@ -360,12 +361,18 @@ export default function ContactPage() {
               Join thousands of happy customers enjoying fresh, organic products delivered right to their doorstep.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-xl font-bold text-base transition-colors">
+              <Link
+                href="/"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-3 rounded-xl font-bold text-base transition-colors text-center"
+              >
                 Start Shopping
-              </button>
-              <button className="bg-white border border-black hover:border-[#266000] text-gray-900 px-8 py-3 rounded-xl font-bold text-base transition-colors">
+              </Link>
+              <Link
+                href="/search"
+                className="bg-white border border-black hover:border-[#266000] text-gray-900 px-8 py-3 rounded-xl font-bold text-base transition-colors text-center"
+              >
                 Browse Products
-              </button>
+              </Link>
             </div>
           </div>
         </div>

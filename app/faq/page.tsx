@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ApiService from "@/lib/api";
 
@@ -125,12 +126,12 @@ export default function FAQPage() {
             Can't find the answer you're looking for? Reach out to our customer support team for personalized assistance.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button className="bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 transition-colors">
+            <Link
+              href="/contact"
+              className="bg-green-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-green-700 transition-colors text-center"
+            >
               Contact Support
-            </button>
-            <button className="border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-50 transition-colors">
-              Live Chat
-            </button>
+            </Link>
           </div>
         </div>
       </div>
