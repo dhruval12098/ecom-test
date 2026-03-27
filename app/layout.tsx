@@ -9,7 +9,12 @@ import RouteLoader from "@/components/ui/RouteLoader";
 import PageTransition from "@/components/ui/PageTransition";
 import { Suspense } from "react";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Tulsi | Indian Grocery Store",
     template: "%s | Tulsi",
@@ -43,9 +48,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <CartProvider>

@@ -216,10 +216,10 @@ export default function ContactPage() {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      maxLength={15}
+                      maxLength={18}
                       inputMode="tel"
                       className="w-full bg-white border border-black rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:border-[#266000] transition-colors"
-                      placeholder="+32 4XX XX XX XX"
+                      placeholder="+32 4X XX XX XX XX"
                     />
                   </div>
                 </div>

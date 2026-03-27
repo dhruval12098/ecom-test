@@ -1,12 +1,9 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import ProductCard from "@/components/common/ProductCard";
-import { Home, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { Home, ChevronRight } from "lucide-react";
+import ProductCard from "@/components/common/ProductCard";
 import ApiService from "@/lib/api";
-import { readCache, writeCache } from "@/lib/storageCache";
+
+export const revalidate = 300;
 
 interface Product {
   id: number;
@@ -52,138 +49,70 @@ interface Category {
   subcategories: Subcategory[];
 }
 
-export default function SubcategoryPage() {
-  const SUBCATEGORY_CACHE_TTL = 1000 * 60 * 60 * 12; // 12 hours
-  const params = useParams();
-  const category = params.category as string;
-  const subcategory = params.subcategory as string;
-  const [categoryData, setCategoryData] = useState<Category | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [missing, setMissing] = useState(false);
+type PageParams = {
+  category: string;
+  subcategory: string;
+};
 
-  useEffect(() => {
-    const cacheKey = `subcategory:${category}/${subcategory}`;
-    const cached = readCache<{
-      categoryData: Category;
-      products: Product[];
-    }>(cacheKey);
-    if (cached?.categoryData) {
-      setCategoryData(cached.categoryData);
-      setProducts(cached.products || []);
-      setLoading(false);
-      setMissing(false);
-    }
+const safeDecode = (value?: string | null) => {
+  if (!value) return "";
+  if (!value.includes("%")) return value;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
 
-    const fetchCategoryData = async () => {
-      try {
-        if (!cached) setLoading(true);
-        const categories: Category[] = await ApiService.getCategories();
-        
-        const foundCategory = categories.find(cat => cat.slug === category);
-        if (!foundCategory) {
-          if (!cached) setMissing(true);
-          return;
-        }
-        
-        setCategoryData(foundCategory);
-        
-        // Find the specific subcategory and get its products
-        const subcategoryData = foundCategory.subcategories.find(sub => sub.slug === subcategory);
-        if (subcategoryData) {
-          const productsWithSlugs = subcategoryData.products.map((product: any) => {
-            const normalizedSlug =
-              product.slug ||
-              product.product_slug ||
-              (product.id !== undefined && product.id !== null ? String(product.id) : null);
-            return ({
-            id: product.id,
-            name: product.name,
-            slug: normalizedSlug || "",
-            category: foundCategory.slug,
-            subcategory: subcategoryData.slug,
-            price: Number(product.price || 0),
-            originalPrice: product.originalPrice ?? product.original_price ?? null,
-            mainVariantId: product.mainVariantId ?? product.main_variant_id ?? null,
-            variants: Array.isArray(product.variants) ? product.variants : [],
-            imageUrl:
-              product.imageUrl ||
-              product.image_url ||
-              product.image ||
-              (Array.isArray(product.imageGallery) ? product.imageGallery[0] : undefined) ||
-              (Array.isArray(product.image_gallery) ? product.image_gallery[0] : undefined) ||
-              '',
-            discountPercentage: product.discountPercentage || product.discount_percentage || '',
-            discountColor: product.discountColor || product.discount_color || 'bg-red-500',
-            description: product.description || '',
-            rating: product.rating || 0,
-            reviews: product.reviews || 0,
-            inStock: product.inStock ?? product.in_stock ?? true,
-            weight: product.weight || '',
-            origin: product.origin || ''
-          });
-        });
-          const schedules = await Promise.all(
-            productsWithSlugs.map((product) => ApiService.getActiveSchedule(product.id))
-          );
-          const productsWithSchedules = productsWithSlugs.map((product, index) => {
-            const schedule = schedules[index];
-            if (!schedule) return product;
-            const scheduledPrice = Number(
-              schedule.scheduled_price ?? schedule.scheduledPrice
-            );
-            const normalPrice = Number(
-              schedule.normal_price ?? schedule.normalPrice ?? product.originalPrice ?? product.price
-            );
-            const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : product.price;
-            const finalOriginal =
-              Number.isFinite(normalPrice) && normalPrice > finalPrice
-                ? normalPrice
-                : product.originalPrice;
-            const discountPercent = schedule.discount_percent ?? schedule.discountPercent;
-            const computedDiscount =
-              discountPercent !== null && discountPercent !== undefined
-                ? `${Number(discountPercent).toFixed(0)}%`
-                : Number.isFinite(normalPrice) && normalPrice > finalPrice
-                  ? `${Math.round(((normalPrice - finalPrice) / normalPrice) * 100)}%`
-                  : product.discountPercentage;
-
-            return {
-              ...product,
-              price: finalPrice,
-              originalPrice: finalOriginal,
-              discountPercentage: computedDiscount || product.discountPercentage
-            };
-          });
-          setProducts(productsWithSchedules);
-          setMissing(false);
-          writeCache(
-            cacheKey,
-            { categoryData: foundCategory, products: productsWithSchedules },
-            SUBCATEGORY_CACHE_TTL
-          );
-        } else {
-          if (!cached) setMissing(true);
-        }
-      } catch (error) {
-        console.error("Error fetching category data:", error);
-        if (!cached) setMissing(true);
-      } finally {
-        setLoading(false);
-      }
+export async function generateMetadata({ params }: { params: Promise<PageParams> }) {
+  const resolvedParams = await params;
+  const rawCategory = safeDecode(resolvedParams?.category);
+  const rawSubcategory = safeDecode(resolvedParams?.subcategory);
+  if (!rawCategory || !rawSubcategory) {
+    return {
+      title: "Subcategory Not Found | Tulsi",
+      description: "The requested subcategory could not be found."
     };
+  }
 
-    fetchCategoryData();
-  }, [category, subcategory]);
+  const normalizedCategory = rawCategory
+    ? rawCategory.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    : "";
+  const normalizedSub = rawSubcategory
+    ? rawSubcategory.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    : "";
 
-  if (missing) {
+  const categories: Category[] = await ApiService.getCategories();
+  const foundCategory =
+    categories.find((cat) => cat.slug === rawCategory) ||
+    (normalizedCategory ? categories.find((cat) => cat.slug === normalizedCategory) : null);
+  const foundSub =
+    foundCategory?.subcategories.find((sub) => sub.slug === rawSubcategory) ||
+    (normalizedSub ? foundCategory?.subcategories.find((sub) => sub.slug === normalizedSub) : null);
+
+  const title = foundSub?.name
+    ? `${foundSub.name} | ${foundCategory?.name || "Tulsi"}`
+    : "Subcategory | Tulsi";
+  const description =
+    foundCategory?.description ||
+    "Browse authentic Indian grocery subcategories at Tulsi.";
+
+  return { title, description };
+}
+
+export default async function SubcategoryPage({ params }: { params: Promise<PageParams> }) {
+  const resolvedParams = await params;
+  const categoryParam = safeDecode(resolvedParams?.category);
+  const subcategoryParam = safeDecode(resolvedParams?.subcategory);
+
+  if (!categoryParam || !subcategoryParam) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
           <div className="text-2xl font-bold text-gray-900 mb-2">Subcategory Not Found</div>
           <div className="text-gray-600 mb-6">Please choose another subcategory.</div>
           <Link
-            href={`/${category}`}
+            href={`/${categoryParam || ""}`}
             className="inline-flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg font-semibold"
           >
             Back to Category
@@ -193,35 +122,119 @@ export default function SubcategoryPage() {
     );
   }
 
-  if (loading && !categoryData) {
+  const normalizedCategory = categoryParam
+    ? categoryParam.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    : "";
+  const normalizedSub = subcategoryParam
+    ? subcategoryParam.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    : "";
+
+  const categories: Category[] = await ApiService.getCategories();
+  const foundCategory =
+    categories.find((cat) => cat.slug === categoryParam) ||
+    (normalizedCategory ? categories.find((cat) => cat.slug === normalizedCategory) : null);
+
+  if (!foundCategory) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 py-10">
-          <div className="skeleton h-8 w-1/3 mb-3" />
-          <div className="skeleton h-4 w-1/2 mb-6" />
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 rounded-2xl p-4">
-                <div className="skeleton w-full aspect-square rounded-xl mb-4" />
-                <div className="skeleton h-4 w-3/4 mb-2" />
-                <div className="skeleton h-4 w-1/2" />
-              </div>
-            ))}
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+          <div className="text-2xl font-bold text-gray-900 mb-2">Subcategory Not Found</div>
+          <div className="text-gray-600 mb-6">Please choose another subcategory.</div>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg font-semibold"
+          >
+            Back to Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  if (!categoryData) {
-    return null;
+  const currentSubcategory =
+    foundCategory.subcategories.find((sub) => sub.slug === subcategoryParam) ||
+    (normalizedSub ? foundCategory.subcategories.find((sub) => sub.slug === normalizedSub) : null);
+
+  if (!currentSubcategory) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+          <div className="text-2xl font-bold text-gray-900 mb-2">Subcategory Not Found</div>
+          <div className="text-gray-600 mb-6">Please choose another subcategory.</div>
+          <Link
+            href={`/${foundCategory.slug}`}
+            className="inline-flex items-center justify-center bg-black text-white px-4 py-2 rounded-lg font-semibold"
+          >
+            Back to Category
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  const currentSubcategory = categoryData.subcategories.find(sub => sub.slug === subcategory);
-  const allSubcategories = [
-    { name: "All", slug: "all" },
-    ...categoryData.subcategories
-  ];
+  const productsWithSlugs = currentSubcategory.products.map((product: any) => {
+    const normalizedSlug =
+      product.slug ||
+      product.product_slug ||
+      (product.id !== undefined && product.id !== null ? String(product.id) : null);
+    return {
+      id: product.id,
+      name: product.name,
+      slug: normalizedSlug || "",
+      category: foundCategory.slug,
+      subcategory: currentSubcategory.slug,
+      price: Number(product.price || 0),
+      originalPrice: product.originalPrice ?? product.original_price ?? null,
+      mainVariantId: product.mainVariantId ?? product.main_variant_id ?? null,
+      variants: Array.isArray(product.variants) ? product.variants : [],
+      imageUrl:
+        product.imageUrl ||
+        product.image_url ||
+        product.image ||
+        (Array.isArray(product.imageGallery) ? product.imageGallery[0] : undefined) ||
+        (Array.isArray(product.image_gallery) ? product.image_gallery[0] : undefined) ||
+        "",
+      discountPercentage: product.discountPercentage || product.discount_percentage || "",
+      discountColor: product.discountColor || product.discount_color || "bg-red-500",
+      description: product.description || "",
+      rating: product.rating || 0,
+      reviews: product.reviews || 0,
+      inStock: product.inStock ?? product.in_stock ?? true,
+      weight: product.weight || "",
+      origin: product.origin || ""
+    } as Product;
+  });
+
+  const schedules = await Promise.all(
+    productsWithSlugs.map((product) => ApiService.getActiveSchedule(product.id))
+  );
+  const productsWithSchedules = productsWithSlugs.map((product, index) => {
+    const schedule = schedules[index];
+    if (!schedule) return product;
+    const scheduledPrice = Number(schedule.scheduled_price ?? schedule.scheduledPrice);
+    const normalPrice = Number(
+      schedule.normal_price ?? schedule.normalPrice ?? product.originalPrice ?? product.price
+    );
+    const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : product.price;
+    const finalOriginal =
+      Number.isFinite(normalPrice) && normalPrice > finalPrice ? normalPrice : product.originalPrice;
+    const discountPercent = schedule.discount_percent ?? schedule.discountPercent;
+    const computedDiscount =
+      discountPercent !== null && discountPercent !== undefined
+        ? `${Number(discountPercent).toFixed(0)}%`
+        : Number.isFinite(normalPrice) && normalPrice > finalPrice
+          ? `${Math.round(((normalPrice - finalPrice) / normalPrice) * 100)}%`
+          : product.discountPercentage;
+
+    return {
+      ...product,
+      price: finalPrice,
+      originalPrice: finalOriginal,
+      discountPercentage: computedDiscount || product.discountPercentage
+    };
+  });
+
+  const allSubcategories = [{ name: "All", slug: "all" }, ...foundCategory.subcategories];
 
   return (
     <div className="min-h-screen bg-gray-50 fade-in">
@@ -233,9 +246,11 @@ export default function SubcategoryPage() {
               <Home size={16} />
             </Link>
             <ChevronRight size={16} />
-            <Link href={`/${category}`} className="hover:text-green-600">{categoryData.name}</Link>
+            <Link href={`/${foundCategory.slug}`} className="hover:text-green-600">
+              {foundCategory.name}
+            </Link>
             <ChevronRight size={16} />
-            <span className="text-gray-900">{currentSubcategory?.name}</span>
+            <span className="text-gray-900">{currentSubcategory.name}</span>
           </div>
         </div>
       </div>
@@ -243,8 +258,10 @@ export default function SubcategoryPage() {
       {/* Category Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">{currentSubcategory?.name}</h1>
-          <p className="text-lg text-gray-600 mt-1">{categoryData.name} - {products.length} products</p>
+          <h1 className="text-3xl font-bold text-gray-900">{currentSubcategory.name}</h1>
+          <p className="text-lg text-gray-600 mt-1">
+            {foundCategory.name} - {productsWithSchedules.length} products
+          </p>
         </div>
       </div>
 
@@ -255,16 +272,18 @@ export default function SubcategoryPage() {
             {allSubcategories.map((sub) => (
               <Link
                 key={sub.slug}
-                href={sub.slug === 'all' ? `/${category}` : `/${category}/${sub.slug}`}
+                href={sub.slug === "all" ? `/${foundCategory.slug}` : `/${foundCategory.slug}/${sub.slug}`}
                 className={`whitespace-nowrap pb-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  sub.slug === subcategory
+                  sub.slug === currentSubcategory.slug
                     ? "border-green-600 text-green-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                {sub.name} ({sub.slug !== 'all' 
-                  ? (categoryData.subcategories.find(s => s.slug === sub.slug)?.products.length || 0)
-                  : categoryData.subcategories.reduce((acc, curr) => acc + curr.products.length, 0)})
+                {sub.name} (
+                {sub.slug !== "all"
+                  ? (foundCategory.subcategories.find((s) => s.slug === sub.slug)?.products.length || 0)
+                  : foundCategory.subcategories.reduce((acc, curr) => acc + curr.products.length, 0)}
+                )
               </Link>
             ))}
           </div>
@@ -273,45 +292,47 @@ export default function SubcategoryPage() {
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8">
-        {products.length === 0 ? (
+        {productsWithSchedules.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">No products found in this subcategory</div>
           </div>
         ) : (
           <>
             <div className="bg-green-50 rounded-t-2xl p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentSubcategory?.name}</h2>
-              <p className="text-gray-600">{categoryData.name} - {products.length} products</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentSubcategory.name}</h2>
+              <p className="text-gray-600">
+                {foundCategory.name} - {productsWithSchedules.length} products
+              </p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-            {products.map((product) => (
-              <ProductCard
-  key={product.id}
-  titleClassName="line-clamp-2"
-  size="compact"
-  product={{
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    originalPrice: product.originalPrice,
-    mainVariantId: product.mainVariantId,
-    variants: product.variants,
-    imageUrl: product.imageUrl,
-    discountPercentage: product.discountPercentage,
-    discountColor: product.discountColor,
-    description: product.description || "",
-    rating: product.rating,
-    reviews: product.reviews,
-    inStock: product.inStock,
-    weight: product.weight,
-    origin: product.origin,
-    category: product.category,
-    subcategory: product.subcategory,
-    slug: product.slug
-  }}
-/>
-            ))}
-          </div>
+              {productsWithSchedules.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  titleClassName="line-clamp-2"
+                  size="compact"
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    originalPrice: product.originalPrice,
+                    mainVariantId: product.mainVariantId,
+                    variants: product.variants,
+                    imageUrl: product.imageUrl,
+                    discountPercentage: product.discountPercentage,
+                    discountColor: product.discountColor,
+                    description: product.description || "",
+                    rating: product.rating,
+                    reviews: product.reviews,
+                    inStock: product.inStock,
+                    weight: product.weight,
+                    origin: product.origin,
+                    category: product.category,
+                    subcategory: product.subcategory,
+                    slug: product.slug
+                  }}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>

@@ -1,5 +1,4 @@
 // components/MainCategories.tsx
-'use client';
 import { 
   GiWheat, 
   GiRiceCooker, 

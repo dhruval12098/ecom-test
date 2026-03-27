@@ -1,5 +1,4 @@
 // components/ShopAdvantages.tsx
-'use client';
 import { FaLeaf, FaTruck, FaTags } from 'react-icons/fa';
 
 const advantages = [

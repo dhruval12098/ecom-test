@@ -1,5 +1,4 @@
 // components/WelcomeSection.tsx
-'use client';
 
 const WelcomeSection = () => {
   return (
