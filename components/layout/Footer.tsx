@@ -1,8 +1,8 @@
 // components/Footer.tsx
 'use client';
 import { useEffect, useState } from 'react';
-import { FaFacebookF, FaTwitter, FaPinterestP, FaInstagram, FaYoutube } from 'react-icons/fa';
-import { SiVisa, SiMastercard, SiAmericanexpress, SiPaypal } from 'react-icons/si';
+import { FaFacebookF, FaTwitter, FaPinterestP, FaInstagram, FaYoutube, FaUniversity } from 'react-icons/fa';
+import { SiVisa, SiMastercard, SiPaypal, SiApplepay, SiGooglepay } from 'react-icons/si';
 import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import ApiService from '@/lib/api';
@@ -175,19 +175,26 @@ const Footer = () => {
               
               {/* Secure Payment Section */}
               <div className="mt-8">
-                <h4 className="text-sm font-semibold mb-4">Secure Payment</h4>
-                <div className="flex gap-2 flex-wrap">
-                  <div className="bg-white rounded px-2.5 py-1.5">
-                    <SiVisa className="text-blue-600 text-2xl" />
-                  </div>
+                <h4 className="text-sm font-semibold mb-4">Pay securely with</h4>
+                <div className="flex gap-2 flex-wrap items-center">
                   <div className="bg-white rounded px-2.5 py-1.5">
                     <SiMastercard className="text-red-600 text-2xl" />
                   </div>
                   <div className="bg-white rounded px-2.5 py-1.5">
-                    <SiAmericanexpress className="text-blue-500 text-2xl" />
+                    <SiVisa className="text-blue-600 text-2xl" />
                   </div>
                   <div className="bg-white rounded px-2.5 py-1.5">
                     <SiPaypal className="text-blue-700 text-2xl" />
+                  </div>
+                  <div className="bg-white rounded px-2.5 py-1.5">
+                    <SiApplepay className="text-gray-900 text-2xl" />
+                  </div>
+                  <div className="bg-white rounded px-2.5 py-1.5">
+                    <SiGooglepay className="text-gray-900 text-2xl" />
+                  </div>
+                  <div className="bg-white rounded px-2.5 py-1.5 flex items-center gap-1.5">
+                    <FaUniversity className="text-gray-900 text-lg" />
+                    <span className="text-[10px] font-semibold text-gray-900">Bank transfer</span>
                   </div>
                 </div>
               </div>

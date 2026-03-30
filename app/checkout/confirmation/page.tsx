@@ -7,6 +7,7 @@ import { CheckCircle, Loader2, Star } from "lucide-react";
 import ApiService from "@/lib/api";
 import { formatCurrency } from "@/lib/currency";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 
 function CheckoutConfirmationContent() {
@@ -17,6 +18,7 @@ function CheckoutConfirmationContent() {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [totalAmount, setTotalAmount] = useState<number | null>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [reviewItemId, setReviewItemId] = useState<number | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
@@ -26,7 +28,9 @@ function CheckoutConfirmationContent() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [showReviewPopup, setShowReviewPopup] = useState(true);
   const [paymentPending, setPaymentPending] = useState(false);
+  const [resolvedStatus, setResolvedStatus] = useState<"confirmed" | "cancelled" | "pending">("pending");
   const { user } = useAuth();
+  const { addToCart, clearCart, cartItems } = useCart();
 
   useEffect(() => {
     const orderId = Number(orderIdParam);
@@ -45,17 +49,39 @@ function CheckoutConfirmationContent() {
         if (statusResult === "timeout") {
           setPaymentPending(true);
         }
+        const normalizedStatus =
+          statusResult && statusResult !== "timeout"
+            ? String((statusResult as any)?.status || "").toLowerCase()
+            : "";
         const orderData = await orderPromise;
         const rawOrder = orderData?.order_code || orderData?.order_number || "";
         setOrderNumber(String(rawOrder || orderId));
         setTotalAmount(Number(orderData?.total_amount || 0));
         const items = orderData?.items || [];
         setOrderItems(items);
+        const nextOrderStatus = String(orderData?.status || "").toLowerCase();
+        setOrderStatus(nextOrderStatus);
         if (items.length > 0) {
           setReviewItemId(Number(items[0]?.id || 0) || null);
         }
         setReviewerName(orderData?.customer_name || '');
         setReviewerEmail(orderData?.customer_email || '');
+
+        const isPaid = nextOrderStatus === "confirmed" || normalizedStatus === "paid";
+        const isCancelled =
+          nextOrderStatus === "cancelled" ||
+          nextOrderStatus === "refunded" ||
+          normalizedStatus === "failed" ||
+          normalizedStatus === "refunded";
+        const isPending =
+          normalizedStatus === "pending" ||
+          normalizedStatus === "refund_pending" ||
+          (!isPaid && !isCancelled);
+
+        setResolvedStatus(isPaid ? "confirmed" : isCancelled ? "cancelled" : "pending");
+        if (isPending) {
+          setPaymentPending(true);
+        }
       } catch {
         setError("Unable to confirm payment. Please refresh or contact support.");
       } finally {
@@ -63,6 +89,50 @@ function CheckoutConfirmationContent() {
       }
     })();
   }, [orderIdParam]);
+
+  useEffect(() => {
+    if (resolvedStatus !== "cancelled") return;
+    if (!orderIdParam) return;
+    if (!orderItems.length) return;
+    if (cartItems.length > 0) return;
+    if (typeof window === "undefined") return;
+    const key = `cancelledCart:${orderIdParam}`;
+    if (sessionStorage.getItem(key) === "done") return;
+    clearCart();
+    orderItems.forEach((item: any) => {
+      const qty = Math.max(1, Number(item.quantity || 1));
+      for (let i = 0; i < qty; i += 1) {
+        addToCart(
+          {
+            id: Number(item.product_id || item.productId || item.id),
+            name: item.product_name || item.name || "Product",
+            price: Number(item.unit_price || item.price || 0),
+            originalPrice: undefined,
+            imageUrl: item.image_url || item.imageUrl || "",
+            weight: item.variant_name || item.weight || "",
+            inStock: true,
+            variantId: item.variant_id || item.variantId || null,
+            variantName: item.variant_name || item.variantName || null
+          },
+          false
+        );
+      }
+    });
+    sessionStorage.setItem(key, "done");
+  }, [resolvedStatus, orderIdParam, orderItems, cartItems.length, addToCart, clearCart]);
+
+  useEffect(() => {
+    if (resolvedStatus !== "confirmed") return;
+    if (typeof window === "undefined") return;
+    const handlePop = () => {
+      window.location.replace("/account?tab=orders");
+    };
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePop);
+    return () => {
+      window.removeEventListener("popstate", handlePop);
+    };
+  }, [resolvedStatus]);
 
   return (
     <div className="min-h-[70vh] bg-white">
@@ -108,24 +178,65 @@ function CheckoutConfirmationContent() {
 
           {!isLoading && !error && (
             <div className="flex flex-col items-center gap-4">
-              <div className="w-20 h-20 bg-[#266000] border-2 border-black rounded-full flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Order Confirmed</h1>
-                <p className="text-sm text-gray-600 mt-2">Thank you for your purchase.</p>
-                {paymentPending && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Payment confirmation is taking longer than usual. Your order is saved and will update shortly.
-                  </p>
-                )}
-              </div>
-              <div className="text-sm text-gray-700 bg-gray-50 border border-black rounded-2xl px-4 py-3">
-                <div>Order: <span className="font-semibold">{orderNumber || "-"}</span></div>
-                <div>Total: <span className="font-semibold">{formatCurrency(totalAmount || 0)}</span></div>
-              </div>
+              {resolvedStatus === "cancelled" ? (
+                <>
+                  <div className="w-20 h-20 bg-red-50 border-2 border-black rounded-full flex items-center justify-center">
+                    <span className="text-red-600 text-2xl font-bold">!</span>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Order Cancelled</h1>
+                    <p className="text-sm text-gray-600 mt-2">
+                      This order was cancelled. You can place a new order or contact support if this was unexpected.
+                    </p>
+                  </div>
+                  <div className="text-sm text-gray-700 bg-gray-50 border border-black rounded-2xl px-4 py-3">
+                    <div>Order: <span className="font-semibold">{orderNumber || "-"}</span></div>
+                    <div>Total: <span className="font-semibold">{formatCurrency(totalAmount || 0)}</span></div>
+                  </div>
+                </>
+              ) : resolvedStatus === "pending" ? (
+                <>
+                  <div className="w-20 h-20 bg-yellow-50 border-2 border-black rounded-full flex items-center justify-center">
+                    <Loader2 className="h-9 w-9 text-yellow-700" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Payment Pending</h1>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Your order is saved. We’re confirming your payment and will update shortly.
+                    </p>
+                    {paymentPending && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Payment confirmation is taking longer than usual. Your order will update shortly.
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-700 bg-gray-50 border border-black rounded-2xl px-4 py-3">
+                    <div>Order: <span className="font-semibold">{orderNumber || "-"}</span></div>
+                    <div>Total: <span className="font-semibold">{formatCurrency(totalAmount || 0)}</span></div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-20 h-20 bg-[#266000] border-2 border-black rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-10 w-10 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Order Confirmed</h1>
+                    <p className="text-sm text-gray-600 mt-2">Thank you for your purchase.</p>
+                    {paymentPending && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Payment confirmation is taking longer than usual. Your order is saved and will update shortly.
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-700 bg-gray-50 border border-black rounded-2xl px-4 py-3">
+                    <div>Order: <span className="font-semibold">{orderNumber || "-"}</span></div>
+                    <div>Total: <span className="font-semibold">{formatCurrency(totalAmount || 0)}</span></div>
+                  </div>
+                </>
+              )}
 
-              {orderItems.length > 0 && (
+              {resolvedStatus === "confirmed" && orderItems.length > 0 && (
                 <>
                   {showReviewPopup && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
@@ -241,12 +352,21 @@ function CheckoutConfirmationContent() {
                 </>
               )}
               <div className="flex flex-col sm:flex-row gap-3 mt-2">
-                <Link
-                  href="/account?tab=orders"
-                  className="bg-black text-white px-5 py-2 rounded-xl text-sm font-semibold"
-                >
-                  View Orders
-                </Link>
+                {resolvedStatus === "pending" ? (
+                  <Link
+                    href={`/checkout?orderId=${encodeURIComponent(orderIdParam || "")}`}
+                    className="bg-black text-white px-5 py-2 rounded-xl text-sm font-semibold"
+                  >
+                    Retry Payment
+                  </Link>
+                ) : resolvedStatus === "confirmed" ? (
+                  <Link
+                    href="/account?tab=orders"
+                    className="bg-black text-white px-5 py-2 rounded-xl text-sm font-semibold"
+                  >
+                    View Orders
+                  </Link>
+                ) : null}
                 <Link
                   href="/"
                   className="bg-white border border-black text-gray-900 px-5 py-2 rounded-xl text-sm font-semibold"

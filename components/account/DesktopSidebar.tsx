@@ -27,15 +27,10 @@ export default function DesktopSidebar({ activeTab, onTabChange, user, onLogout 
     <div className="hidden lg:block lg:col-span-1">
       <div className="bg-white border border-black rounded-2xl p-6 sticky top-6">
         <div className="flex flex-col items-center mb-8 pb-6 border-b border-gray-200">
-          <div className="w-20 h-20 rounded-full border-2 border-black overflow-hidden mb-4">
-            <img 
-              src={user.avatar} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="80" height="80" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="40" cy="40" r="40" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" font-size="30" text-anchor="middle" dy=".3em" fill="%236b7280"%3E' + user.name.charAt(0) + '%3C/text%3E%3C/svg%3E';
-              }}
-            />
+          <div className="w-20 h-20 rounded-full border-2 border-black bg-gray-100 flex items-center justify-center mb-4">
+            <span className="text-2xl font-bold text-gray-700">
+              {(user.name || "U").trim().charAt(0).toUpperCase()}
+            </span>
           </div>
           <h3 className="font-bold text-gray-900 text-center">{user.name}</h3>
           <p className="text-gray-600 text-sm text-center">{user.email}</p>

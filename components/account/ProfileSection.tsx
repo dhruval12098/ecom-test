@@ -28,22 +28,11 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
       <div className="bg-white border border-black rounded-2xl p-4 sm:p-6 lg:p-8">
         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6 lg:mb-8">Profile Information</h3>
         
-        <div className="flex flex-col md:flex-row items-start md:items-center mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-black overflow-hidden mb-4 md:mb-0 md:mr-6">
-            <img 
-              src={user.avatar} 
-              alt="Profile" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,%3Csvg width="96" height="96" xmlns="http://www.w3.org/2000/svg"%3E%3Ccircle cx="48" cy="48" r="48" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" font-size="36" text-anchor="middle" dy=".3em" fill="%236b7280"%3E' + user.name.charAt(0) + '%3C/text%3E%3C/svg%3E';
-              }}
-            />
-          </div>
-          <div>
-            <button className="bg-white border border-black text-gray-900 py-2 px-5 sm:px-6 rounded-xl font-semibold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors mb-2">
-              Change Photo
-            </button>
-            <p className="text-xs sm:text-sm text-gray-600">JPG, PNG or GIF. Maximum file size 5MB</p>
+        <div className="flex items-center gap-4 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-200">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-black bg-gray-100 flex items-center justify-center">
+            <span className="text-2xl sm:text-3xl font-bold text-gray-700">
+              {(user.name || "U").trim().charAt(0).toUpperCase()}
+            </span>
           </div>
         </div>
         

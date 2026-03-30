@@ -1068,7 +1068,7 @@ function AccountPageInner() {
   );
 }
 
-export default function AccountPage() {
+export default function AccountClient() {
   return (
     <Suspense fallback={null}>
       <AccountPageInner />
