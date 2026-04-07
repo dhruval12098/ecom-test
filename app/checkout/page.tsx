@@ -105,6 +105,7 @@ function CheckoutPageContent() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [isEditingSelectedAddress, setIsEditingSelectedAddress] = useState(false);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
+  const [scheduleMap, setScheduleMap] = useState<Record<string, any>>({});
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState("");
@@ -298,9 +299,21 @@ function CheckoutPageContent() {
 
   const displayItems = sourceItems.map((item: CheckoutItem) => {
     const live = liveMap[item.id];
+    const scheduleKey = `${item.id}:${item.variantId ?? "base"}`;
+    const schedule = scheduleMap[scheduleKey] || null;
     if (!live) {
+      const fallbackPrice = Number(item.price || 0);
+      const fallbackOriginal = item.originalPrice !== undefined ? Number(item.originalPrice) : undefined;
+      const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
+      const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
+      const price = Number.isFinite(scheduledPrice) ? scheduledPrice : fallbackPrice;
+      const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : fallbackOriginal;
+      const originalPrice =
+        Number.isFinite(normalCandidate) && normalCandidate > price ? normalCandidate : fallbackOriginal;
       return {
         ...item,
+        price,
+        originalPrice,
         stockQuantity: null
       };
     }
@@ -318,25 +331,33 @@ function CheckoutPageContent() {
         : live.in_stock !== undefined
           ? Boolean(live.in_stock) && Number(live.stock_quantity || 0) > 0
           : item.inStock ?? true;
+    const basePrice = variantPrice !== null && variantPrice !== undefined
+      ? Number(variantPrice)
+      : Number(live.sale_price || live.price || item.price);
+    const baseOriginalPrice = variantPrice !== null && variantPrice !== undefined
+      ? (
+          selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
+            ? Number(selectedVariant.originalPrice)
+            : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
+              ? Number(selectedVariant.original_price)
+              : item.originalPrice
+        )
+      : live.originalPrice
+        ? Number(live.originalPrice)
+        : live.original_price
+          ? Number(live.original_price)
+          : item.originalPrice;
+    const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
+    const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
+    const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : basePrice;
+    const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : baseOriginalPrice;
+    const finalOriginal =
+      Number.isFinite(normalCandidate) && normalCandidate > finalPrice ? normalCandidate : baseOriginalPrice;
     return {
       ...item,
       name: live.name || item.name,
-      price: variantPrice !== null && variantPrice !== undefined
-        ? Number(variantPrice)
-        : Number(live.sale_price || live.price || item.price),
-      originalPrice: variantPrice !== null && variantPrice !== undefined
-        ? (
-            selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
-              ? Number(selectedVariant.originalPrice)
-              : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
-                ? Number(selectedVariant.original_price)
-                : item.originalPrice
-          )
-        : live.originalPrice
-          ? Number(live.originalPrice)
-          : live.original_price
-            ? Number(live.original_price)
-            : item.originalPrice,
+      price: finalPrice,
+      originalPrice: finalOriginal,
       imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
       inStock,
       stockQuantity
@@ -624,10 +645,12 @@ function CheckoutPageContent() {
 
   const validateStep = (currentStep: number) => {
     if (currentStep === 1) {
+      const personal = ['firstName', 'lastName', 'email', 'phone'] as const;
+      const delivery = ['street', 'postalCode', 'city', 'country'] as const;
       const required =
         shippingStep === 1
-          ? ['firstName', 'lastName', 'email', 'phone']
-          : ['street', 'postalCode', 'city', 'country'];
+          ? [...personal]
+          : [...personal, ...delivery];
       const missing = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
       if (shippingStep === 2 && !shippingInfo.termsAccepted) {
         missing.push('termsAccepted');
@@ -661,13 +684,13 @@ function CheckoutPageContent() {
       return;
     }
 
-    const phoneValue = shippingInfo.phone?.trim() || "";
-    if (!isValidPhone(phoneValue, shippingInfo.country)) {
-      toast.error("Invalid phone number", {
-        description: "Please enter a valid phone number with 10–15 digits."
-      });
-      return;
-    }
+      const phoneValue = shippingInfo.phone?.trim() || "";
+      if (!isValidPhone(phoneValue, shippingInfo.country)) {
+        toast.error("Invalid phone number", {
+          description: "Please enter 10 digits plus a 2-digit country code (12 digits total)."
+        });
+        return;
+      }
 
     if (hasStockIssues) {
       const message = formatStockIssueMessage(stockIssues);
@@ -919,6 +942,32 @@ function CheckoutPageContent() {
     enabled: !useRetryItems
   });
 
+  useEffect(() => {
+    const loadSchedules = async () => {
+      if (sourceItems.length === 0) return;
+      try {
+        const pairs = sourceItems.map((item: CheckoutItem) => ({
+          id: Number(item.id),
+          variantId: item.variantId ?? null
+        }));
+        const results = await Promise.all(
+          pairs.map((p) =>
+            Number.isFinite(p.id) ? ApiService.getActiveSchedule(p.id, p.variantId) : null
+          )
+        );
+        const next: Record<string, any> = {};
+        pairs.forEach((p, idx) => {
+          const key = `${p.id}:${p.variantId ?? "base"}`;
+          next[key] = results[idx] || null;
+        });
+        setScheduleMap(next);
+      } catch {
+        // keep UI stable on failure
+      }
+    };
+    loadSchedules();
+  }, [sourceItemIdsKey]);
+
   // Confirmation Screen
   if (step === 4) {
     return (
@@ -1035,6 +1084,17 @@ function CheckoutPageContent() {
                   <ShippingStep
                     shippingStep={shippingStep}
                     setShippingStep={setShippingStep}
+                    onContinueToDelivery={() => {
+                      const validation = validateStep(1);
+                      if (!validation.valid) {
+                        const missingList = validation.missing.map((f) => fieldLabels[f] || f).join(", ");
+                        toast.warning("Missing required fields", {
+                          description: `Please fill: ${missingList}`,
+                        });
+                        return;
+                      }
+                      setShippingStep(2);
+                    }}
                     user={user}
                     savedAddresses={savedAddresses}
                     selectedAddressId={selectedAddressId}
@@ -1121,14 +1181,14 @@ function CheckoutPageContent() {
               {/* Order Summary Sidebar */}
               {step === 2 && (
               <div className="lg:col-span-1 hidden lg:block">
-                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4 md:p-6 lg:p-4 lg:sticky lg:top-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 md:mb-6 flex items-center gap-2">
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4 lg:p-5 lg:sticky lg:top-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <Package className="h-5 w-5 text-[#266000]" />
                     Order Summary
                   </h2>
                   
-                  <div className="max-h-[calc(100vh-170px)] overflow-y-auto pr-1">
-                  <div className="space-y-3 mb-4 md:mb-6">
+                  <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
+                  <div className="space-y-2.5 mb-4">
                     <div className="text-xs text-gray-600">
                       Items: <span className="font-semibold text-gray-900">{displayItems.length}</span>
                     </div>
@@ -1140,7 +1200,7 @@ function CheckoutPageContent() {
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
                           placeholder="Coupon code"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#266000]"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-[#266000]"
                         />
                         {appliedCoupon ? (
                           <button
@@ -1149,7 +1209,7 @@ function CheckoutPageContent() {
                               setAppliedCoupon(null);
                               setCouponError("");
                             }}
-                            className="px-3 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                            className="px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
                           >
                             Remove
                           </button>
@@ -1158,7 +1218,7 @@ function CheckoutPageContent() {
                             type="button"
                             onClick={applyCoupon}
                             disabled={couponLoading}
-                            className="px-3 py-2 text-sm font-semibold text-white bg-black rounded-lg disabled:opacity-60"
+                            className="px-3 py-2 text-xs font-semibold text-white bg-black rounded-lg disabled:opacity-60"
                           >
                             {couponLoading ? "Applying..." : "Apply"}
                           </button>
@@ -1174,7 +1234,7 @@ function CheckoutPageContent() {
                       )}
                     </div>
                     
-                    <div className="border-t border-gray-300 pt-3 mt-3 space-y-2">
+                    <div className="border-t border-gray-300 pt-3 mt-3 space-y-1.5">
                       <div className="flex justify-between text-sm text-gray-600">
                         <span>Subtotal</span>
                         <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
@@ -1210,31 +1270,20 @@ function CheckoutPageContent() {
                         <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                       </div>
                       
-                      <div className="border-t border-gray-300 pt-3 mt-3 flex justify-between text-lg md:text-xl">
-                        <span className="font-bold text-gray-900">Total</span>
-                        <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
+                      <div className="border-t border-gray-300 pt-3 mt-3 flex justify-between text-lg">
+                        <span className="font-semibold text-gray-900">Total</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(total)}</span>
                       </div>
                     </div>
                   </div>
                   
                   {/* Trust Badges */}
-                  <div className="space-y-3 pt-4 md:pt-6 border-t border-gray-300">
-                    <div className="flex items-center gap-3 text-xs md:text-sm">
-                      <ShieldCheck className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
-                      <span className="text-gray-700">Secure SSL encrypted checkout</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs md:text-sm">
-                      <Truck className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
-                      <span className="text-gray-700">
-                        {freeThreshold !== null
-                          ? `Free shipping on orders ${formatCurrency(freeThreshold)}+`
-                          : 'Free shipping available'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs md:text-sm">
-                      <Package className="h-4 w-4 md:h-5 md:w-5 text-[#266000]" />
-                      <span className="text-gray-700">100% freshness guarantee</span>
-                    </div>
+                  <div className="space-y-2.5 pt-4 border-t border-gray-300 text-xs text-gray-700">
+                    <div>🔒 Secure SSL encrypted checkout</div>
+                    <div>🚚 Free delivery available from €25 depending on location</div>
+                    <div>⚡ Same-day delivery (order before 10 AM, selected areas)</div>
+                    <div>🇧🇪 Delivery across Belgium</div>
+                    <div>✅ Quality & freshness guaranteed</div>
                   </div>
                   </div>
                 </div>

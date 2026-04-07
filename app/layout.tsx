@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ConditionalChrome from "@/components/layout/ConditionalChrome";
 import RouteLoader from "@/components/ui/RouteLoader";
-import PageTransition from "@/components/ui/PageTransition";
 import { Suspense } from "react";
 
 const siteUrl =
@@ -58,7 +57,6 @@ export default function RootLayout({
             <SmoothScrollProvider>
               <Suspense fallback={null}>
                 <RouteLoader />
-                <PageTransition />
               </Suspense>
               <ConditionalChrome>{children}</ConditionalChrome>
               <Toaster />

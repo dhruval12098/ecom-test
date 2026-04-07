@@ -12,21 +12,21 @@ export default function RouteLoader() {
 
   useEffect(() => {
     setVisible(true);
-    setProgress(15);
+    setProgress(20);
 
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setProgress((prev) => (prev < 90 ? prev + 8 : prev));
-    }, 120);
+      setProgress((prev) => (prev < 85 ? prev + 10 : prev));
+    }, 90);
 
     const completeTimer = setTimeout(() => {
       setProgress(100);
-      setTimeout(() => setVisible(false), 250);
+      setTimeout(() => setVisible(false), 150);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-    }, 400);
+    }, 220);
 
     return () => {
       clearTimeout(completeTimer);

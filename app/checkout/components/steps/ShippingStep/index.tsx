@@ -5,6 +5,7 @@ import { formatCurrency } from "@/lib/currency";
 type ShippingStepProps = {
   shippingStep: 1 | 2;
   setShippingStep: (value: 1 | 2) => void;
+  onContinueToDelivery: () => void;
   user: any;
   savedAddresses: any[];
   selectedAddressId: string | null;
@@ -34,6 +35,7 @@ type ShippingStepProps = {
 export default function ShippingStep({
   shippingStep,
   setShippingStep,
+  onContinueToDelivery,
   user,
   savedAddresses,
   selectedAddressId,
@@ -144,7 +146,7 @@ export default function ShippingStep({
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setShippingStep(2)}
+              onClick={onContinueToDelivery}
               className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors"
             >
               Continue to Delivery
@@ -169,7 +171,10 @@ export default function ShippingStep({
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => setSelectedAddressId(null)}
+                      onClick={() => {
+                        setSelectedAddressId(null);
+                        setIsEditingSelectedAddress(true);
+                      }}
                       className="text-[#266000] text-sm font-semibold hover:underline"
                     >
                       Add New Address
@@ -340,7 +345,7 @@ export default function ShippingStep({
 
                 <div>
                   <label htmlFor="region" className="block text-sm font-semibold text-gray-900 mb-2">
-                    State/Region
+                    Province
                   </label>
                   <input
                     type="text"
@@ -349,7 +354,7 @@ export default function ShippingStep({
                     value={shippingInfo.region}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-[#266000] transition-colors text-sm md:text-base"
-                    placeholder="Maharashtra"
+                    placeholder="East Flanders"
                   />
                 </div>
 

@@ -10,7 +10,7 @@ export default function PageTransition() {
 
   useEffect(() => {
     setVisible(true);
-    const timer = setTimeout(() => setVisible(false), 220);
+    const timer = setTimeout(() => setVisible(false), 120);
     return () => clearTimeout(timer);
   }, [pathname, searchParams]);
 

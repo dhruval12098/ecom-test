@@ -342,25 +342,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="w-full py-10 sm:py-14 md:py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-8 lg:px-10">
-          <h2 className="text-4xl font-bold mb-8 sm:mb-10 text-center text-black">Customer Reviews</h2>
-          {homeReviews.length > 0 ? (
-            <ReviewCardsSection reviews={homeReviews} mobileSlider={true} />
-          ) : (
-            <div className="text-center text-sm text-gray-600">No reviews yet.</div>
-          )}
-          <div className="mt-6 sm:mt-8 text-center">
-            <Link
-              href="/reviews"
-              className="inline-flex items-center justify-center rounded-lg bg-[#266000] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f00] transition-colors"
-            >
-              View All Reviews
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <>
         {/* ================= CURRENT TRENDS SECTION ================= */}
         <section className="w-full py-10 sm:py-14 md:py-20 bg-gray-50">
@@ -470,6 +451,25 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        <section className="w-full py-10 sm:py-14 md:py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 md:px-12 lg:px-16">
+          <h2 className="text-4xl font-bold mb-8 sm:mb-10 text-center text-black">Customer Reviews</h2>
+          {homeReviews.length > 0 ? (
+            <ReviewCardsSection reviews={homeReviews} mobileSlider={true} />
+          ) : (
+            <div className="text-center text-sm text-gray-600">No reviews yet.</div>
+          )}
+          <div className="mt-6 sm:mt-8 text-center">
+            <Link
+              href="/reviews"
+              className="inline-flex items-center justify-center rounded-lg bg-[#266000] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f00] transition-colors"
+            >
+              View All Reviews
+            </Link>
+          </div>
+        </div>
+      </section>
 
         {/* ================= PARTNERSHIP BRANDS SECTION ================= */}
         <section className="w-full py-16 bg-white">

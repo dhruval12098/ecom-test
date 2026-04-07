@@ -23,13 +23,34 @@ export default function CartPage() {
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
   const [showTaxDetails, setShowTaxDetails] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
+  const [scheduleMap, setScheduleMap] = useState<Record<string, any>>({});
+
+  const getProductUrl = (item: any) => {
+    const slug = item?.slug ?? item?.id;
+    if (item?.category && item?.subcategory && slug) {
+      return `/${item.category}/${item.subcategory}/${slug}`;
+    }
+    return "#";
+  };
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
       const live = liveMap[item.id];
+      const scheduleKey = `${item.id}:${item.variantId ?? "base"}`;
+      const schedule = scheduleMap[scheduleKey] || null;
       if (!live) {
+        const fallbackPrice = Number(item.price || 0);
+        const fallbackOriginal = item.originalPrice !== undefined ? Number(item.originalPrice) : undefined;
+        const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
+        const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
+        const price = Number.isFinite(scheduledPrice) ? scheduledPrice : fallbackPrice;
+        const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : fallbackOriginal;
+        const originalPrice =
+          Number.isFinite(normalCandidate) && normalCandidate > price ? normalCandidate : fallbackOriginal;
         return {
           ...item,
+          price,
+          originalPrice,
           stockQuantity: item.stockQuantity ?? null
         };
       }
@@ -60,31 +81,39 @@ export default function CartPage() {
         : (live.stock_quantity ?? live.stockQuantity ?? NaN);
       const rawStockQtyNum = Number(rawStockQty);
       const stockQuantity = Number.isFinite(rawStockQtyNum) ? Math.max(0, rawStockQtyNum) : null;
+      const basePrice = variantPrice !== null && variantPrice !== undefined
+        ? Number(variantPrice)
+        : Number(live.sale_price || live.price || item.price);
+      const baseOriginalPrice = variantPrice !== null && variantPrice !== undefined
+        ? (
+            selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
+              ? Number(selectedVariant.originalPrice)
+              : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
+                ? Number(selectedVariant.original_price)
+                : item.originalPrice
+          )
+        : live.originalPrice
+          ? Number(live.originalPrice)
+          : live.original_price
+            ? Number(live.original_price)
+            : item.originalPrice;
+      const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
+      const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
+      const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : basePrice;
+      const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : baseOriginalPrice;
+      const finalOriginal =
+        Number.isFinite(normalCandidate) && normalCandidate > finalPrice ? normalCandidate : baseOriginalPrice;
       return {
         ...item,
         name: live.name || item.name,
-        price: variantPrice !== null && variantPrice !== undefined
-          ? Number(variantPrice)
-          : Number(live.sale_price || live.price || item.price),
-        originalPrice: variantPrice !== null && variantPrice !== undefined
-          ? (
-              selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
-                ? Number(selectedVariant.originalPrice)
-                : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
-                  ? Number(selectedVariant.original_price)
-                  : item.originalPrice
-            )
-          : live.originalPrice
-            ? Number(live.originalPrice)
-            : live.original_price
-              ? Number(live.original_price)
-              : item.originalPrice,
+        price: finalPrice,
+        originalPrice: finalOriginal,
         imageUrl: live.imageUrl || live.image_url || item.imageUrl || "",
         inStock,
         stockQuantity
       };
     });
-  }, [cartItems, liveMap]);
+  }, [cartItems, liveMap, scheduleMap]);
 
   const purchasableItems = useMemo(
     () => displayItems.filter((item) => item.inStock),
@@ -247,6 +276,32 @@ export default function CartPage() {
       }
     };
     loadLiveProducts();
+  }, [cartItems]);
+
+  useEffect(() => {
+    const loadSchedules = async () => {
+      if (cartItems.length === 0) return;
+      try {
+        const pairs = cartItems.map((item) => ({
+          id: Number(item.id),
+          variantId: item.variantId ?? null
+        }));
+        const results = await Promise.all(
+          pairs.map((p) =>
+            Number.isFinite(p.id) ? ApiService.getActiveSchedule(p.id, p.variantId) : null
+          )
+        );
+        const next: Record<string, any> = {};
+        pairs.forEach((p, idx) => {
+          const key = `${p.id}:${p.variantId ?? "base"}`;
+          next[key] = results[idx] || null;
+        });
+        setScheduleMap(next);
+      } catch {
+        // keep UI stable on failure
+      }
+    };
+    loadSchedules();
   }, [cartItems]);
 
   useEffect(() => {
@@ -427,13 +482,18 @@ export default function CartPage() {
                 {/* Cart Items */}
                 <div className="bg-white border border-black rounded-2xl overflow-hidden">
                   <div className="sm:hidden divide-y divide-gray-200">
-                    {displayItems.map((item) => (
+                    {displayItems.map((item) => {
+                      const productUrl = getProductUrl(item);
+                      return (
                       <div
                         key={`${item.id}-${item.variantId ?? "base"}-mobile`}
                         className={`p-3 ${!item.inStock ? "opacity-50" : ""}`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0">
+                          <Link
+                            href={productUrl}
+                            className="w-10 h-10 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0"
+                          >
                             {item.imageUrl ? (
                               <img
                                 src={item.imageUrl}
@@ -449,11 +509,14 @@ export default function CartPage() {
                                 No Image
                               </div>
                             )}
-                          </div>
+                          </Link>
                           <div className="min-w-0 flex-1">
-                            <div className="text-sm font-semibold text-gray-900 truncate">
+                            <Link
+                              href={productUrl}
+                              className="text-sm font-semibold text-gray-900 truncate hover:underline"
+                            >
                               {item.name}
-                            </div>
+                            </Link>
                             {(item.variantName || item.weight) && (
                               <div className="text-[11px] text-gray-600 truncate">
                                 {item.variantName || item.weight}
@@ -525,7 +588,8 @@ export default function CartPage() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="hidden sm:block overflow-x-auto">
@@ -551,14 +615,19 @@ export default function CartPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {displayItems.map((item) => (
-                          <tr
-                            key={`${item.id}-${item.variantId ?? "base"}`}
-                            className={!item.inStock ? "opacity-50" : undefined}
-                          >
+                          {displayItems.map((item) => {
+                            const productUrl = getProductUrl(item);
+                            return (
+                            <tr
+                              key={`${item.id}-${item.variantId ?? "base"}`}
+                              className={!item.inStock ? "opacity-50" : undefined}
+                            >
                             <td className="px-3 md:px-4 py-2 align-top">
                               <div className="flex items-start gap-2">
-                                <div className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0">
+                                <Link
+                                  href={productUrl}
+                                  className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0"
+                                >
                                   {item.imageUrl ? (
                                     <img
                                       src={item.imageUrl}
@@ -574,11 +643,14 @@ export default function CartPage() {
                                       No Image
                                     </div>
                                   )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="font-semibold text-gray-900 text-sm truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px]">
-                                      {item.name}
-                                    </div>
+                                </Link>
+                                <div className="min-w-0">
+                                  <Link
+                                    href={productUrl}
+                                    className="font-semibold text-gray-900 text-sm truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px] hover:underline"
+                                  >
+                                    {item.name}
+                                  </Link>
                                     {(item.variantName || item.weight) && (
                                       <div className="text-[11px] text-gray-600 mt-0.5 truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px]">
                                         {item.variantName || item.weight}
@@ -678,8 +750,9 @@ export default function CartPage() {
                                 <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                               </button>
                             </td>
-                          </tr>
-                        ))}
+                            </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
@@ -697,11 +770,11 @@ export default function CartPage() {
               
               {/* Order Summary Column */}
               <div className="lg:col-span-1 hidden sm:block">
-                <div className="bg-white border border-black rounded-2xl p-4 md:p-6 lg:sticky lg:top-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Order Summary</h2>
+                <div className="bg-white border border-black rounded-2xl p-4 lg:p-5 lg:sticky lg:top-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-3">Order Summary</h2>
 
-                  <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mb-4 md:mb-5">
-                    <div className="text-xs md:text-sm font-semibold text-gray-900 mb-2">
+                  <div className="bg-gray-50 border border-black rounded-xl p-3 mb-4">
+                    <div className="text-xs font-semibold text-gray-900 mb-2">
                       Check delivery & free shipping
                     </div>
                     <div className="flex items-center gap-2">
@@ -712,7 +785,7 @@ export default function CartPage() {
                           setPostalChecked(false);
                         }}
                         placeholder="Enter postal code"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs shadow-sm focus:border-gray-400 focus:ring-0"
                       />
                       <button
                         type="button"
@@ -739,13 +812,13 @@ export default function CartPage() {
                    
                   </div>
                   
-                  <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
-                    <div className="flex justify-between text-sm md:text-base text-gray-600">
+                  <div className="space-y-2.5 mb-4">
+                    <div className="flex justify-between text-sm text-gray-600">
                       <span>Subtotal ({purchasableCount} purchasable items)</span>
                       <span className="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
                     </div>
                     
-                    <div className="flex justify-between text-sm md:text-base text-gray-600">
+                    <div className="flex justify-between text-sm text-gray-600">
                       <span>Shipping</span>
                       <span className="font-semibold text-gray-900">
                         {shippingCost === 0 ? (
@@ -757,13 +830,13 @@ export default function CartPage() {
                     </div>
                     
                     {discount > 0 && (
-                      <div className="flex justify-between text-sm md:text-base text-[#266000]">
+                      <div className="flex justify-between text-sm text-[#266000]">
                         <span>Discount (10%)</span>
                         <span className="font-semibold">-{formatCurrency(discount)}</span>
                       </div>
                     )}
                     
-                    <div className="flex justify-between text-sm md:text-base text-gray-600">
+                    <div className="flex justify-between text-sm text-gray-600">
                       <span>{taxLabel}</span>
                       <span className="font-semibold text-gray-900">{formatCurrency(tax)}</span>
                     </div>
@@ -797,8 +870,8 @@ export default function CartPage() {
                     
                     {/* Free shipping progress bar */}
                     {shippingCost > 0 && freeThreshold !== null && (
-                      <div className="bg-gray-50 border border-black rounded-xl p-3 md:p-4 mt-3 md:mt-4">
-                        <div className="flex justify-between text-xs md:text-sm mb-2">
+                      <div className="bg-gray-50 border border-black rounded-xl p-3 mt-3">
+                        <div className="flex justify-between text-xs mb-2">
                           <span className="text-gray-600">
                             Add {formatCurrency(Math.max(0, (freeThreshold ?? 0) - eligibleSubtotal))} more for free shipping
                           </span>
@@ -813,13 +886,13 @@ export default function CartPage() {
                     )}
                   </div>
                   
-                  <div className="border-t border-gray-300 pt-3 md:pt-4 mb-4 md:mb-6">
-                    <div className="flex justify-between text-lg md:text-xl">
-                      <span className="font-bold text-gray-900">Total</span>
-                      <span className="font-bold text-gray-900">{formatCurrency(total)}</span>
+                  <div className="border-t border-gray-300 pt-3 mb-4">
+                    <div className="flex justify-between text-lg">
+                      <span className="font-semibold text-gray-900">Total</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(total)}</span>
                     </div>
                     {discount > 0 && (
-                      <p className="text-[#266000] text-xs md:text-sm font-semibold mt-2 text-right">
+                      <p className="text-[#266000] text-xs font-semibold mt-2 text-right">
                         You saved {formatCurrency(discount)}!
                       </p>
                     )}
@@ -868,7 +941,7 @@ export default function CartPage() {
                   {canProceedCheckout ? (
                     <Link
                       href="/checkout"
-                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2 mb-3 md:mb-4"
+                      className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 px-4 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 mb-3"
                     >
                       Proceed to Checkout
                     </Link>
@@ -876,7 +949,7 @@ export default function CartPage() {
                     <button
                       type="button"
                       disabled
-                      className="w-full bg-gray-200 text-gray-500 py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base cursor-not-allowed mb-3 md:mb-4"
+                      className="w-full bg-gray-200 text-gray-500 py-2.5 px-4 rounded-xl font-semibold text-sm cursor-not-allowed mb-3"
                     >
                       {!hasPurchasableItems
                         ? "No in-stock items to checkout"
@@ -888,7 +961,7 @@ export default function CartPage() {
                   
                   <Link
                     href="/"
-                    className="w-full bg-white border border-black hover:border-[#266000] text-gray-900 py-3 md:py-4 px-4 md:px-6 rounded-xl font-bold text-sm md:text-base transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-white border border-black hover:border-[#266000] text-gray-900 py-2.5 px-4 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" />
                     Continue Shopping

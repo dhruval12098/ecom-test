@@ -47,7 +47,7 @@ export default function ReviewsPage() {
   const totalPages = Math.max(1, Math.ceil(reviewCount / pageSize));
 
   return (
-    <div className="w-full py-16 sm:py-20 px-4 sm:px-6 md:px-12 lg:px-20 bg-white">
+    <div className="w-full py-16 sm:py-20 px-4 sm:px-8 md:px-14 lg:px-24 bg-white">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-14 items-center">
         <div>
           <h2 className="text-3xl sm:text-4xl md:text-4xl lg:text-5xl leading-snug mb-4 text-[#173A00] font-bold">
