@@ -40,6 +40,11 @@ type CheckoutItem = {
   shipping_method?: string;
   tax_percent?: number | string | null;
   taxPercent?: number | string | null;
+  isSpecial?: boolean;
+  bulkOrderLimit?: number | null;
+  preorderOnly?: boolean | null;
+  cutoffTime?: string | null;
+  availableDays?: string[] | null;
 };
 
 function CheckoutPageContent() {
@@ -66,6 +71,7 @@ function CheckoutPageContent() {
   const [returnChecked, setReturnChecked] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
+  const [excludedSpecialCategoryIds, setExcludedSpecialCategoryIds] = useState<number[]>([]);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [orderAcceptDays, setOrderAcceptDays] = useState<string[]>([]);
   const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
@@ -131,6 +137,49 @@ function CheckoutPageContent() {
     if (step === 3) return isMobile ? 5 : 4;
     return isMobile ? 5 : 4;
   })();
+
+  const getTodayKey = () => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return days[new Date().getDay()];
+  };
+
+  const parseTimeToMinutes = (timeValue?: string | null) => {
+    if (!timeValue) return null;
+    const match = String(timeValue).match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return hours * 60 + minutes;
+  };
+
+  const getSpecialValidationError = (items: CheckoutItem[]) => {
+    const todayKey = getTodayKey();
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    for (const item of items) {
+      const isSpecial = Boolean(item.isSpecial || item.bulkOrderLimit || item.cutoffTime || item.availableDays?.length);
+      if (!isSpecial) continue;
+      const limit = Number(item.bulkOrderLimit);
+      if (Number.isFinite(limit) && limit > 0 && item.quantity > limit) {
+        return `${item.name} has a bulk order limit of ${limit}.`;
+      }
+      const allowedDays = Array.isArray(item.availableDays) ? item.availableDays : [];
+      if (allowedDays.length > 0) {
+        const normalized = allowedDays.map((d) => String(d).trim().slice(0, 3).toLowerCase());
+        if (!normalized.includes(todayKey.toLowerCase())) {
+          return `${item.name} is not available today.`;
+        }
+      }
+      if (item.preorderOnly && item.cutoffTime) {
+        const cutoffMinutes = parseTimeToMinutes(item.cutoffTime);
+        if (cutoffMinutes !== null && nowMinutes > cutoffMinutes) {
+          return `${item.name} is past the order-by time for today.`;
+        }
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -224,6 +273,9 @@ function CheckoutPageContent() {
         const raw = settings?.excluded_free_shipping_category_ids || [];
         const parsed = Array.isArray(raw) ? raw : [];
         setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
+        const rawSpecial = settings?.excluded_free_shipping_special_category_ids || [];
+        const parsedSpecial = Array.isArray(rawSpecial) ? rawSpecial : [];
+        setExcludedSpecialCategoryIds(parsedSpecial.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
         setScheduleEnabled(Boolean(settings?.delivery_schedule_enabled));
         const acceptRaw = Array.isArray(settings?.order_accept_days) ? settings.order_accept_days : [];
         const deliveryRaw = Array.isArray(settings?.delivery_days) ? settings.delivery_days : [];
@@ -299,7 +351,7 @@ function CheckoutPageContent() {
 
   const displayItems = sourceItems.map((item: CheckoutItem) => {
     const live = liveMap[item.id];
-    const scheduleKey = `${item.id}:${item.variantId ?? "base"}`;
+    const scheduleKey = `${item.isSpecial ? "special" : "normal"}:${item.id}:${item.variantId ?? "base"}`;
     const schedule = scheduleMap[scheduleKey] || null;
     if (!live) {
       const fallbackPrice = Number(item.price || 0);
@@ -408,7 +460,13 @@ function CheckoutPageContent() {
     });
   }, [sourceItemIdsKey]);
 
-  const subtotal = displayItems.reduce(
+  const purchasableItems = useMemo(
+    () => displayItems.filter((item: CheckoutItem) => item.inStock),
+    [displayItems]
+  );
+  const purchasableCount = purchasableItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const subtotal = purchasableItems.reduce(
     (sum: number, item: CheckoutItem) => sum + item.price * item.quantity,
     0
   );
@@ -440,19 +498,29 @@ function CheckoutPageContent() {
     () => new Set(excludedCategoryIds.map((id) => Number(id))),
     [excludedCategoryIds]
   );
+  const excludedSpecialCategorySet = useMemo(
+    () => new Set(excludedSpecialCategoryIds.map((id) => Number(id))),
+    [excludedSpecialCategoryIds]
+  );
 
-  const eligibleSubtotal = displayItems.reduce((sum: number, item: CheckoutItem) => {
+  const eligibleSubtotal = purchasableItems.reduce((sum: number, item: CheckoutItem) => {
     const live = liveMap[item.id];
     const categoryId = Number(
-      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+      live?.category_id ??
+        live?.categoryId ??
+        (item as any)?.category_id ??
+        (item as any)?.categoryId ??
+        NaN
     );
-    if (Number.isFinite(categoryId) && excludedCategorySet.has(categoryId)) {
+    const isSpecial = Boolean(item.isSpecial || live?.isSpecial);
+    const targetSet = isSpecial ? excludedSpecialCategorySet : excludedCategorySet;
+    if (Number.isFinite(categoryId) && targetSet.has(categoryId)) {
       return sum;
     }
     return sum + item.price * item.quantity;
   }, 0);
 
-  const hasFreeShippingItem = displayItems.some((item: CheckoutItem) => {
+  const hasFreeShippingItem = purchasableItems.some((item: CheckoutItem) => {
     const live = liveMap[item.id];
     const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
     return method === 'free';
@@ -485,7 +553,7 @@ function CheckoutPageContent() {
   const taxableAmount = Math.max(0, subtotal - discountTotal);
   const tax = (() => {
     if (subtotal <= 0) return 0;
-    return displayItems.reduce((sum: number, item: CheckoutItem) => {
+    return purchasableItems.reduce((sum: number, item: CheckoutItem) => {
       const live = liveMap[item.id];
       const rawRate = live?.tax_percent ?? live?.taxPercent ?? item.tax_percent ?? item.taxPercent ?? null;
       const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
@@ -496,7 +564,7 @@ function CheckoutPageContent() {
     }, 0);
   })();
   const taxLabel = (() => {
-    const rates = displayItems.map((item: CheckoutItem) => {
+    const rates = purchasableItems.map((item: CheckoutItem) => {
       const live = liveMap[item.id];
       const rawRate = live?.tax_percent ?? live?.taxPercent ?? item.tax_percent ?? item.taxPercent ?? null;
       const rate = rawRate !== null && rawRate !== undefined && rawRate !== '' ? Number(rawRate) : Number(taxRate);
@@ -644,6 +712,7 @@ function CheckoutPageContent() {
   }, [user?.email, user?.phone]);
 
   const validateStep = (currentStep: number) => {
+    let invalidPhone = false;
     if (currentStep === 1) {
       const personal = ['firstName', 'lastName', 'email', 'phone'] as const;
       const delivery = ['street', 'postalCode', 'city', 'country'] as const;
@@ -652,12 +721,18 @@ function CheckoutPageContent() {
           ? [...personal]
           : [...personal, ...delivery];
       const missing = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
+      if (shippingStep === 1) {
+        const phoneValue = shippingInfo.phone?.trim() || "";
+        if (phoneValue && !isValidPhone(phoneValue, shippingInfo.country)) {
+          invalidPhone = true;
+        }
+      }
       if (shippingStep === 2 && !shippingInfo.termsAccepted) {
         missing.push('termsAccepted');
       }
-      return { valid: missing.length === 0, missing };
+      return { valid: missing.length === 0 && !invalidPhone, missing, invalidPhone };
     }
-    return { valid: true, missing: [] as string[] };
+    return { valid: true, missing: [] as string[], invalidPhone: false };
   };
 
   const fieldLabels: Record<string, string> = {
@@ -677,6 +752,12 @@ function CheckoutPageContent() {
     
     const validation = validateStep(step);
     if (!validation.valid) {
+      if (validation.invalidPhone) {
+        toast.error("Invalid phone number", {
+          description: "Please enter a 2-digit country code plus 10 digits (e.g. +32 323-333-3333)."
+        });
+        return;
+      }
       const missingList = validation.missing.map((f) => fieldLabels[f] || f).join(", ");
       toast.warning("Missing required fields", {
         description: `Please fill: ${missingList}`,
@@ -684,21 +765,21 @@ function CheckoutPageContent() {
       return;
     }
 
-      const phoneValue = shippingInfo.phone?.trim() || "";
-      if (!isValidPhone(phoneValue, shippingInfo.country)) {
-        toast.error("Invalid phone number", {
-          description: "Please enter 10 digits plus a 2-digit country code (12 digits total)."
-        });
+      // phone is validated during personal details step
+
+      if (hasStockIssues) {
+        const message = formatStockIssueMessage(stockIssues);
+        setStockValidationError(message);
+        toast.error("Insufficient stock", { description: message });
         return;
       }
+      setStockValidationError(null);
 
-    if (hasStockIssues) {
-      const message = formatStockIssueMessage(stockIssues);
-      setStockValidationError(message);
-      toast.error("Insufficient stock", { description: message });
-      return;
-    }
-    setStockValidationError(null);
+      const specialError = getSpecialValidationError(displayItems);
+      if (specialError) {
+        toast.error("Special item unavailable", { description: specialError });
+        return;
+      }
     
     if (step === 1) {
       if (shippingStep === 1) {
@@ -946,19 +1027,27 @@ function CheckoutPageContent() {
     const loadSchedules = async () => {
       if (sourceItems.length === 0) return;
       try {
-        const pairs = sourceItems.map((item: CheckoutItem) => ({
+        const pairsAll = sourceItems.map((item: CheckoutItem) => ({
           id: Number(item.id),
-          variantId: item.variantId ?? null
+          variantId: item.variantId ?? null,
+          isSpecial: Boolean(item.isSpecial)
         }));
-        const results = await Promise.all(
-          pairs.map((p) =>
-            Number.isFinite(p.id) ? ApiService.getActiveSchedule(p.id, p.variantId) : null
+        const next: Record<string, any> = {};
+        pairsAll.forEach((p) => {
+          const key = `${p.isSpecial ? "special" : "normal"}:${p.id}:${p.variantId ?? "base"}`;
+          next[key] = null;
+        });
+        const results = await Promise.allSettled(
+          pairsAll.map((p) =>
+            Number.isFinite(p.id)
+              ? ApiService.getActiveSchedule(p.id, p.variantId, { isSpecial: p.isSpecial })
+              : null
           )
         );
-        const next: Record<string, any> = {};
-        pairs.forEach((p, idx) => {
-          const key = `${p.id}:${p.variantId ?? "base"}`;
-          next[key] = results[idx] || null;
+        pairsAll.forEach((p, idx) => {
+          const key = `${p.isSpecial ? "special" : "normal"}:${p.id}:${p.variantId ?? "base"}`;
+          const result = results[idx];
+          next[key] = result && result.status === "fulfilled" ? result.value : null;
         });
         setScheduleMap(next);
       } catch {
@@ -1087,6 +1176,12 @@ function CheckoutPageContent() {
                     onContinueToDelivery={() => {
                       const validation = validateStep(1);
                       if (!validation.valid) {
+                        if (validation.invalidPhone) {
+                          toast.error("Invalid phone number", {
+                            description: "Please enter a 2-digit country code plus 10 digits (e.g. +32 323-333-3333)."
+                          });
+                          return;
+                        }
                         const missingList = validation.missing.map((f) => fieldLabels[f] || f).join(", ");
                         toast.warning("Missing required fields", {
                           description: `Please fill: ${missingList}`,

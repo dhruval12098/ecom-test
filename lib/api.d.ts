@@ -18,8 +18,12 @@ declare module "@/lib/api" {
     static getLeadership(): Promise<any>;
     static getTrends(options?: { bypassCache?: boolean }): Promise<any>;
     static getCategories(options?: any): Promise<any>;
+    static getSpecialProducts(options?: any): Promise<any>;
+    static getSpecialCategories(options?: any): Promise<any>;
+    static getSpecialSubcategories(categoryId?: any, options?: any): Promise<any>;
+    static getSpecialCategoriesTree(options?: any): Promise<any>;
     static getHomepageSection(sectionKey: any): Promise<any>;
-    static getActiveSchedule(productId: any, variantId?: any): Promise<any>;
+    static getActiveSchedule(productId: any, variantId?: any, options?: any): Promise<any>;
     static getAnnouncementBar(): Promise<any>;
     static getContactInfo(): Promise<any>;
     static getSettings(): Promise<any>;

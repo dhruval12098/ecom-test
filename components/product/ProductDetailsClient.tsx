@@ -39,6 +39,17 @@ export interface ProductDetails {
   imageGallery?: string[];
   mainVariantId?: number | null;
   variants?: ProductVariant[];
+  isSpecial?: boolean;
+  category_id?: number | null;
+  categoryId?: number | null;
+  bulk_order_limit?: number | null;
+  bulkOrderLimit?: number | null;
+  preorder_only?: boolean | null;
+  preorderOnly?: boolean | null;
+  cutoff_time?: string | null;
+  cutoffTime?: string | null;
+  available_days?: string[] | null;
+  availableDays?: string[] | null;
 }
 
 type ReviewSummary = { count: number; avg_rating: number };
@@ -46,11 +57,13 @@ type ReviewSummary = { count: number; avg_rating: number };
 export default function ProductDetailsClient({
   product,
   initialReviewSummary,
-  initialSchedule
+  initialSchedule,
+  disableSchedule = false
 }: {
   product: ProductDetails;
   initialReviewSummary: ReviewSummary;
   initialSchedule: any | null;
+  disableSchedule?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -69,6 +82,8 @@ export default function ProductDetailsClient({
   const [showZoom, setShowZoom] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
+  const [useBulkOrder, setUseBulkOrder] = useState(false);
+  const [customBulkQty, setCustomBulkQty] = useState("");
   const [reviewSummary] = useState<ReviewSummary>(
     initialReviewSummary || { count: 0, avg_rating: 0 }
   );
@@ -85,23 +100,30 @@ export default function ProductDetailsClient({
   }, [product?.id, searchParams]);
 
   useEffect(() => {
+    if (disableSchedule) return;
     const refreshSchedule = async () => {
       if (!product?.id) return;
       try {
-        const schedule = await ApiService.getActiveSchedule(product.id, selectedVariantId);
+        const schedule = await ApiService.getActiveSchedule(product.id, selectedVariantId, {
+          isSpecial: Boolean(product.isSpecial)
+        });
         setActiveSchedule(schedule);
       } catch {
         setActiveSchedule(null);
       }
     };
     refreshSchedule();
-  }, [product?.id, selectedVariantId]);
+  }, [product?.id, selectedVariantId, disableSchedule]);
 
   const selectedVariant = product.variants
     ? product.variants.find((v) => v.id === selectedVariantId)
     : null;
+  const selectedVariantStock =
+    selectedVariant?.stockQuantity === undefined || selectedVariant?.stockQuantity === null
+      ? undefined
+      : Number(selectedVariant.stockQuantity);
   const displayInStock = selectedVariant
-    ? Number(selectedVariant.stockQuantity ?? 0) > 0
+    ? (Number.isFinite(selectedVariantStock) ? selectedVariantStock > 0 : true)
     : product.inStock;
   const rawStockQty = selectedVariant?.stockQuantity ?? product.stockQuantity;
   const maxQuantity = Number.isFinite(Number(rawStockQty)) ? Math.max(1, Number(rawStockQty)) : null;
@@ -148,32 +170,39 @@ export default function ProductDetailsClient({
   const handleMouseEnter = () => setShowZoom(true);
   const handleMouseLeave = () => setShowZoom(false);
 
+  const limitRaw = product.bulk_order_limit ?? product.bulkOrderLimit ?? null;
+  const limit =
+    Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
+  const bulkEligible = limit !== null;
+  const parsedCustomBulkQty = customBulkQty.trim() ? Number(customBulkQty) : NaN;
+  const bulkQty =
+    useBulkOrder && Number.isFinite(parsedCustomBulkQty)
+      ? Math.max(1, Math.floor(parsedCustomBulkQty))
+      : useBulkOrder
+        ? 0
+        : effectiveQuantity;
+  const bulkQtyInvalid =
+    useBulkOrder && (bulkQty <= 0 || (limit !== null && bulkQty > limit));
+
   const handleAddToCart = () => {
-    const cartItem = {
-      id: product.id,
-      name: product.name,
-      price: safeDisplayPrice,
-      originalPrice:
-        safeNormalPrice !== undefined && safeNormalPrice > safeDisplayPrice
-          ? safeNormalPrice
-          : undefined,
-      imageUrl: product.imageUrl,
-      weight: product.weight,
-      inStock: displayInStock,
-      variantId: selectedVariant?.id ?? null,
-      variantName: selectedVariant?.name ?? null,
-      category: product.category,
-      subcategory: product.subcategory,
-      slug: product.slug
-    };
-
-    for (let i = 0; i < effectiveQuantity; i++) {
-      addToCart(cartItem, i === 0);
+    const limitRaw = product.bulk_order_limit ?? product.bulkOrderLimit ?? null;
+    const limit =
+      Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
+    const requestedQty = useBulkOrder ? bulkQty : effectiveQuantity;
+    const cappedQuantity = limit !== null ? Math.min(requestedQty, limit) : requestedQty;
+    if (useBulkOrder && (bulkQty <= 0 || (limit !== null && bulkQty > limit))) {
+      toast.error("Bulk quantity exceeds limit", {
+        description: limit !== null
+          ? `Maximum bulk limit is ${limit}.`
+          : "Please enter a valid bulk quantity."
+      });
+      return;
     }
-    setQuantity(1);
-  };
-
-  const handleBuyNow = () => {
+    if (limit !== null && requestedQty > limit) {
+      toast.info("Bulk limit reached", {
+        description: `You can only order up to ${limit} for this item.`
+      });
+    }
     const cartItem = {
       id: product.id,
       name: product.name,
@@ -190,7 +219,63 @@ export default function ProductDetailsClient({
       category: product.category,
       subcategory: product.subcategory,
       slug: product.slug,
-      quantity: effectiveQuantity
+      categoryId: product.category_id ?? product.categoryId ?? null,
+      isSpecial: Boolean(product.isSpecial),
+      bulkOrderLimit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
+      preorderOnly: product.preorder_only ?? product.preorderOnly ?? null,
+      cutoffTime: product.cutoff_time ?? product.cutoffTime ?? null,
+      availableDays: product.available_days ?? product.availableDays ?? null
+    };
+
+    for (let i = 0; i < cappedQuantity; i++) {
+      addToCart(cartItem, i === 0);
+    }
+    setQuantity(1);
+    setCustomBulkQty("");
+  };
+
+  const handleBuyNow = () => {
+    const limitRaw = product.bulk_order_limit ?? product.bulkOrderLimit ?? null;
+    const limit =
+      Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
+    const requestedQty = useBulkOrder ? bulkQty : effectiveQuantity;
+    const cappedQuantity = limit !== null ? Math.min(requestedQty, limit) : requestedQty;
+    if (useBulkOrder && (bulkQty <= 0 || (limit !== null && bulkQty > limit))) {
+      toast.error("Bulk quantity exceeds limit", {
+        description: limit !== null
+          ? `Maximum bulk limit is ${limit}.`
+          : "Please enter a valid bulk quantity."
+      });
+      return;
+    }
+    if (limit !== null && requestedQty > limit) {
+      toast.info("Bulk limit reached", {
+        description: `You can only order up to ${limit} for this item.`
+      });
+    }
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      price: safeDisplayPrice,
+      originalPrice:
+        safeNormalPrice !== undefined && safeNormalPrice > safeDisplayPrice
+          ? safeNormalPrice
+          : undefined,
+      imageUrl: product.imageUrl,
+      weight: product.weight,
+      inStock: displayInStock,
+      variantId: selectedVariant?.id ?? null,
+      variantName: selectedVariant?.name ?? null,
+      category: product.category,
+      subcategory: product.subcategory,
+      slug: product.slug,
+      quantity: cappedQuantity,
+      categoryId: product.category_id ?? product.categoryId ?? null,
+      isSpecial: Boolean(product.isSpecial),
+      bulkOrderLimit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
+      preorderOnly: product.preorder_only ?? product.preorderOnly ?? null,
+      cutoffTime: product.cutoff_time ?? product.cutoffTime ?? null,
+      availableDays: product.available_days ?? product.availableDays ?? null
     };
 
     if (typeof window !== "undefined") {
@@ -378,51 +463,107 @@ export default function ProductDetailsClient({
 
             {/* Quantity Selector */}
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2 text-sm">Quantity</h4>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center bg-gray-100 rounded-lg">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-l-lg transition-colors text-lg font-bold"
-                  >
-                    -
-                  </button>
-                  <span className="w-12 text-center font-semibold text-base">{quantity}</span>
-                  <button
-                    onClick={() => {
-                      if (maxQuantity && quantity >= maxQuantity) {
-                        toast.info("Maximum stock reached", {
-                          description: `Only ${maxQuantity} available for this item.`
-                        });
-                        return;
-                      }
-                      const nextQty = maxQuantity ? Math.min(maxQuantity, quantity + 1) : quantity + 1;
-                      setQuantity(nextQty);
-                      if (maxQuantity && nextQty >= maxQuantity) {
-                        toast.info("Maximum stock reached", {
-                          description: `Only ${maxQuantity} available for this item.`
-                        });
-                      }
-                    }}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-r-lg transition-colors text-lg font-bold"
-                  >
-                    +
-                  </button>
-                </div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900 text-sm">Quantity</h4>
+                {bulkEligible && (
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      checked={useBulkOrder}
+                      onChange={(e) => {
+                        setUseBulkOrder(e.target.checked);
+                        setCustomBulkQty("");
+                      }}
+                    />
+                    Order in bulk
+                  </label>
+                )}
               </div>
+              <div className="flex items-center gap-3">
+                {useBulkOrder ? (
+                  <div className="flex items-center gap-2 w-full">
+                    <select
+                      className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                      value={bulkQty && bulkQty <= 0 ? "" : String(bulkQty)}
+                      onChange={(e) => {
+                        setCustomBulkQty(e.target.value);
+                      }}
+                    >
+                      <option value="">Select qty</option>
+                      {limit
+                        ? Array.from({ length: Math.min(limit, 10) }, (_, i) => i + 1).map((qty) => (
+                            <option key={qty} value={qty}>{qty}</option>
+                          ))
+                        : [1, 2, 3, 4, 5].map((qty) => (
+                            <option key={qty} value={qty}>{qty}</option>
+                          ))}
+                      {limit && limit > 10 && (
+                        <option value={limit}>{limit} (max)</option>
+                      )}
+                    </select>
+                    <input
+                      type="number"
+                      min={1}
+                      placeholder={limit ? `Custom (max ${limit})` : "Custom qty"}
+                      className="h-10 w-36 rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                      value={customBulkQty}
+                      onChange={(e) => setCustomBulkQty(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center bg-gray-100 rounded-lg">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-l-lg transition-colors text-lg font-bold"
+                    >
+                      -
+                    </button>
+                    <span className="w-12 text-center font-semibold text-base">{quantity}</span>
+                    <button
+                      onClick={() => {
+                        if (maxQuantity && quantity >= maxQuantity) {
+                          toast.info("Maximum stock reached", {
+                            description: `Only ${maxQuantity} available for this item.`
+                          });
+                          return;
+                        }
+                        const nextQty = maxQuantity ? Math.min(maxQuantity, quantity + 1) : quantity + 1;
+                        setQuantity(nextQty);
+                        if (maxQuantity && nextQty >= maxQuantity) {
+                          toast.info("Maximum stock reached", {
+                            description: `Only ${maxQuantity} available for this item.`
+                          });
+                        }
+                      }}
+                      className="w-10 h-10 flex items-center justify-center hover:bg-gray-200 rounded-r-lg transition-colors text-lg font-bold"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+              </div>
+              {useBulkOrder && bulkQtyInvalid && (
+                <p className="mt-2 text-xs text-red-600">
+                  {limit !== null
+                    ? `Bulk quantity must be between 1 and ${limit}.`
+                    : "Please enter a valid bulk quantity."}
+                </p>
+              )}
             </div>
 
             {/* Action Buttons */}
             <div className="space-y-2 pt-2">
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors shadow-md hover:shadow-lg"
+                disabled={bulkQtyInvalid}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-yellow-500"
               >
                 Add to cart
               </button>
               <button
                 onClick={handleBuyNow}
-                disabled={!displayInStock}
+                disabled={!displayInStock || bulkQtyInvalid}
                 className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-black"
               >
                 Buy Now

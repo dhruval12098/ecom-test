@@ -21,6 +21,12 @@ interface CartItem {
   slug?: string;
   shippingMethod?: string;
   shipping_method?: string;
+  categoryId?: number | null;
+  isSpecial?: boolean;
+  bulkOrderLimit?: number | null;
+  preorderOnly?: boolean | null;
+  cutoffTime?: string | null;
+  availableDays?: string[] | null;
 }
 
 interface CartContextType {
@@ -84,8 +90,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = (item: Omit<CartItem, 'quantity'>, showNotification: boolean = true) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(cartItem => isSameCartLine(cartItem, item));
-      
+      const limitRaw = item.bulkOrderLimit ?? null;
+      const limit = Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
+
       if (existingItem) {
+        if (limit !== null && existingItem.quantity >= limit) {
+          if (showNotification) {
+            toast.info("Bulk limit reached", {
+              description: `You can only order up to ${limit} for this item.`
+            });
+          }
+          return prevItems;
+        }
         // If item exists, increase quantity
         const updatedItems = prevItems.map(cartItem =>
           isSameCartLine(cartItem, item)
@@ -104,6 +120,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         
         return updatedItems;
       } else {
+        if (limit !== null && limit < 1) {
+          if (showNotification) {
+            toast.info("Bulk limit reached", {
+              description: `You can only order up to ${limit} for this item.`
+            });
+          }
+          return prevItems;
+        }
         // If item doesn't exist, add new item with quantity 1
         const newItem = { ...item, quantity: 1 };
         
@@ -144,6 +168,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
     
     const itemToUpdate = cartItems.find(item => isSameCartLine(item, { id, variantId }));
+    const limitRaw = itemToUpdate?.bulkOrderLimit ?? null;
+    const limit = Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
+    if (limit !== null && quantity > limit) {
+      toast.info("Bulk limit reached", {
+        description: `You can only order up to ${limit} for this item.`
+      });
+      quantity = limit;
+    }
     setCartItems(prevItems =>
       prevItems.map(item =>
         isSameCartLine(item, { id, variantId }) ? { ...item, quantity } : item

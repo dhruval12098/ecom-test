@@ -291,7 +291,7 @@ export default async function SubcategoryPage({ params }: { params: Promise<Page
       </div>
 
       {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 xl:px-[50px] py-8">
         {productsWithSchedules.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-500 text-lg">No products found in this subcategory</div>

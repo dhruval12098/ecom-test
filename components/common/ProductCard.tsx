@@ -36,6 +36,21 @@ interface Product {
     discountColor?: string | null;
     discount_color?: string | null;
   }>;
+  isSpecial?: boolean;
+  category_id?: number | null;
+  categoryId?: number | null;
+  bulk_order_limit?: number | null;
+  bulkOrderLimit?: number | null;
+  preorder_only?: boolean | null;
+  preorderOnly?: boolean | null;
+  cutoff_time?: string | null;
+  cutoffTime?: string | null;
+  available_days?: string[] | null;
+  availableDays?: string[] | null;
+  label_name?: string | null;
+  labelName?: string | null;
+  label_color?: string | null;
+  labelColor?: string | null;
 }
 
 type ProductCardProps = {
@@ -150,15 +165,27 @@ export default function ProductCard({
   const resolvedVariantDiscountColor = productHasVariants
     ? (defaultVariant?.discountColor ?? defaultVariant?.discount_color)
     : undefined;
+  const displayPriceValue = product
+    ? Number(resolvedProductPrice || 0)
+    : (parsedPrice !== undefined ? parsedPrice : Number(price || 0));
   const displayPrice = product
-    ? formatCurrency(Number(resolvedProductPrice || 0))
+    ? formatCurrency(displayPriceValue)
     : (parsedPrice !== undefined ? formatCurrency(parsedPrice) : price);
-  const displayOriginalPrice =
+  const originalPriceValue =
     resolvedVariantOriginalPrice !== undefined && Number.isFinite(resolvedVariantOriginalPrice)
-      ? formatCurrency(resolvedVariantOriginalPrice)
-      : product?.originalPrice
-    ? formatCurrency(Number(product.originalPrice))
-    : (parsedOriginalPrice !== undefined ? formatCurrency(parsedOriginalPrice) : originalPrice);
+      ? resolvedVariantOriginalPrice
+      : product?.originalPrice !== undefined && product?.originalPrice !== null
+        ? Number(product.originalPrice)
+        : parsedOriginalPrice !== undefined
+          ? parsedOriginalPrice
+          : undefined;
+  const showOriginalPrice =
+    Number.isFinite(displayPriceValue) &&
+    Number.isFinite(Number(originalPriceValue)) &&
+    Number(originalPriceValue) > displayPriceValue;
+  const displayOriginalPrice = showOriginalPrice && originalPriceValue !== undefined
+    ? formatCurrency(Number(originalPriceValue))
+    : undefined;
   const displayRating = product?.rating || rating;
   const displayDiscountPercentage = resolvedVariantDiscountPercentage || product?.discountPercentage || discountPercentage;
   const displayDiscountColor = resolvedVariantDiscountColor || product?.discountColor || discountColor;
@@ -214,20 +241,42 @@ export default function ProductCard({
       subcategory: product?.subcategory || subcategorySlug,
       slug: product?.slug || (product?.id !== undefined ? String(product.id) : (typeof productId === "string" ? productId : undefined)),
       variantId: cartLineVariantId,
-      variantName: productHasVariants ? defaultVariantName : null
+      variantName: productHasVariants ? defaultVariantName : null,
+      categoryId: product?.category_id ?? product?.categoryId ?? null,
+      isSpecial: Boolean(product?.isSpecial),
+      bulkOrderLimit: product?.bulk_order_limit ?? product?.bulkOrderLimit ?? null,
+      preorderOnly: product?.preorder_only ?? product?.preorderOnly ?? null,
+      cutoffTime: product?.cutoff_time ?? product?.cutoffTime ?? null,
+      availableDays: product?.available_days ?? product?.availableDays ?? null
     };
     
     addToCart(cartItem);
   };
+  const labelText = product?.label_name ?? product?.labelName ?? null;
+  const labelColor = product?.label_color ?? product?.labelColor ?? null;
+  const getReadableLabelText = (bg?: string | null) => {
+    if (!bg) return "text-white";
+    const hex = bg.trim();
+    const match = hex.match(/^#?([0-9a-fA-F]{6})$/);
+    if (!match) return "text-white";
+    const val = match[1];
+    const r = parseInt(val.slice(0, 2), 16);
+    const g = parseInt(val.slice(2, 4), 16);
+    const b = parseInt(val.slice(4, 6), 16);
+    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return luminance > 0.6 ? "text-gray-900" : "text-white";
+  };
+  const labelTextClass = getReadableLabelText(labelColor);
+
   return (
     <Link
       href={productUrl}
-      className={`border border-gray-300 rounded-xl sm:rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300 bg-[#F8FFF9] ${
+      className={`border border-gray-300 rounded-xl sm:rounded-2xl shadow-lg overflow-hidden relative flex flex-col hover:shadow-xl transition-shadow duration-300 bg-[#F3FFF5] ${
         layout === "carousel"
-          ? "w-48 sm:w-72 shrink-0 h-[290px] sm:h-[420px]"
+          ? "w-36 sm:w-56 lg:w-52 shrink-0 h-[256px] sm:h-[370px] lg:h-[446px]"
           : size === "compact"
-            ? "w-full min-w-0 h-[240px] sm:h-68 md:h-72 lg:h-80"
-            : "w-full min-w-0 h-[240px] sm:h-56 md:h-60 lg:h-72"
+            ? "w-full min-w-0 h-[212px] sm:h-60 md:h-64 lg:h-[322px]"
+            : "w-full min-w-0 h-[212px] sm:h-52 md:h-56 lg:h-[295px]"
       }`}
     >
       
@@ -245,8 +294,8 @@ export default function ProductCard({
           layout === "carousel"
             ? "h-40 sm:h-[70%]"
             : size === "compact"
-              ? "h-[130px] sm:h-[58%]"
-              : "h-[130px] sm:h-[62%]"
+              ? "h-[110px] sm:h-[58%]"
+              : "h-[110px] sm:h-[62%]"
         }`}
       >
         <img
@@ -264,14 +313,24 @@ export default function ProductCard({
 
       {/* ===== CONTENT AREA ===== */}
       <div
-        className={`px-2 sm:px-3 pt-2 pb-2.5 sm:pt-2.5 sm:pb-3 flex flex-col justify-between gap-1 min-h-0 flex-1 ${
+        className={`px-1.5 sm:px-3 pt-1.5 pb-2 sm:pt-2.5 sm:pb-3 flex flex-col justify-between gap-0.5 min-h-0 flex-1 ${
           layout === "carousel" ? "sm:h-[30%]" : size === "compact" ? "sm:h-[42%]" : "sm:h-[38%]"
         }`}
       >
         
         {/* Title + Rating */}
-        <div className="flex items-start justify-between min-h-[2.25rem] sm:min-h-[2.5rem]">
+        <div className="flex items-start justify-between min-h-0 sm:min-h-[2.5rem]">
           <div className="min-w-0 w-full">
+            {labelText && (
+              <div className="mb-1">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-xs font-semibold ${labelTextClass}`}
+                  style={{ backgroundColor: labelColor || "#166534" }}
+                >
+                  {labelText}
+                </span>
+              </div>
+            )}
             <h3 className={`font-semibold text-black ${layout === "carousel" ? "text-[13px] sm:text-lg" : size === "compact" ? "text-[11px] sm:text-sm md:text-base" : "text-[11px] sm:text-xs md:text-sm"} leading-snug line-clamp-2 break-words min-w-0 min-h-[2.25rem] ${titleClassName ?? ""}`}>
               {titleWithWeight}
             </h3>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, ChevronRight } from "lucide-react";
+import { Home, ChevronRight, Truck } from "lucide-react";
 import ProductCard from "@/components/common/ProductCard";
 import ApiService from "@/lib/api";
 
@@ -12,7 +12,7 @@ interface Product {
   category: string;
   subcategory: string;
   price: number;
-  originalPrice: number;
+  originalPrice: number | null;
   mainVariantId?: number | null;
   imageUrl: string;
   discountPercentage: string;
@@ -23,15 +23,15 @@ interface Product {
   inStock: boolean;
   weight: string;
   origin: string;
-  variants?: Array<{
-    id?: number | string;
-    name?: string | null;
-    type?: string | null;
-    price?: number | string;
-    originalPrice?: number | string | null;
-    discountPercentage?: string | null;
-    discountColor?: string | null;
-  }>;
+  isSpecial?: boolean;
+  category_id?: number | null;
+  subcategory_id?: number | null;
+  bulk_order_limit?: number | null;
+  preorder_only?: boolean | null;
+  cutoff_time?: string | null;
+  available_days?: string[] | null;
+  label_name?: string | null;
+  label_color?: string | null;
 }
 
 interface Subcategory {
@@ -46,7 +46,10 @@ interface Category {
   name: string;
   slug: string;
   description: string;
+  pickup_only?: boolean | null;
+  pickup_address?: string | null;
   subcategories: Subcategory[];
+  category_products?: Product[];
 }
 
 type PageParams = {
@@ -68,36 +71,36 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
   const rawSlug = safeDecode(resolvedParams?.category);
   if (!rawSlug) {
     return {
-      title: "Category Not Found | Tulsi",
-      description: "The requested category could not be found."
+      title: "Special Category Not Found | Tulsi",
+      description: "The requested special category could not be found."
     };
   }
   const normalizedSlug = rawSlug
     ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
     : "";
-  const categories: Category[] = await ApiService.getCategories();
+  const categories: Category[] = await ApiService.getSpecialCategoriesTree();
   const foundCategory =
     categories.find((cat) => cat.slug === rawSlug) ||
     (normalizedSlug ? categories.find((cat) => cat.slug === normalizedSlug) : null);
 
   const title = foundCategory?.name
     ? `${foundCategory.name} | Tulsi`
-    : "Category | Tulsi";
+    : "Special Category | Tulsi";
   const description =
     foundCategory?.description ||
-    "Browse authentic Indian grocery categories at Tulsi.";
+    "Browse special menus at Tulsi.";
 
   return { title, description };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<PageParams> }) {
+export default async function SpecialCategoryPage({ params }: { params: Promise<PageParams> }) {
   const resolvedParams = await params;
   const categoryParam = safeDecode(resolvedParams?.category);
   if (!categoryParam) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
-          <div className="text-2xl font-bold text-gray-900 mb-2">Category Not Found</div>
+          <div className="text-2xl font-bold text-gray-900 mb-2">Special Category Not Found</div>
           <div className="text-gray-600 mb-6">Please choose another category.</div>
           <Link
             href="/"
@@ -114,7 +117,7 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
     ? categoryParam.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
     : "";
 
-  const categories: Category[] = await ApiService.getCategories();
+  const categories: Category[] = await ApiService.getSpecialCategoriesTree();
   const foundCategory =
     categories.find((cat) => cat.slug === categoryParam) ||
     (normalizedSlug ? categories.find((cat) => cat.slug === normalizedSlug) : null);
@@ -123,7 +126,7 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-lg text-center bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
-          <div className="text-2xl font-bold text-gray-900 mb-2">Category Not Found</div>
+          <div className="text-2xl font-bold text-gray-900 mb-2">Special Category Not Found</div>
           <div className="text-gray-600 mb-6">Please choose another category.</div>
           <Link
             href="/"
@@ -147,12 +150,11 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
         id: product.id,
         name: product.name,
         slug: normalizedSlug || "",
-        category: foundCategory.slug,
+        category: `special/${foundCategory.slug}`,
         subcategory: sub.slug,
         price: Number(product.price || 0),
         originalPrice: product.originalPrice ?? product.original_price ?? null,
         mainVariantId: product.mainVariantId ?? product.main_variant_id ?? null,
-        variants: Array.isArray(product.variants) ? product.variants : [],
         imageUrl:
           product.imageUrl ||
           product.image_url ||
@@ -167,13 +169,63 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
         reviews: product.reviews || 0,
         inStock: product.inStock ?? product.in_stock ?? true,
         weight: product.weight || "",
-        origin: product.origin || ""
+        origin: product.origin || "",
+        isSpecial: true,
+        category_id: foundCategory.id,
+        subcategory_id: sub.id,
+        bulk_order_limit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
+        preorder_only: product.preorder_only ?? product.preorderOnly ?? null,
+        cutoff_time: product.cutoff_time ?? product.cutoffTime ?? null,
+        available_days: product.available_days ?? product.availableDays ?? null,
+        label_name: product.label_name ?? product.labelName ?? null,
+        label_color: product.label_color ?? product.labelColor ?? null
       });
     });
   });
 
+  (foundCategory.category_products || []).forEach((product: any) => {
+    const normalizedSlug =
+      product.slug ||
+      product.product_slug ||
+      (product.id !== undefined && product.id !== null ? String(product.id) : null);
+    allProducts.push({
+      id: product.id,
+      name: product.name,
+      slug: normalizedSlug || "",
+      category: `special/${foundCategory.slug}`,
+      subcategory: "all",
+      price: Number(product.price || 0),
+      originalPrice: product.originalPrice ?? product.original_price ?? null,
+      mainVariantId: product.mainVariantId ?? product.main_variant_id ?? null,
+      imageUrl:
+        product.imageUrl ||
+        product.image_url ||
+        product.image ||
+        (Array.isArray(product.imageGallery) ? product.imageGallery[0] : undefined) ||
+        (Array.isArray(product.image_gallery) ? product.image_gallery[0] : undefined) ||
+        "",
+      discountPercentage: product.discountPercentage || product.discount_percentage || "",
+      discountColor: product.discountColor || product.discount_color || "bg-red-500",
+      description: product.description || "",
+      rating: product.rating || 0,
+      reviews: product.reviews || 0,
+      inStock: product.inStock ?? product.in_stock ?? true,
+      weight: product.weight || "",
+      origin: product.origin || "",
+      isSpecial: true,
+      category_id: foundCategory.id,
+      subcategory_id: null,
+      bulk_order_limit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
+      preorder_only: product.preorder_only ?? product.preorderOnly ?? null,
+      cutoff_time: product.cutoff_time ?? product.cutoffTime ?? null,
+      available_days: product.available_days ?? product.availableDays ?? null,
+      label_name: product.label_name ?? product.labelName ?? null,
+      label_color: product.label_color ?? product.labelColor ?? null
+    });
+  });
+
   const schedules = await Promise.all(
-    allProducts.map((product) => ApiService.getActiveSchedule(product.id))
+    allProducts.map((product) => ApiService.getActiveSchedule(product.id, null, { isSpecial: true }))
   );
   const productsWithSchedules = allProducts.map((product, index) => {
     const schedule = schedules[index];
@@ -224,12 +276,27 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{foundCategory.name}</h1>
-          <p className="text-lg text-gray-600">{foundCategory.description}</p>
+          <p className="text-xs md:text-sm text-gray-600">{foundCategory.description}</p>
+          {(foundCategory.pickup_address || foundCategory.pickup_only) && (
+            <div className="mt-4 flex items-center gap-3 rounded-xl border border-green-500 bg-green-50 px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-green-500 bg-green-100">
+                <Truck className="h-5 w-5 text-green-700" />
+              </div>
+              <div className="text-sm text-gray-800">
+                <div className="font-semibold">
+                  {foundCategory.pickup_only ? "Pickup only" : "Pickup available"}
+                </div>
+                {foundCategory.pickup_address && (
+                  <div className="text-xs text-gray-600">{foundCategory.pickup_address}</div>
+                )}
+              </div>
+            </div>
+          )}
           <div className="mt-4 flex items-center space-x-4">
             <span className="text-sm text-gray-500">
               {foundCategory.subcategories.length} Subcategories
             </span>
-            <span className="text-sm text-gray-500">{productsWithSchedules.length} Products</span>
+            <span className="text-sm text-gray-500">{filteredProducts.length} Products</span>
           </div>
         </div>
       </div>
@@ -241,7 +308,7 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
             {subcats.map((sub) => (
               <Link
                 key={sub.slug}
-                href={`/${foundCategory.slug}/${sub.slug}`}
+                href={`/special/${foundCategory.slug}/${sub.slug}`}
                 className={`whitespace-nowrap pb-2 px-1 border-b border-gray-200 font-medium text-sm transition-colors ${
                   activeSubcategory === sub.slug
                     ? "border-green-600 text-green-600"
@@ -250,8 +317,8 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
               >
                 {sub.name} (
                 {sub.slug !== "all"
-                  ? productsWithSchedules.filter((p) => p.subcategory === sub.slug).length
-                  : productsWithSchedules.length}
+                  ? filteredProducts.filter((p) => p.subcategory === sub.slug).length
+                  : filteredProducts.length}
                 )
               </Link>
             ))}
@@ -261,11 +328,9 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
 
       {/* Products Grid */}
       <div className="max-w-7xl mx-auto px-3 sm:px-4 xl:px-[50px] py-8">
-        <div className="bg-white border border-black rounded-2xl p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-gray-900">All Products</h2>
-            <div className="text-sm text-gray-600">{filteredProducts.length} products</div>
-          </div>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">All Products</h2>
+          <div className="text-sm text-gray-600">{filteredProducts.length} products</div>
         </div>
 
         {filteredProducts.length === 0 ? (
@@ -276,29 +341,10 @@ export default async function CategoryPage({ params }: { params: Promise<PagePar
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
             {filteredProducts.map((product: Product) => (
               <ProductCard
-                key={product.id}
+                key={`${product.id}-${product.subcategory}`}
                 titleClassName="line-clamp-2"
                 size="compact"
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  originalPrice: product.originalPrice,
-                  mainVariantId: product.mainVariantId,
-                  variants: product.variants,
-                  imageUrl: product.imageUrl,
-                  discountPercentage: product.discountPercentage,
-                  discountColor: product.discountColor,
-                  description: product.description || "",
-                  rating: product.rating,
-                  reviews: product.reviews,
-                  inStock: product.inStock,
-                  weight: product.weight,
-                  origin: product.origin,
-                  category: product.category,
-                  subcategory: product.subcategory,
-                  slug: product.slug
-                }}
+                product={product}
               />
             ))}
           </div>

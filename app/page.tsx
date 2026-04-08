@@ -262,6 +262,8 @@ export default async function HomePage() {
                 <ProductCard
                   key={`${product.id}-${index}`}
                   product={product}
+                  size="compact"
+                  titleClassName="line-clamp-2"
                   imageUrl={product.imageUrl}
                   title={product.name}
                   weight={product.weight}
@@ -292,6 +294,8 @@ export default async function HomePage() {
                 <ProductCard
                   key={`${product.id}-${index}`}
                   product={product}
+                  size="compact"
+                  titleClassName="line-clamp-2"
                   imageUrl={product.imageUrl}
                   title={product.name}
                   weight={product.weight}
@@ -322,6 +326,8 @@ export default async function HomePage() {
                 <ProductCard
                   key={`${product.id}-${index}`}
                   product={product}
+                  size="compact"
+                  titleClassName="line-clamp-2"
                   imageUrl={product.imageUrl}
                   title={product.name}
                   weight={product.weight}

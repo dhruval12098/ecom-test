@@ -21,6 +21,8 @@ export default function CartPage() {
   const [postalChecked, setPostalChecked] = useState(false);
   const [taxRate, setTaxRate] = useState(5);
   const [excludedCategoryIds, setExcludedCategoryIds] = useState<number[]>([]);
+  const [excludedSpecialCategoryIds, setExcludedSpecialCategoryIds] = useState<number[]>([]);
+  const hasPostalCode = postalCode.trim().length > 0;
   const [showTaxDetails, setShowTaxDetails] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [scheduleMap, setScheduleMap] = useState<Record<string, any>>({});
@@ -36,17 +38,19 @@ export default function CartPage() {
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
       const live = liveMap[item.id];
-      const scheduleKey = `${item.id}:${item.variantId ?? "base"}`;
+      const scheduleKey = `${item.isSpecial ? "special" : "normal"}:${item.id}:${item.variantId ?? "base"}`;
       const schedule = scheduleMap[scheduleKey] || null;
       if (!live) {
         const fallbackPrice = Number(item.price || 0);
-        const fallbackOriginal = item.originalPrice !== undefined ? Number(item.originalPrice) : undefined;
+        const fallbackOriginalRaw = item.originalPrice !== undefined ? item.originalPrice : undefined;
+        const fallbackOriginalNum = Number(fallbackOriginalRaw ?? NaN);
         const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
         const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
         const price = Number.isFinite(scheduledPrice) ? scheduledPrice : fallbackPrice;
-        const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : fallbackOriginal;
-        const originalPrice =
-          Number.isFinite(normalCandidate) && normalCandidate > price ? normalCandidate : fallbackOriginal;
+        const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : fallbackOriginalNum;
+        const originalPriceNum =
+          Number.isFinite(normalCandidate) && normalCandidate > price ? normalCandidate : fallbackOriginalNum;
+        const originalPrice = Number.isFinite(originalPriceNum) ? originalPriceNum : undefined;
         return {
           ...item,
           price,
@@ -84,25 +88,27 @@ export default function CartPage() {
       const basePrice = variantPrice !== null && variantPrice !== undefined
         ? Number(variantPrice)
         : Number(live.sale_price || live.price || item.price);
-      const baseOriginalPrice = variantPrice !== null && variantPrice !== undefined
+      const baseOriginalPriceRaw = variantPrice !== null && variantPrice !== undefined
         ? (
             selectedVariant?.originalPrice !== undefined && selectedVariant?.originalPrice !== null
-              ? Number(selectedVariant.originalPrice)
+              ? selectedVariant.originalPrice
               : selectedVariant?.original_price !== undefined && selectedVariant?.original_price !== null
-                ? Number(selectedVariant.original_price)
+                ? selectedVariant.original_price
                 : item.originalPrice
           )
         : live.originalPrice
-          ? Number(live.originalPrice)
+          ? live.originalPrice
           : live.original_price
-            ? Number(live.original_price)
+            ? live.original_price
             : item.originalPrice;
+      const baseOriginalPrice = Number(baseOriginalPriceRaw ?? NaN);
       const scheduledPrice = Number(schedule?.scheduled_price ?? schedule?.scheduledPrice);
       const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
       const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : basePrice;
       const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : baseOriginalPrice;
-      const finalOriginal =
+      const finalOriginalNum =
         Number.isFinite(normalCandidate) && normalCandidate > finalPrice ? normalCandidate : baseOriginalPrice;
+      const finalOriginal = Number.isFinite(finalOriginalNum) ? finalOriginalNum : undefined;
       return {
         ...item,
         name: live.name || item.name,
@@ -130,13 +136,23 @@ export default function CartPage() {
     () => new Set(excludedCategoryIds.map((id) => Number(id))),
     [excludedCategoryIds]
   );
+  const excludedSpecialCategorySet = useMemo(
+    () => new Set(excludedSpecialCategoryIds.map((id) => Number(id))),
+    [excludedSpecialCategoryIds]
+  );
 
   const eligibleSubtotal = purchasableItems.reduce((sum, item) => {
     const live = liveMap[item.id];
     const categoryId = Number(
-      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+      live?.category_id ??
+        live?.categoryId ??
+        (item as any)?.category_id ??
+        (item as any)?.categoryId ??
+        NaN
     );
-    if (Number.isFinite(categoryId) && excludedCategorySet.has(categoryId)) {
+    const isSpecial = Boolean(item.isSpecial || live?.isSpecial);
+    const targetSet = isSpecial ? excludedSpecialCategorySet : excludedCategorySet;
+    if (Number.isFinite(categoryId) && targetSet.has(categoryId)) {
       return sum;
     }
     return sum + item.price * item.quantity;
@@ -144,29 +160,44 @@ export default function CartPage() {
   const hasExcludedFreeShippingItems = purchasableItems.some((item) => {
     const live = liveMap[item.id];
     const categoryId = Number(
-      live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+      live?.category_id ??
+        live?.categoryId ??
+        (item as any)?.category_id ??
+        (item as any)?.categoryId ??
+        NaN
     );
-    return Number.isFinite(categoryId) && excludedCategorySet.has(categoryId);
+    if (!Number.isFinite(categoryId)) return false;
+    const isSpecial = Boolean(item.isSpecial || live?.isSpecial);
+    const targetSet = isSpecial ? excludedSpecialCategorySet : excludedCategorySet;
+    return targetSet.has(categoryId);
   });
   const excludedCategoryNames = useMemo(() => {
     const names = new Set<string>();
     purchasableItems.forEach((item) => {
       const live = liveMap[item.id];
       const categoryId = Number(
-        live?.category_id ?? live?.categoryId ?? (item as any)?.category_id ?? NaN
+        live?.category_id ??
+          live?.categoryId ??
+          (item as any)?.category_id ??
+          (item as any)?.categoryId ??
+          NaN
       );
-      if (!Number.isFinite(categoryId) || !excludedCategorySet.has(categoryId)) return;
+      if (!Number.isFinite(categoryId)) return;
+      const isSpecial = Boolean(item.isSpecial || live?.isSpecial);
+      const targetSet = isSpecial ? excludedSpecialCategorySet : excludedCategorySet;
+      if (!targetSet.has(categoryId)) return;
       const rawName =
         live?.category_name ??
         live?.categoryName ??
         (item as any)?.category_name ??
         (item as any)?.categoryName ??
         null;
-      const name = String(rawName || "").trim();
+      const name = String(rawName || "").trim() ||
+        (isSpecial ? `Special Category #${categoryId}` : `Category #${categoryId}`);
       if (name) names.add(name);
     });
     return Array.from(names);
-  }, [purchasableItems, liveMap, excludedCategorySet]);
+  }, [purchasableItems, liveMap, excludedCategorySet, excludedSpecialCategorySet]);
 
   const hasFreeShippingItem = purchasableItems.some((item) => {
     const live = liveMap[item.id];
@@ -197,7 +228,7 @@ export default function CartPage() {
     if (basicRate) return Number(basicRate.price || 0);
     return subtotal > 500 ? 0 : 50;
   })();
-  const discount = subtotal > 1000 ? subtotal * 0.1 : 0; // 10% discount for orders above 1000
+  const discount = 0;
   const tax = (() => {
     if (subtotal <= 0) return 0;
     return purchasableItems.reduce((sum, item) => {
@@ -260,6 +291,7 @@ export default function CartPage() {
       if (cartItems.length === 0) return;
       try {
         const ids = cartItems
+          .filter((item) => !item.isSpecial)
           .map((item) => Number(item.id))
           .filter((id) => Number.isFinite(id) && id > 0);
         if (ids.length === 0) return;
@@ -284,16 +316,19 @@ export default function CartPage() {
       try {
         const pairs = cartItems.map((item) => ({
           id: Number(item.id),
-          variantId: item.variantId ?? null
+          variantId: item.variantId ?? null,
+          isSpecial: Boolean(item.isSpecial)
         }));
         const results = await Promise.all(
           pairs.map((p) =>
-            Number.isFinite(p.id) ? ApiService.getActiveSchedule(p.id, p.variantId) : null
+            Number.isFinite(p.id)
+              ? ApiService.getActiveSchedule(p.id, p.variantId, { isSpecial: p.isSpecial })
+              : null
           )
         );
         const next: Record<string, any> = {};
         pairs.forEach((p, idx) => {
-          const key = `${p.id}:${p.variantId ?? "base"}`;
+          const key = `${p.isSpecial ? "special" : "normal"}:${p.id}:${p.variantId ?? "base"}`;
           next[key] = results[idx] || null;
         });
         setScheduleMap(next);
@@ -338,6 +373,9 @@ export default function CartPage() {
         const raw = settings?.excluded_free_shipping_category_ids || [];
         const parsed = Array.isArray(raw) ? raw : [];
         setExcludedCategoryIds(parsed.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
+        const rawSpecial = settings?.excluded_free_shipping_special_category_ids || [];
+        const parsedSpecial = Array.isArray(rawSpecial) ? rawSpecial : [];
+        setExcludedSpecialCategoryIds(parsedSpecial.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
       } catch (e) {
         setTaxRate(5);
       }
@@ -551,24 +589,35 @@ export default function CartPage() {
                               {item.quantity}
                             </span>
                               <button
-                                onClick={() => {
-                                  const maxQty = item.stockQuantity ?? null;
-                                  if (maxQty !== null && item.quantity >= maxQty) {
-                                    toast.info("Maximum stock reached", {
-                                      description: `Only ${maxQty} available for this item.`
-                                    });
-                                    return;
-                                  }
-                                  const nextQty = maxQty !== null
-                                    ? Math.min(maxQty, item.quantity + 1)
-                                    : item.quantity + 1;
-                                  updateQuantity(item.id, nextQty, item.variantId);
-                                  if (maxQty !== null && nextQty >= maxQty) {
-                                    toast.info("Maximum stock reached", {
-                                      description: `Only ${maxQty} available for this item.`
-                                    });
-                                  }
-                                }}
+                                  onClick={() => {
+                                    const stockLimit =
+                                      Number.isFinite(Number(item.stockQuantity)) && Number(item.stockQuantity) > 0
+                                        ? Number(item.stockQuantity)
+                                        : null;
+                                    const bulkLimit =
+                                      Number.isFinite(Number(item.bulkOrderLimit)) && Number(item.bulkOrderLimit) > 0
+                                        ? Number(item.bulkOrderLimit)
+                                        : null;
+                                    const maxQty =
+                                      stockLimit !== null && bulkLimit !== null
+                                        ? Math.min(stockLimit, bulkLimit)
+                                        : stockLimit ?? bulkLimit;
+                                    if (maxQty !== null && item.quantity >= maxQty) {
+                                      toast.info("Maximum stock reached", {
+                                        description: `Only ${maxQty} allowed for this item.`
+                                      });
+                                      return;
+                                    }
+                                    const nextQty = maxQty !== null
+                                      ? Math.min(maxQty, item.quantity + 1)
+                                      : item.quantity + 1;
+                                    updateQuantity(item.id, nextQty, item.variantId);
+                                    if (maxQty !== null && nextQty >= maxQty) {
+                                      toast.info("Maximum stock reached", {
+                                        description: `Only ${maxQty} allowed for this item.`
+                                      });
+                                    }
+                                  }}
                                 disabled={!item.inStock}
                                 className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                 aria-label="Increase quantity"
@@ -683,10 +732,21 @@ export default function CartPage() {
                                     </span>
                                       <button
                                         onClick={() => {
-                                          const maxQty = item.stockQuantity ?? null;
+                                          const stockLimit =
+                                            Number.isFinite(Number(item.stockQuantity)) && Number(item.stockQuantity) > 0
+                                              ? Number(item.stockQuantity)
+                                              : null;
+                                          const bulkLimit =
+                                            Number.isFinite(Number(item.bulkOrderLimit)) && Number(item.bulkOrderLimit) > 0
+                                              ? Number(item.bulkOrderLimit)
+                                              : null;
+                                          const maxQty =
+                                            stockLimit !== null && bulkLimit !== null
+                                              ? Math.min(stockLimit, bulkLimit)
+                                              : stockLimit ?? bulkLimit;
                                           if (maxQty !== null && item.quantity >= maxQty) {
                                             toast.info("Maximum stock reached", {
-                                              description: `Only ${maxQty} available for this item.`
+                                              description: `Only ${maxQty} allowed for this item.`
                                             });
                                             return;
                                           }
@@ -696,7 +756,7 @@ export default function CartPage() {
                                           updateQuantity(item.id, nextQty, item.variantId);
                                           if (maxQty !== null && nextQty >= maxQty) {
                                             toast.info("Maximum stock reached", {
-                                              description: `Only ${maxQty} available for this item.`
+                                              description: `Only ${maxQty} allowed for this item.`
                                             });
                                           }
                                         }}
@@ -821,10 +881,12 @@ export default function CartPage() {
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Shipping</span>
                       <span className="font-semibold text-gray-900">
-                        {shippingCost === 0 ? (
-                          <span className="text-[#266000]">FREE</span>
-                        ) : (
-                          `${formatCurrency(shippingCost)}`
+                        {!hasPostalCode ? "-" : (
+                          shippingCost === 0 ? (
+                            <span className="text-[#266000]">FREE</span>
+                          ) : (
+                            `${formatCurrency(shippingCost)}`
+                          )
                         )}
                       </span>
                     </div>
@@ -1120,10 +1182,12 @@ export default function CartPage() {
             <div className="flex justify-between text-sm text-gray-600">
               <span>Shipping</span>
               <span className="font-semibold text-gray-900">
-                {shippingCost === 0 ? (
-                  <span className="text-[#266000]">FREE</span>
-                ) : (
-                  `${formatCurrency(shippingCost)}`
+                {!hasPostalCode ? "-" : (
+                  shippingCost === 0 ? (
+                    <span className="text-[#266000]">FREE</span>
+                  ) : (
+                    `${formatCurrency(shippingCost)}`
+                  )
                 )}
               </span>
             </div>

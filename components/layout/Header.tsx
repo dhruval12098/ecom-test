@@ -39,6 +39,7 @@ interface Category {
   slug: string;
   image?: string;
   subcategories: Subcategory[];
+  isSpecial?: boolean;
 }
 
 export default function Header() {
@@ -59,6 +60,7 @@ export default function Header() {
   const [showAll, setShowAll] = useState(false);
   const [columnsPerRow, setColumnsPerRow] = useState(6);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [specialCategories, setSpecialCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,6 +97,41 @@ export default function Header() {
     }
 
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const fetchSpecials = async () => {
+      try {
+        const [cats, subs] = await Promise.all([
+          ApiService.getSpecialCategories(),
+          ApiService.getSpecialSubcategories("all")
+        ]);
+        const subByCat: Record<string, Subcategory[]> = {};
+        (subs || []).forEach((sub: any) => {
+          const catId = String(sub.category_id ?? sub.categoryId ?? "");
+          if (!catId) return;
+          if (!subByCat[catId]) subByCat[catId] = [];
+          subByCat[catId].push({
+            id: sub.id,
+            name: sub.name,
+            slug: sub.slug,
+            image: sub.image_url || sub.imageUrl
+          } as Subcategory);
+        });
+        const mapped = (cats || []).map((cat: any) => ({
+          id: cat.id,
+          name: cat.name,
+          slug: cat.slug,
+          image: cat.image || cat.image_url || undefined,
+          subcategories: subByCat[String(cat.id)] || [],
+          isSpecial: true
+        }));
+        setSpecialCategories(mapped);
+      } catch (error) {
+        console.error('Error fetching special categories:', error);
+      }
+    };
+    fetchSpecials();
   }, []);
 
   useEffect(() => {
@@ -150,8 +187,9 @@ export default function Header() {
   }, [authUser]);
 
   const itemsPerRow = columnsPerRow;
-  const totalRows = Math.ceil(categories.length / itemsPerRow);
-  const displayedCategories: Category[] = showAll ? categories : categories.slice(0, itemsPerRow * 2);
+  const navCategories: Category[] = [...specialCategories, ...categories];
+  const totalRows = Math.ceil(navCategories.length / itemsPerRow);
+  const displayedCategories: Category[] = showAll ? navCategories : navCategories.slice(0, itemsPerRow * 2);
 
   useEffect(() => {
     const updateColumns = () => {
@@ -321,61 +359,65 @@ export default function Header() {
               {loading ? (
                 <div className="col-span-full text-center py-4">Loading categories...</div>
               ) : (
-                displayedCategories.map((item) => (
-                  <div 
-                    key={item.id}
-                    className="relative"
-                    onMouseEnter={() => handleMouseEnter(item.slug)}
-                    onMouseLeave={handleMouseLeave}
-                  >
-                    <Link 
-                      href={`/${item.slug}`}
-                      className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-0.5 font-medium"
+                displayedCategories.map((item) => {
+                  const navKey = `${item.isSpecial ? "special:" : ""}${item.slug}`;
+                  const baseHref = item.isSpecial ? `/special/${item.slug}` : `/${item.slug}`;
+                  return (
+                    <div 
+                      key={navKey}
+                      className="relative"
+                      onMouseEnter={() => handleMouseEnter(navKey)}
+                      onMouseLeave={handleMouseLeave}
                     >
-                      <span className="font-semibold">{item.name}</span>
-                      <ChevronDown size={10} />
-                    </Link>
-                    
-                    {/* Dropdown Menu */}
-                    {openDropdown === item.slug && item.subcategories.length > 0 && (
-                      <div 
-                        className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-50 border border-gray-200 hidden sm:block"
-                        onMouseEnter={() => handleMouseEnter(item.slug)}
-                        onMouseLeave={handleMouseLeave}
+                      <Link 
+                        href={baseHref}
+                        className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-0.5 font-medium"
                       >
-                        <div className="p-1.5">
-                          <div className="text-gray-900 text-xs font-semibold mb-1.5 border-b pb-1.5">{item.name}</div>
-                          <div className="grid grid-cols-1 gap-0.5 max-h-60 overflow-y-auto">
-                            {item.subcategories.map((subcat) => (
-                              <Link
-                                key={subcat.id}
-                                href={`/${item.slug}/${subcat.slug}`}
-                                className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 transition-colors group"
-                              >
-                                {subcat.image && (
-                                  <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 bg-gray-100">
-                                    <img 
-                                      src={subcat.image} 
-                                      alt={subcat.name}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                      }}
-                                    />
-                                  </div>
-                                )}
-                                <span className="text-xs text-gray-700 group-hover:text-green-700 transition-colors">
-                                  {subcat.name}
-                                </span>
-                              </Link>
-                            ))}
+                        <span className="font-semibold">{item.name}</span>
+                        <ChevronDown size={10} />
+                      </Link>
+                      
+                      {/* Dropdown Menu */}
+                      {openDropdown === navKey && item.subcategories.length > 0 && (
+                        <div 
+                          className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-50 border border-gray-200 hidden sm:block"
+                          onMouseEnter={() => handleMouseEnter(navKey)}
+                          onMouseLeave={handleMouseLeave}
+                        >
+                          <div className="p-1.5">
+                            <div className="text-gray-900 text-xs font-semibold mb-1.5 border-b pb-1.5">{item.name}</div>
+                            <div className="grid grid-cols-1 gap-0.5 max-h-60 overflow-y-auto">
+                              {item.subcategories.map((subcat) => (
+                                <Link
+                                  key={subcat.id}
+                                  href={`${baseHref}/${subcat.slug}`}
+                                  className="flex items-center gap-2 p-1 rounded-md hover:bg-gray-100 transition-colors group"
+                                >
+                                  {subcat.image && (
+                                    <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0 bg-gray-100">
+                                      <img 
+                                        src={subcat.image} 
+                                        alt={subcat.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                  <span className="text-xs text-gray-700 group-hover:text-green-700 transition-colors">
+                                    {subcat.name}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
             {totalRows > 2 && (
