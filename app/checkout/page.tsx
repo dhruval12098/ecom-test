@@ -722,7 +722,7 @@ function CheckoutPageContent() {
         shippingStep === 1
           ? [...personal]
           : [...personal, ...delivery];
-      const missing = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
+      const missing: string[] = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
       if (shippingStep === 1) {
         const phoneValue = shippingInfo.phone?.trim() || "";
         if (phoneValue && !isValidPhone(phoneValue, shippingInfo.country)) {
