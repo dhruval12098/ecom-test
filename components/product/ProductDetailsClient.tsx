@@ -122,8 +122,9 @@ export default function ProductDetailsClient({
     selectedVariant?.stockQuantity === undefined || selectedVariant?.stockQuantity === null
       ? undefined
       : Number(selectedVariant.stockQuantity);
+  const selectedVariantStockValue = Number(selectedVariantStock ?? NaN);
   const displayInStock = selectedVariant
-    ? (Number.isFinite(selectedVariantStock) ? selectedVariantStock > 0 : true)
+    ? (Number.isFinite(selectedVariantStockValue) ? selectedVariantStockValue > 0 : true)
     : product.inStock;
   const rawStockQty = selectedVariant?.stockQuantity ?? product.stockQuantity;
   const maxQuantity = Number.isFinite(Number(rawStockQty)) ? Math.max(1, Number(rawStockQty)) : null;

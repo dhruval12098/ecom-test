@@ -9,7 +9,7 @@ interface Product {
   id: number;
   name: string;
   price: number;
-  originalPrice?: number;
+  originalPrice?: number | null;
   imageUrl: string;
   discountPercentage: string;
   discountColor: string;
