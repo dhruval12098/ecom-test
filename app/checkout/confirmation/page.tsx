@@ -39,55 +39,101 @@ function CheckoutConfirmationContent() {
       setIsLoading(false);
       return;
     }
+    let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const syncOrderState = (orderData: any) => {
+      const rawOrder = orderData?.order_code || orderData?.order_number || "";
+      setOrderNumber(String(rawOrder || orderId));
+      setTotalAmount(Number(orderData?.total_amount || 0));
+      const items = orderData?.items || [];
+      setOrderItems(items);
+      const nextOrderStatus = String(orderData?.status || "").toLowerCase();
+      setOrderStatus(nextOrderStatus);
+      if (items.length > 0) {
+        setReviewItemId(Number(items[0]?.id || 0) || null);
+      }
+      setReviewerName(orderData?.customer_name || "");
+      setReviewerEmail(orderData?.customer_email || "");
+
+      if (nextOrderStatus === "confirmed") {
+        setResolvedStatus("confirmed");
+        setPaymentPending(false);
+        return "confirmed";
+      }
+      if (nextOrderStatus === "cancelled" || nextOrderStatus === "refunded") {
+        setResolvedStatus("cancelled");
+        setPaymentPending(false);
+        return "cancelled";
+      }
+      setResolvedStatus("pending");
+      setPaymentPending(true);
+      return "pending";
+    };
+
     (async () => {
       try {
         setIsLoading(true);
-        const statusPromise = ApiService.getWorldlineCheckoutStatus(orderId).catch(() => null);
-        const orderPromise = ApiService.getOrderById(orderId);
-        const timeout = new Promise((resolve) => setTimeout(() => resolve("timeout"), 4000));
-        const statusResult = await Promise.race([statusPromise, timeout]);
-        if (statusResult === "timeout") {
-          setPaymentPending(true);
-        }
-        const normalizedStatus =
-          statusResult && statusResult !== "timeout"
-            ? String((statusResult as any)?.status || "").toLowerCase()
-            : "";
-        const orderData = await orderPromise;
-        const rawOrder = orderData?.order_code || orderData?.order_number || "";
-        setOrderNumber(String(rawOrder || orderId));
-        setTotalAmount(Number(orderData?.total_amount || 0));
-        const items = orderData?.items || [];
-        setOrderItems(items);
-        const nextOrderStatus = String(orderData?.status || "").toLowerCase();
-        setOrderStatus(nextOrderStatus);
-        if (items.length > 0) {
-          setReviewItemId(Number(items[0]?.id || 0) || null);
-        }
-        setReviewerName(orderData?.customer_name || '');
-        setReviewerEmail(orderData?.customer_email || '');
+        let orderData = await ApiService.getOrderById(orderId);
+        if (cancelled) return;
+        const status = syncOrderState(orderData);
 
-        const isPaid = nextOrderStatus === "confirmed" || normalizedStatus === "paid";
-        const isCancelled =
-          nextOrderStatus === "cancelled" ||
-          nextOrderStatus === "refunded" ||
-          normalizedStatus === "failed" ||
-          normalizedStatus === "refunded";
-        const isPending =
-          normalizedStatus === "pending" ||
-          normalizedStatus === "refund_pending" ||
-          (!isPaid && !isCancelled);
-
-        setResolvedStatus(isPaid ? "confirmed" : isCancelled ? "cancelled" : "pending");
-        if (isPending) {
-          setPaymentPending(true);
+        // If the DB hasn't been updated by webhook yet, force a Worldline status refresh once.
+        // The backend endpoint also updates our DB based on Worldline status.
+        if (status === "pending") {
+          try {
+            await ApiService.getWorldlineCheckoutStatus(orderId);
+          } catch {
+            // ignore and fall back to polling DB
+          }
+          try {
+            orderData = await ApiService.getOrderById(orderId);
+            if (!cancelled) {
+              const refreshedStatus = syncOrderState(orderData);
+              if (refreshedStatus !== "pending") {
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch {
+            // ignore and fall back to polling DB
+          }
         }
-      } catch {
-        setError("Unable to confirm payment. Please refresh or contact support.");
-      } finally {
+
         setIsLoading(false);
+
+        if (status !== "pending") return;
+
+        let attempts = 0;
+        intervalId = setInterval(async () => {
+          attempts += 1;
+          try {
+            const latest = await ApiService.getOrderById(orderId);
+            if (cancelled) return;
+            const nextStatus = syncOrderState(latest);
+            if (nextStatus !== "pending" || attempts >= 8) {
+              if (intervalId) clearInterval(intervalId);
+              intervalId = null;
+            }
+          } catch {
+            if (attempts >= 8 && intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+          }
+        }, 2000);
+      } catch {
+        if (!cancelled) {
+          setError("Unable to confirm payment. Please refresh or contact support.");
+          setIsLoading(false);
+        }
       }
     })();
+
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [orderIdParam]);
 
   useEffect(() => {

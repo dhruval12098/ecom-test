@@ -141,7 +141,19 @@ export default function CartPage() {
     [excludedSpecialCategoryIds]
   );
 
-  const eligibleSubtotal = purchasableItems.reduce((sum, item) => {
+  const getShippingMethod = (item: any) => {
+    const live = liveMap[item.id];
+    return (live?.shipping_method || item.shippingMethod || item.shipping_method || "")
+      .toString()
+      .toLowerCase();
+  };
+
+  // "Free shipping" on a product should not make the entire mixed cart free-shipping.
+  // Treat shipping as free only when all purchasable items are marked free-shipping.
+  const shippableItems = purchasableItems.filter((item) => getShippingMethod(item) !== "free");
+  const allFreeShipping = purchasableItems.length > 0 && shippableItems.length === 0;
+
+  const eligibleSubtotal = shippableItems.reduce((sum, item) => {
     const live = liveMap[item.id];
     const categoryId = Number(
       live?.category_id ??
@@ -199,11 +211,7 @@ export default function CartPage() {
     return Array.from(names);
   }, [purchasableItems, liveMap, excludedCategorySet, excludedSpecialCategorySet]);
 
-  const hasFreeShippingItem = purchasableItems.some((item) => {
-    const live = liveMap[item.id];
-    const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
-    return method === 'free';
-  });
+  const hasFreeShippingItem = allFreeShipping;
   const activeRates = shippingRates.filter((r) => r.active);
   const freeRate = activeRates.find((r) => r.type === 'free');
   const basicRate = activeRates.find((r) => r.type === 'basic');
@@ -211,11 +219,12 @@ export default function CartPage() {
     shippingZone?.conditional !== undefined && shippingZone?.conditional !== null
       ? Number(shippingZone.conditional)
       : null;
-  const freeThreshold = zoneThreshold !== null && Number.isFinite(zoneThreshold)
+  const computedFreeThreshold = zoneThreshold !== null && Number.isFinite(zoneThreshold)
     ? zoneThreshold
     : (freeRate?.min_order ? Number(freeRate.min_order) : null);
+  const freeThreshold = allFreeShipping ? null : computedFreeThreshold;
   const shippingCost = (() => {
-    if (hasFreeShippingItem) return 0;
+    if (allFreeShipping) return 0;
     if (shippingZone) {
       const zoneFee = Number(shippingZone.delivery_fee ?? 0);
       if (freeThreshold !== null && eligibleSubtotal >= freeThreshold) return 0;

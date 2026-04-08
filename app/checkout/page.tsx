@@ -505,7 +505,19 @@ function CheckoutPageContent() {
     [excludedSpecialCategoryIds]
   );
 
-  const eligibleSubtotal = purchasableItems.reduce((sum: number, item: CheckoutItem) => {
+  const getShippingMethod = (item: CheckoutItem) => {
+    const live = liveMap[item.id];
+    return (live?.shipping_method || item.shippingMethod || item.shipping_method || "")
+      .toString()
+      .toLowerCase();
+  };
+
+  // "Free shipping" on a product should not make the entire mixed cart free-shipping.
+  // Treat shipping as free only when all purchasable items are marked free-shipping.
+  const shippableItems = purchasableItems.filter((item: CheckoutItem) => getShippingMethod(item) !== "free");
+  const allFreeShipping = purchasableItems.length > 0 && shippableItems.length === 0;
+
+  const eligibleSubtotal = shippableItems.reduce((sum: number, item: CheckoutItem) => {
     const live = liveMap[item.id];
     const categoryId = Number(
       live?.category_id ??
@@ -522,14 +534,8 @@ function CheckoutPageContent() {
     return sum + item.price * item.quantity;
   }, 0);
 
-  const hasFreeShippingItem = purchasableItems.some((item: CheckoutItem) => {
-    const live = liveMap[item.id];
-    const method = (live?.shipping_method || item.shippingMethod || item.shipping_method || '').toString().toLowerCase();
-    return method === 'free';
-  });
-
   const shippingCost = (() => {
-    if (hasFreeShippingItem) return 0;
+    if (allFreeShipping) return 0;
     if (shippingZone) {
       const fee = Number(shippingZone.delivery_fee ?? 0);
       const threshold =
@@ -544,7 +550,7 @@ function CheckoutPageContent() {
     return 0;
   })();
   const freeThreshold = (() => {
-    if (hasFreeShippingItem) return null;
+    if (allFreeShipping) return null;
     if (!shippingZone) return null;
     const threshold =
       shippingZone.conditional !== undefined && shippingZone.conditional !== null
@@ -756,7 +762,7 @@ function CheckoutPageContent() {
     if (!validation.valid) {
       if (validation.invalidPhone) {
         toast.error("Invalid phone number", {
-          description: "Please enter a 2-digit country code plus 10 digits (e.g. +32 323-333-3333)."
+          description: "Use +32 4xx-xxx-xxx for Belgium, or 2-digit country code + 10 digits."
         });
         return;
       }
@@ -1180,7 +1186,7 @@ function CheckoutPageContent() {
                       if (!validation.valid) {
                         if (validation.invalidPhone) {
                           toast.error("Invalid phone number", {
-                            description: "Please enter a 2-digit country code plus 10 digits (e.g. +32 323-333-3333)."
+                            description: "Use +32 4xx-xxx-xxx for Belgium, or 2-digit country code + 10 digits."
                           });
                           return;
                         }

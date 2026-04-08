@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { User } from "lucide-react";
-import { formatPhone } from "@/app/checkout/utils/phoneValidation";
+import { formatPhone, isValidPhone } from "@/app/checkout/utils/phoneValidation";
+import { toast } from "sonner";
 
 interface User {
   name: string;
@@ -124,6 +125,12 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
               </button>
               <button 
                 onClick={() => {
+                  if (!isValidPhone(editedUser.phone || "", "BE")) {
+                    toast.error("Invalid phone number", {
+                      description: "Use +32 4xx-xxx-xxx for Belgium, or 2-digit country code + 10 digits."
+                    });
+                    return;
+                  }
                   onUserUpdate({...editedUser, avatar: user.avatar});
                   setIsEditing(false);
                 }}
