@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { User } from "lucide-react";
+import { formatPhone } from "@/app/checkout/utils/phoneValidation";
 
 interface User {
   name: string;
@@ -20,8 +21,9 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
   const [editedUser, setEditedUser] = useState({
     name: user.name,
     email: user.email,
-    phone: user.phone
+    phone: formatPhone(user.phone || "", "BE")
   });
+  const displayPhone = formatPhone(user.phone || "", "BE");
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -73,15 +75,17 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
             <label className="block text-xs sm:text-sm font-bold text-gray-900 mb-2">Phone Number</label>
             <input
               type="tel"
-              value={isEditing ? editedUser.phone : user.phone}
-              onChange={(e) => isEditing && setEditedUser({...editedUser, phone: e.target.value})}
+              value={isEditing ? editedUser.phone : displayPhone}
+              onChange={(e) =>
+                isEditing && setEditedUser({ ...editedUser, phone: formatPhone(e.target.value, "BE") })
+              }
               disabled={!isEditing}
               className={`w-full bg-white px-3 sm:px-4 py-2.5 sm:py-3 border border-black rounded-xl focus:outline-none transition-colors text-sm ${
                 isEditing 
                   ? "focus:border-[#266000]" 
                   : "bg-gray-100 cursor-not-allowed"
               }`}
-              placeholder="+32 ..."
+              placeholder="+32 323-333-3333"
             />
           </div>
           
@@ -107,13 +111,13 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
             <>
               <button 
                 onClick={() => {
-                  setIsEditing(false);
-                  setEditedUser({
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone
-                  });
-                }}
+                setIsEditing(false);
+                setEditedUser({
+                  name: user.name,
+                  email: user.email,
+                  phone: formatPhone(user.phone || "", "BE")
+                });
+              }}
                 className="bg-white border border-black text-gray-900 py-2.5 sm:py-3 px-6 sm:px-8 rounded-xl font-bold text-sm sm:text-base hover:border-[#266000] hover:text-[#266000] transition-colors"
               >
                 Cancel
@@ -134,7 +138,7 @@ export default function ProfileSection({ user, onUserUpdate }: ProfileSectionPro
                 setEditedUser({
                   name: user.name,
                   email: user.email,
-                  phone: user.phone
+                  phone: formatPhone(user.phone || "", "BE")
                 });
                 setIsEditing(true);
               }}
