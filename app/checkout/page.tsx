@@ -360,8 +360,9 @@ function CheckoutPageContent() {
       const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
       const price = Number.isFinite(scheduledPrice) ? scheduledPrice : fallbackPrice;
       const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : fallbackOriginal;
+      const normalCandidateValue = Number(normalCandidate);
       const originalPrice =
-        Number.isFinite(normalCandidate) && normalCandidate > price ? normalCandidate : fallbackOriginal;
+        Number.isFinite(normalCandidateValue) && normalCandidateValue > price ? normalCandidateValue : fallbackOriginal;
       return {
         ...item,
         price,
@@ -403,8 +404,9 @@ function CheckoutPageContent() {
     const scheduledNormal = Number(schedule?.normal_price ?? schedule?.normalPrice);
     const finalPrice = Number.isFinite(scheduledPrice) ? scheduledPrice : basePrice;
     const normalCandidate = Number.isFinite(scheduledNormal) ? scheduledNormal : baseOriginalPrice;
+    const normalCandidateValue = Number(normalCandidate);
     const finalOriginal =
-      Number.isFinite(normalCandidate) && normalCandidate > finalPrice ? normalCandidate : baseOriginalPrice;
+      Number.isFinite(normalCandidateValue) && normalCandidateValue > finalPrice ? normalCandidateValue : baseOriginalPrice;
     return {
       ...item,
       name: live.name || item.name,
