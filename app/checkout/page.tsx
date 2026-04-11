@@ -77,6 +77,8 @@ function CheckoutPageContent() {
   const [deliveryDays, setDeliveryDays] = useState<string[]>([]);
   const [deliveryTimeRange, setDeliveryTimeRange] = useState<any | null>(null);
   const [stockValidationError, setStockValidationError] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [storeAddress, setStoreAddress] = useState<string | null>(null);
   
   const [shippingInfo, setShippingInfo] = useState({
     // Personal Information
@@ -277,6 +279,8 @@ function CheckoutPageContent() {
         const parsedSpecial = Array.isArray(rawSpecial) ? rawSpecial : [];
         setExcludedSpecialCategoryIds(parsedSpecial.map((id: any) => Number(id)).filter((id: number) => Number.isFinite(id)));
         setScheduleEnabled(Boolean(settings?.delivery_schedule_enabled));
+        setStoreName(settings?.store_name || null);
+        setStoreAddress(settings?.address || null);
         const acceptRaw = Array.isArray(settings?.order_accept_days) ? settings.order_accept_days : [];
         const deliveryRaw = Array.isArray(settings?.delivery_days) ? settings.delivery_days : [];
         setOrderAcceptDays(acceptRaw.map((d: any) => String(d)));
@@ -313,6 +317,25 @@ function CheckoutPageContent() {
     : useRetryItems
       ? retryOrderItems
       : cartItems;
+
+  const fulfillment = useMemo(() => {
+    const hasSpecial = sourceItems.some((item: CheckoutItem) => Boolean(item.isSpecial));
+    const hasNormal = sourceItems.some((item: CheckoutItem) => !Boolean(item.isSpecial));
+    const isMixedFulfillment = hasSpecial && hasNormal;
+    const isPickupOnlyOrder = hasSpecial && !hasNormal;
+    return { hasSpecial, hasNormal, isMixedFulfillment, isPickupOnlyOrder };
+  }, [sourceItems]);
+
+  useEffect(() => {
+    if (!fulfillment.isMixedFulfillment) return;
+    toast.error("Meals must be ordered separately", {
+      description:
+        "Meals are pickup-only and can’t be combined with delivery items. Please go back to the cart and remove items from one type."
+    });
+    setStep(1);
+    setShippingStep(1);
+    setReviewStep(1);
+  }, [fulfillment.isMixedFulfillment]);
 
   useEffect(() => {
     if (isBuyNow) return;
@@ -486,6 +509,7 @@ function CheckoutPageContent() {
   const effectiveSubtotalForMinOrder = Math.max(0, subtotal - discountTotal);
 
   useDeliveryZone({
+    enabled: !fulfillment.isPickupOnlyOrder && !fulfillment.isMixedFulfillment,
     shippingStep,
     country: shippingInfo.country,
     city: shippingInfo.city,
@@ -535,6 +559,7 @@ function CheckoutPageContent() {
   }, 0);
 
   const shippingCost = (() => {
+    if (fulfillment.isPickupOnlyOrder) return 0;
     if (allFreeShipping) return 0;
     if (shippingZone) {
       const fee = Number(shippingZone.delivery_fee ?? 0);
@@ -727,7 +752,9 @@ function CheckoutPageContent() {
       const required =
         shippingStep === 1
           ? [...personal]
-          : [...personal, ...delivery];
+          : fulfillment.isPickupOnlyOrder
+            ? [...personal]
+            : [...personal, ...delivery];
       const missing: string[] = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
       if (shippingStep === 1) {
         const phoneValue = shippingInfo.phone?.trim() || "";
@@ -788,10 +815,25 @@ function CheckoutPageContent() {
         toast.error("Special item unavailable", { description: specialError });
         return;
       }
+
+      if (fulfillment.isMixedFulfillment) {
+        toast.error("Meals must be ordered separately", {
+          description:
+            "Meals are pickup-only and can’t be combined with delivery items. Please go back to the cart and remove items from one type."
+        });
+        return;
+      }
     
     if (step === 1) {
       if (shippingStep === 1) {
         setShippingStep(2);
+        return;
+      }
+      if (fulfillment.isPickupOnlyOrder) {
+        setShippingZone(null);
+        setDeliveryCheckError(null);
+        setStep(2);
+        setReviewStep(1);
         return;
       }
       try {
@@ -831,7 +873,9 @@ function CheckoutPageContent() {
     }
 
     let effectiveZone = shippingZone;
-    if (!effectiveZone) {
+    if (fulfillment.isPickupOnlyOrder) {
+      effectiveZone = null;
+    } else if (!effectiveZone) {
       try {
         const refreshed = await ApiService.validateDeliveryZone({
           country: shippingInfo.country,
@@ -847,14 +891,16 @@ function CheckoutPageContent() {
     if (step < 3) {
       const mobile = isMobile;
       if (step === 2) {
-        const minOrderAmount = Number(
-          effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
-        );
-        if (Number.isFinite(minOrderAmount) && effectiveSubtotalForMinOrder < minOrderAmount) {
-          toast.error("Minimum order amount not met", {
-            description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
-          });
-          return;
+        if (!fulfillment.isPickupOnlyOrder) {
+          const minOrderAmount = Number(
+            effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
+          );
+          if (Number.isFinite(minOrderAmount) && effectiveSubtotalForMinOrder < minOrderAmount) {
+            toast.error("Minimum order amount not met", {
+              description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
+            });
+            return;
+          }
         }
       }
       if (step === 2 && mobile && reviewStep === 1) {
@@ -864,14 +910,16 @@ function CheckoutPageContent() {
       setStep((step + 1) as CheckoutStep);
       } else {
         try {
-          const minOrderAmount = Number(
-            effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
-          );
-        if (Number.isFinite(minOrderAmount) && effectiveSubtotalForMinOrder < minOrderAmount) {
-          toast.error("Minimum order amount not met", {
-            description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
-          });
-          return;
+          if (!fulfillment.isPickupOnlyOrder) {
+            const minOrderAmount = Number(
+              effectiveZone?.min_order_amount ?? effectiveZone?.minOrderAmount ?? NaN
+            );
+            if (Number.isFinite(minOrderAmount) && effectiveSubtotalForMinOrder < minOrderAmount) {
+              toast.error("Minimum order amount not met", {
+                description: `Minimum order amount is ${formatCurrency(minOrderAmount)} for this delivery zone.`
+              });
+              return;
+            }
           }
           setIsSubmitting(true);
           const retryOrderIdNum = retryOrderId ? Number(retryOrderId) : null;
@@ -902,37 +950,40 @@ function CheckoutPageContent() {
             }
             return;
           }
+          const pickupStreet = String(storeAddress || "").trim();
           const payload = {
           customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
           customer_email: shippingInfo.email,
           customer_phone: shippingInfo.phone,
-          address_street: shippingInfo.street,
-          address_house: shippingInfo.houseNumber,
-          address_apartment: shippingInfo.apartment,
-          address_city: shippingInfo.city,
-          address_region: shippingInfo.region,
-          address_postal_code: shippingInfo.postalCode,
-          address_country: shippingInfo.country,
-          subtotal,
-          shipping_fee: shippingCost,
-          tax_amount: tax,
-          discount_amount: discountTotal,
-          coupon_code: appliedCoupon?.code ? String(appliedCoupon.code).trim() : null,
-          total_amount: total,
-          status: 'Pending',
-            items: displayItems.map((item: CheckoutItem) => ({
-            product_id: item.id,
-            variant_id: item.variantId || null,
-            product_name: item.name,
-            variant_name: item.variantName || item.weight || null,
-            unit_price: item.price,
-            quantity: item.quantity,
-            total_price: item.price * item.quantity
-          })),
-          payment: {
-            method: paymentMethod,
-            status: paymentMethod === 'cod' || paymentMethod === 'worldline' ? 'Pending' : 'Paid',
-            amount: total
+          address_street: fulfillment.isPickupOnlyOrder && pickupStreet ? pickupStreet : shippingInfo.street,
+          address_house: fulfillment.isPickupOnlyOrder ? null : shippingInfo.houseNumber,
+          address_apartment: fulfillment.isPickupOnlyOrder ? null : shippingInfo.apartment,
+          address_city: fulfillment.isPickupOnlyOrder ? null : shippingInfo.city,
+          address_region: fulfillment.isPickupOnlyOrder ? null : shippingInfo.region,
+            address_postal_code: fulfillment.isPickupOnlyOrder ? null : shippingInfo.postalCode,
+            address_country: shippingInfo.country,
+            subtotal,
+            shipping_fee: fulfillment.isPickupOnlyOrder ? 0 : shippingCost,
+            tax_amount: tax,
+            discount_amount: discountTotal,
+            coupon_code: appliedCoupon?.code ? String(appliedCoupon.code).trim() : null,
+            total_amount: total,
+            status: 'Pending',
+              items: displayItems.map((item: CheckoutItem) => ({
+              product_id: item.id,
+              variant_id: item.variantId || null,
+              product_name: item.name,
+              variant_name: item.variantName || item.weight || null,
+              unit_price: item.price,
+              quantity: item.quantity,
+              total_price: item.price * item.quantity,
+              product_type: item.isSpecial ? "special" : "normal",
+              is_special: Boolean(item.isSpecial)
+            })),
+            payment: {
+              method: paymentMethod,
+              status: paymentMethod === 'cod' || paymentMethod === 'worldline' ? 'Pending' : 'Paid',
+              amount: total
           }
         };
 
@@ -1073,6 +1124,9 @@ function CheckoutPageContent() {
         displayTotal={displayTotal}
         paymentLabel={paymentLabel}
         shippingInfo={shippingInfo}
+        isPickupOnlyOrder={fulfillment.isPickupOnlyOrder}
+        storeName={storeName}
+        storeAddress={storeAddress}
       />
     );
   }
@@ -1105,14 +1159,14 @@ function CheckoutPageContent() {
             const steps = isMobile
               ? [
                   { label: "Personal", icon: User },
-                  { label: "Delivery", icon: MapPin },
+                  { label: fulfillment.isPickupOnlyOrder ? "Pickup" : "Delivery", icon: MapPin },
                   { label: "Review", icon: CheckCircle },
                   { label: "Summary", icon: FileText },
                   { label: "Payment", icon: CreditCard },
                 ]
               : [
                   { label: "Personal", icon: User },
-                  { label: "Delivery", icon: MapPin },
+                  { label: fulfillment.isPickupOnlyOrder ? "Pickup" : "Delivery", icon: MapPin },
                   { label: "Review", icon: CheckCircle },
                   { label: "Payment", icon: CreditCard },
                 ];
@@ -1179,6 +1233,9 @@ function CheckoutPageContent() {
                 {/* STEP 1: Shipping Information */}
                 {step === 1 && (
                   <ShippingStep
+                    isPickupOnlyOrder={fulfillment.isPickupOnlyOrder}
+                    storeName={storeName}
+                    storeAddress={storeAddress}
                     shippingStep={shippingStep}
                     setShippingStep={setShippingStep}
                     onContinueToDelivery={() => {
@@ -1246,6 +1303,9 @@ function CheckoutPageContent() {
                     isMobile={isMobile}
                     reviewStep={reviewStep}
                     setReviewStep={setReviewStep}
+                    isPickupOnlyOrder={fulfillment.isPickupOnlyOrder}
+                    storeName={storeName}
+                    storeAddress={storeAddress}
                     displayItems={displayItems}
                     couponCode={couponCode}
                     setCouponCode={setCouponCode}

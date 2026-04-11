@@ -89,6 +89,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (item: Omit<CartItem, 'quantity'>, showNotification: boolean = true) => {
     setCartItems(prevItems => {
+      const nextIsSpecial = Boolean(item.isSpecial);
+      const hasSpecial = prevItems.some((i) => Boolean(i.isSpecial));
+      const hasNormal = prevItems.some((i) => !Boolean(i.isSpecial));
+      const wouldMix = (nextIsSpecial && hasNormal) || (!nextIsSpecial && hasSpecial);
+      if (wouldMix) {
+        if (showNotification) {
+          toast.error("Meals must be ordered separately", {
+            description:
+              "Meals are pickup-only and can’t be combined with delivery items. Please clear the cart or checkout first.",
+            action: {
+              label: "View Cart",
+              onClick: () => (window.location.href = "/cart")
+            }
+          });
+        }
+        return prevItems;
+      }
+
       const existingItem = prevItems.find(cartItem => isSameCartLine(cartItem, item));
       const limitRaw = item.bulkOrderLimit ?? null;
       const limit = Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;

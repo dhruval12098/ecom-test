@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { MapPin, User, Building, FileText, Truck, AlertCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import PickupLocationCard from "../../PickupLocationCard";
 
 type ShippingStepProps = {
+  isPickupOnlyOrder?: boolean;
+  storeName?: string | null;
+  storeAddress?: string | null;
   shippingStep: 1 | 2;
   setShippingStep: (value: 1 | 2) => void;
   onContinueToDelivery: () => void;
@@ -33,6 +37,9 @@ type ShippingStepProps = {
 };
 
 export default function ShippingStep({
+  isPickupOnlyOrder = false,
+  storeName = null,
+  storeAddress = null,
   shippingStep,
   setShippingStep,
   onContinueToDelivery,
@@ -67,7 +74,7 @@ export default function ShippingStep({
         <div className="w-10 h-10 bg-gray-50 border border-gray-200 rounded-full flex items-center justify-center">
           <MapPin className="h-5 w-5 text-[#266000]" />
         </div>
-        {shippingStep === 1 ? "Personal Details" : "Delivery Details"}
+        {shippingStep === 1 ? "Personal Details" : isPickupOnlyOrder ? "Pickup Details" : "Delivery Details"}
       </h2>
 
       {shippingStep === 1 && (
@@ -149,7 +156,7 @@ export default function ShippingStep({
               onClick={onContinueToDelivery}
               className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors"
             >
-              Continue to Delivery
+              Continue to {isPickupOnlyOrder ? "Pickup" : "Delivery"}
             </button>
           </div>
         </>
@@ -157,12 +164,22 @@ export default function ShippingStep({
 
       {shippingStep === 2 && (
         <>
+          {isPickupOnlyOrder && (
+            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              Meals are pickup-only. No delivery validation or shipping fee will be applied.
+            </div>
+          )}
           <div className="mb-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Building className="h-4 w-4 text-[#266000]" />
-              Delivery Address
+              {isPickupOnlyOrder ? "Address Details" : "Delivery Address"}
             </h3>
-            {user && savedAddresses.length > 0 && (
+
+            {isPickupOnlyOrder ? (
+              <PickupLocationCard storeName={storeName} storeAddress={storeAddress} />
+            ) : null}
+
+            {!isPickupOnlyOrder && user && savedAddresses.length > 0 && (
               <div className="mb-6 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="block text-sm font-semibold text-gray-900">
@@ -263,7 +280,7 @@ export default function ShippingStep({
                 )}
               </div>
             )}
-            {(!user || savedAddresses.length === 0 || selectedAddressId === null) && (
+            {!isPickupOnlyOrder && (!user || savedAddresses.length === 0 || selectedAddressId === null) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label htmlFor="street" className="block text-sm font-semibold text-gray-900 mb-2">
@@ -517,12 +534,12 @@ export default function ShippingStep({
             <button
               type="submit"
               className="bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-8 rounded-xl font-bold text-sm md:text-base transition-colors disabled:opacity-70"
-              disabled={deliveryCheckLoading}
+              disabled={!isPickupOnlyOrder && deliveryCheckLoading}
             >
-              {deliveryCheckLoading ? "Checking delivery..." : "Continue to Review"}
+              {!isPickupOnlyOrder && deliveryCheckLoading ? "Checking delivery..." : "Continue to Review"}
             </button>
           </div>
-          {deliveryCheckError && (
+          {!isPickupOnlyOrder && deliveryCheckError && (
             <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-red-200 bg-red-50 px-4 py-3">
               <div className="flex items-start gap-3 text-red-800">
                 <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -544,7 +561,7 @@ export default function ShippingStep({
               </div>
             </div>
           )}
-          {shippingStep === 2 && shippingInfo.postalCode && belowMinOrder && (
+          {!isPickupOnlyOrder && shippingStep === 2 && shippingInfo.postalCode && belowMinOrder && (
             <div className="mt-4 w-full max-w-xl ml-auto rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="text-sm text-amber-900">
                 <p className="font-semibold">Minimum order amount not met</p>

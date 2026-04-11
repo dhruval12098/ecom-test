@@ -6,6 +6,9 @@ type ReviewStepProps = {
   isMobile: boolean;
   reviewStep: 1 | 2;
   setReviewStep: (value: 1 | 2) => void;
+  isPickupOnlyOrder?: boolean;
+  storeName?: string | null;
+  storeAddress?: string | null;
   displayItems: any[];
   couponCode: string;
   setCouponCode: (value: string) => void;
@@ -39,6 +42,9 @@ export default function ReviewStep({
   isMobile,
   reviewStep,
   setReviewStep,
+  isPickupOnlyOrder = false,
+  storeName = null,
+  storeAddress = null,
   displayItems,
   couponCode,
   setCouponCode,
@@ -67,6 +73,7 @@ export default function ReviewStep({
   onEditPayment,
   onBackToDelivery
 }: ReviewStepProps) {
+  const pickupStreet = String(storeAddress || "").trim();
   return (
     <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-4 md:p-6 lg:p-4">
       {isMobile && reviewStep === 2 ? (
@@ -287,7 +294,7 @@ export default function ReviewStep({
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-gray-900 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#266000]" />
-                Delivery Address
+                {isPickupOnlyOrder ? "Pickup Location" : "Delivery Address"}
               </h3>
               <button
                 type="button"
@@ -302,24 +309,32 @@ export default function ReviewStep({
                 {shippingInfo.firstName} {shippingInfo.lastName}
                 {shippingInfo.company ? `, ${shippingInfo.company}` : ""}
               </p>
-              <p>
-                {[
-                  `${shippingInfo.street} ${shippingInfo.houseNumber}`.trim(),
-                  shippingInfo.apartment,
-                  `${shippingInfo.postalCode} ${shippingInfo.city}`.trim(),
-                  shippingInfo.region,
-                  shippingInfo.country,
-                ]
-                  .filter((part) => String(part || "").trim().length > 0)
-                  .join(", ")}
-              </p>
+              {isPickupOnlyOrder ? (
+                <p>
+                  {[storeName, pickupStreet]
+                    .filter((part) => String(part || "").trim().length > 0)
+                    .join(", ") || "Pickup address not configured in admin settings."}
+                </p>
+              ) : (
+                <p>
+                  {[
+                    `${shippingInfo.street} ${shippingInfo.houseNumber}`.trim(),
+                    shippingInfo.apartment,
+                    `${shippingInfo.postalCode} ${shippingInfo.city}`.trim(),
+                    shippingInfo.region,
+                    shippingInfo.country,
+                  ]
+                    .filter((part) => String(part || "").trim().length > 0)
+                    .join(", ")}
+                </p>
+              )}
               <p className="mt-2">
                 {[shippingInfo.email, shippingInfo.phone]
                   .filter((part) => String(part || "").trim().length > 0)
                   .join(" • ")}
               </p>
             </div>
-            {scheduleEnabled && (
+            {scheduleEnabled && !isPickupOnlyOrder && (
               <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
                 <p className="font-semibold mb-1">Delivery Schedule</p>
                 <p>Order acceptance: {scheduleAcceptLabel}</p>
@@ -352,7 +367,10 @@ export default function ReviewStep({
             <AlertCircle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
             <div className="text-sm text-yellow-800">
               <p className="font-semibold mb-1">Please review your order carefully</p>
-              <p>Once placed, some details cannot be changed. Make sure your delivery address and contact information are correct.</p>
+              <p>
+                Once placed, some details cannot be changed. Make sure your{" "}
+                {isPickupOnlyOrder ? "pickup details" : "delivery address"} and contact information are correct.
+              </p>
             </div>
           </div>
 

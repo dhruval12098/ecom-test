@@ -23,6 +23,7 @@ declare module "@/lib/api" {
     static getSpecialSubcategories(categoryId?: any, options?: any): Promise<any>;
     static getSpecialCategoriesTree(options?: any): Promise<any>;
     static getHomepageSection(sectionKey: any): Promise<any>;
+    static getHomepageSectionDefs(options?: { bypassCache?: boolean }): Promise<any>;
     static getActiveSchedule(productId: any, variantId?: any, options?: any): Promise<any>;
     static getAnnouncementBar(): Promise<any>;
     static getContactInfo(): Promise<any>;

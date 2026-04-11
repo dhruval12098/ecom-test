@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import ApiService from "@/lib/api";
 
 type UseDeliveryZoneArgs = {
+  enabled?: boolean;
   shippingStep: number;
   country: string;
   city: string;
@@ -13,6 +14,7 @@ type UseDeliveryZoneArgs = {
 };
 
 export function useDeliveryZone({
+  enabled = true,
   shippingStep,
   country,
   city,
@@ -23,6 +25,7 @@ export function useDeliveryZone({
   formatCurrency
 }: UseDeliveryZoneArgs) {
   useEffect(() => {
+    if (!enabled) return;
     if (shippingStep !== 2) return;
 
     const safeCountry = country?.trim();
@@ -74,5 +77,5 @@ export function useDeliveryZone({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [shippingStep, country, city, postalCode, effectiveSubtotalForMinOrder]);
+  }, [enabled, shippingStep, country, city, postalCode, effectiveSubtotalForMinOrder]);
 }

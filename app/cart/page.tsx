@@ -223,7 +223,14 @@ export default function CartPage() {
     ? zoneThreshold
     : (freeRate?.min_order ? Number(freeRate.min_order) : null);
   const freeThreshold = allFreeShipping ? null : computedFreeThreshold;
+
+  const hasSpecialItems = purchasableItems.some((item) => Boolean(item.isSpecial));
+  const hasNormalItems = purchasableItems.some((item) => !Boolean(item.isSpecial));
+  const isMixedFulfillment = hasSpecialItems && hasNormalItems;
+  const isPickupOnlyOrder = hasSpecialItems && !hasNormalItems;
+
   const shippingCost = (() => {
+    if (isPickupOnlyOrder) return 0;
     if (allFreeShipping) return 0;
     if (shippingZone) {
       const zoneFee = Number(shippingZone.delivery_fee ?? 0);
@@ -293,7 +300,13 @@ export default function CartPage() {
   const belowMinOrder = hasMinOrderAmount && subtotal < minOrderAmount;
   const deliveryValidated = postalChecked && !postalError && Boolean(shippingZone);
   const hasPurchasableItems = purchasableItems.length > 0;
-  const canProceedCheckout = hasPurchasableItems && deliveryValidated && !belowMinOrder;
+  const effectiveBelowMinOrder = isPickupOnlyOrder ? false : belowMinOrder;
+  const effectiveDeliveryValidated = isPickupOnlyOrder ? true : deliveryValidated;
+  const canProceedCheckout =
+    hasPurchasableItems &&
+    !isMixedFulfillment &&
+    effectiveDeliveryValidated &&
+    !effectiveBelowMinOrder;
 
   useEffect(() => {
     const loadLiveProducts = async () => {
@@ -304,12 +317,12 @@ export default function CartPage() {
           .map((item) => Number(item.id))
           .filter((id) => Number.isFinite(id) && id > 0);
         if (ids.length === 0) return;
-        const results = await Promise.all(ids.map((id) => ApiService.getProductById(id)));
+        const results = await Promise.allSettled(ids.map((id) => ApiService.getProductById(id)));
         const map: Record<number, any> = {};
-        results.forEach((p) => {
-          if (p && typeof p.id === "number") {
-            map[p.id] = p;
-          }
+        results.forEach((result) => {
+          if (result.status !== "fulfilled") return;
+          const p: any = result.value;
+          if (p && typeof p.id === "number") map[p.id] = p;
         });
         setLiveMap(map);
       } catch (e) {
@@ -539,8 +552,13 @@ export default function CartPage() {
                         <div className="flex items-start gap-3">
                           <Link
                             href={productUrl}
-                            className="w-10 h-10 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0"
+                            className="w-10 h-10 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0 relative"
                           >
+                            {Boolean(item.isSpecial) && (
+                              <span className="absolute top-0 left-0 bg-black/85 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-br-md">
+                                Meals
+                              </span>
+                            )}
                             {item.imageUrl ? (
                               <img
                                 src={item.imageUrl}
@@ -684,8 +702,13 @@ export default function CartPage() {
                               <div className="flex items-start gap-2">
                                 <Link
                                   href={productUrl}
-                                  className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0"
+                                  className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0 relative"
                                 >
+                                  {Boolean(item.isSpecial) && (
+                                    <span className="absolute top-0 left-0 bg-black/85 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-br-md">
+                                      Meals
+                                    </span>
+                                  )}
                                   {item.imageUrl ? (
                                     <img
                                       src={item.imageUrl}
@@ -843,40 +866,63 @@ export default function CartPage() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-3">Order Summary</h2>
 
                   <div className="bg-gray-50 border border-black rounded-xl p-3 mb-4">
-                    <div className="text-xs font-semibold text-gray-900 mb-2">
-                      Check delivery & free shipping
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={postalCode}
-                        onChange={(e) => {
-                          setPostalCode(e.target.value);
-                          setPostalChecked(false);
-                        }}
-                        placeholder="Enter postal code"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs shadow-sm focus:border-gray-400 focus:ring-0"
-                      />
-                      <button
-                        type="button"
-                        onClick={validatePostalCode}
-                        disabled={postalLoading}
-                        className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
-                      >
-                        {postalLoading ? "Checking..." : "Check"}
-                      </button>
-                    </div>
-                    {postalChecked && postalError && (
-                      <div className="mt-2 text-xs text-red-600">{postalError}</div>
-                    )}
-                    {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        Free shipping above {formatCurrency(freeThreshold)} for your area.
-                      </div>
-                    )}
-                    {postalChecked && !postalError && !shippingZone && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        Delivery availability confirmed.
-                      </div>
+                    {isMixedFulfillment ? (
+                      <>
+                        <div className="text-xs font-semibold text-gray-900 mb-2">
+                          Meals must be ordered separately
+                        </div>
+                        <div className="text-xs text-gray-700">
+                          Meals are pickup-only and can’t be combined with delivery items. Please remove items from one
+                          type and try again.
+                        </div>
+                      </>
+                    ) : isPickupOnlyOrder ? (
+                      <>
+                        <div className="text-xs font-semibold text-gray-900 mb-2">
+                          Pickup-only order
+                        </div>
+                        <div className="text-xs text-gray-700">
+                          Meals are pickup-only. No delivery validation or shipping fee will be applied.
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-xs font-semibold text-gray-900 mb-2">
+                          Check delivery & free shipping
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={postalCode}
+                            onChange={(e) => {
+                              setPostalCode(e.target.value);
+                              setPostalChecked(false);
+                            }}
+                            placeholder="Enter postal code"
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs shadow-sm focus:border-gray-400 focus:ring-0"
+                          />
+                          <button
+                            type="button"
+                            onClick={validatePostalCode}
+                            disabled={postalLoading}
+                            className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+                          >
+                            {postalLoading ? "Checking..." : "Check"}
+                          </button>
+                        </div>
+                        {postalChecked && postalError && (
+                          <div className="mt-2 text-xs text-red-600">{postalError}</div>
+                        )}
+                        {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            Free shipping above {formatCurrency(freeThreshold)} for your area.
+                          </div>
+                        )}
+                        {postalChecked && !postalError && !shippingZone && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            Delivery availability confirmed.
+                          </div>
+                        )}
+                      </>
                     )}
                    
                   </div>
@@ -890,12 +936,14 @@ export default function CartPage() {
                     <div className="flex justify-between text-sm text-gray-600">
                       <span>Shipping</span>
                       <span className="font-semibold text-gray-900">
-                        {!hasPostalCode ? "-" : (
-                          shippingCost === 0 ? (
-                            <span className="text-[#266000]">FREE</span>
-                          ) : (
-                            `${formatCurrency(shippingCost)}`
-                          )
+                        {isMixedFulfillment ? "-" : isPickupOnlyOrder ? (
+                          <span className="text-[#266000]">FREE</span>
+                        ) : !hasPostalCode ? (
+                          "-"
+                        ) : shippingCost === 0 ? (
+                          <span className="text-[#266000]">FREE</span>
+                        ) : (
+                          `${formatCurrency(shippingCost)}`
                         )}
                       </span>
                     </div>
@@ -984,7 +1032,7 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {hasPurchasableItems && !deliveryValidated && (
+                  {hasPurchasableItems && !isMixedFulfillment && !effectiveDeliveryValidated && (
                     <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
                       <p className="text-sm font-semibold text-amber-900">Delivery check required</p>
                       <p className="mt-1 text-sm text-amber-800">
@@ -993,7 +1041,7 @@ export default function CartPage() {
                     </div>
                   )}
 
-                  {deliveryValidated && belowMinOrder && (
+                  {effectiveDeliveryValidated && !isMixedFulfillment && effectiveBelowMinOrder && (
                     <div className="mb-4 md:mb-6 rounded-xl border border-amber-200 bg-amber-50 p-3 md:p-4">
                       <p className="text-sm font-semibold text-amber-900">Minimum order amount not met</p>
                       <p className="mt-1 text-sm text-amber-800">
@@ -1024,9 +1072,11 @@ export default function CartPage() {
                     >
                       {!hasPurchasableItems
                         ? "No in-stock items to checkout"
-                        : deliveryValidated
-                          ? "Minimum order not met"
-                          : "Validate delivery to continue"}
+                        : isMixedFulfillment
+                          ? "Meals must be ordered separately"
+                          : effectiveDeliveryValidated
+                            ? "Minimum order not met"
+                            : "Validate delivery to continue"}
                     </button>
                   )}
                   
@@ -1141,45 +1191,66 @@ export default function CartPage() {
         </div>
         <div className="px-4 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-72px)]">
           <div className="bg-gray-50 border border-black rounded-xl p-3">
-            <div className="text-xs font-semibold text-gray-900 mb-2">Check delivery & free shipping</div>
-            <div className="flex items-center gap-2">
-              <input
-                value={postalCode}
-                onChange={(e) => {
-                  setPostalCode(e.target.value);
-                  setPostalChecked(false);
-                }}
-                placeholder="Enter postal code"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
-              />
-              <button
-                type="button"
-                onClick={validatePostalCode}
-                disabled={postalLoading}
-                className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
-              >
-                {postalLoading ? "Checking..." : "Check"}
-              </button>
-            </div>
-            {postalChecked && postalError && (
-              <div className="mt-2 text-xs text-red-600">{postalError}</div>
-            )}
-            {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
-              <div className="mt-2 text-xs text-gray-600">
-                Free shipping above {formatCurrency(freeThreshold)} for your area.
-              </div>
-            )}
-            {postalChecked && !postalError && !shippingZone && (
-              <div className="mt-2 text-xs text-gray-600">
-                Delivery availability confirmed.
-              </div>
-            )}
-            {hasExcludedFreeShippingItems && (
-              <div className="mt-2 text-xs text-amber-800">
-                {excludedCategoryNames.length > 0
-                  ? `Items in ${excludedCategoryNames.join(", ")} are excluded from the free shipping threshold.`
-                  : ""}
-              </div>
+            {isMixedFulfillment ? (
+              <>
+                <div className="text-xs font-semibold text-gray-900 mb-2">
+                  Meals must be ordered separately
+                </div>
+                <div className="text-xs text-gray-700">
+                  Meals are pickup-only and can’t be combined with delivery items. Please remove items from one type and
+                  try again.
+                </div>
+              </>
+            ) : isPickupOnlyOrder ? (
+              <>
+                <div className="text-xs font-semibold text-gray-900 mb-2">Pickup-only order</div>
+                <div className="text-xs text-gray-700">
+                  Meals are pickup-only. No delivery validation or shipping fee will be applied.
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-semibold text-gray-900 mb-2">Check delivery & free shipping</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={postalCode}
+                    onChange={(e) => {
+                      setPostalCode(e.target.value);
+                      setPostalChecked(false);
+                    }}
+                    placeholder="Enter postal code"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-400 focus:ring-0"
+                  />
+                  <button
+                    type="button"
+                    onClick={validatePostalCode}
+                    disabled={postalLoading}
+                    className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    {postalLoading ? "Checking..." : "Check"}
+                  </button>
+                </div>
+                {postalChecked && postalError && (
+                  <div className="mt-2 text-xs text-red-600">{postalError}</div>
+                )}
+                {postalChecked && !postalError && shippingZone && freeThreshold !== null && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Free shipping above {formatCurrency(freeThreshold)} for your area.
+                  </div>
+                )}
+                {postalChecked && !postalError && !shippingZone && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    Delivery availability confirmed.
+                  </div>
+                )}
+                {hasExcludedFreeShippingItems && (
+                  <div className="mt-2 text-xs text-amber-800">
+                    {excludedCategoryNames.length > 0
+                      ? `Items in ${excludedCategoryNames.join(", ")} are excluded from the free shipping threshold.`
+                      : ""}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -1191,12 +1262,14 @@ export default function CartPage() {
             <div className="flex justify-between text-sm text-gray-600">
               <span>Shipping</span>
               <span className="font-semibold text-gray-900">
-                {!hasPostalCode ? "-" : (
-                  shippingCost === 0 ? (
-                    <span className="text-[#266000]">FREE</span>
-                  ) : (
-                    `${formatCurrency(shippingCost)}`
-                  )
+                {isMixedFulfillment ? "-" : isPickupOnlyOrder ? (
+                  <span className="text-[#266000]">FREE</span>
+                ) : !hasPostalCode ? (
+                  "-"
+                ) : shippingCost === 0 ? (
+                  <span className="text-[#266000]">FREE</span>
+                ) : (
+                  `${formatCurrency(shippingCost)}`
                 )}
               </span>
             </div>
@@ -1281,7 +1354,7 @@ export default function CartPage() {
             </div>
           )}
 
-          {hasPurchasableItems && !deliveryValidated && (
+          {hasPurchasableItems && !isMixedFulfillment && !effectiveDeliveryValidated && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
               <p className="text-sm font-semibold text-amber-900">Delivery check required</p>
               <p className="mt-1 text-sm text-amber-800">
@@ -1290,7 +1363,7 @@ export default function CartPage() {
             </div>
           )}
 
-          {deliveryValidated && belowMinOrder && (
+          {effectiveDeliveryValidated && !isMixedFulfillment && effectiveBelowMinOrder && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
               <p className="text-sm font-semibold text-amber-900">Minimum order amount not met</p>
               <p className="mt-1 text-sm text-amber-800">
@@ -1321,9 +1394,11 @@ export default function CartPage() {
             >
               {!hasPurchasableItems
                 ? "No in-stock items to checkout"
-                : deliveryValidated
-                  ? "Minimum order not met"
-                  : "Validate delivery to continue"}
+                : isMixedFulfillment
+                  ? "Meals must be ordered separately"
+                  : effectiveDeliveryValidated
+                    ? "Minimum order not met"
+                    : "Validate delivery to continue"}
             </button>
           )}
         </div>

@@ -288,6 +288,16 @@ export default function ProductCard({
         </div>
       )}
 
+      {Boolean(product?.isSpecial) && (
+        <div
+          className={`absolute left-0 z-10 bg-black/85 text-white text-[10px] sm:text-xs font-semibold px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-br-lg ${
+            hasDiscount ? "top-7 sm:top-9" : "top-0"
+          }`}
+        >
+          Meals
+        </div>
+      )}
+
       {/* ===== IMAGE AREA (fixed on mobile to prevent content clipping) ===== */}
       <div
         className={`relative w-full shrink-0 ${

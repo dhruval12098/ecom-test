@@ -37,7 +37,6 @@ interface Category {
   id: number;
   name: string;
   slug: string;
-  image?: string;
   subcategories: Subcategory[];
   isSpecial?: boolean;
 }
@@ -122,7 +121,6 @@ export default function Header() {
           id: cat.id,
           name: cat.name,
           slug: cat.slug,
-          image: cat.image || cat.image_url || undefined,
           subcategories: subByCat[String(cat.id)] || [],
           isSpecial: true
         }));
@@ -189,7 +187,12 @@ export default function Header() {
   const itemsPerRow = columnsPerRow;
   const navCategories: Category[] = [...specialCategories, ...categories];
   const totalRows = Math.ceil(navCategories.length / itemsPerRow);
-  const displayedCategories: Category[] = showAll ? navCategories : navCategories.slice(0, itemsPerRow * 2);
+  const isMobile = columnsPerRow === 3;
+  const displayedCategories: Category[] = showAll
+    ? navCategories
+    : isMobile
+      ? navCategories.slice(0, 10)
+      : navCategories.slice(0, itemsPerRow * 2);
 
   useEffect(() => {
     const updateColumns = () => {
@@ -355,7 +358,7 @@ export default function Header() {
 
         <div style={{ backgroundColor: '#266000' }} className="relative">
           <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-white text-[12px] font-medium">
+            <div className="grid grid-cols-5 gap-x-3 gap-y-2 text-white text-[11px] font-medium sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2 sm:text-[12px]">
               {loading ? (
                 <div className="col-span-full text-center py-4">Loading categories...</div>
               ) : (
@@ -371,10 +374,15 @@ export default function Header() {
                     >
                       <Link 
                         href={baseHref}
-                        className="flex items-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-0.5 font-medium"
+                        className="flex items-center justify-center gap-1 cursor-pointer hover:text-gray-300 transition-colors py-0.5 font-medium sm:justify-start"
+                        title={item.name}
                       >
-                        <span className="font-semibold">{item.name}</span>
-                        <ChevronDown size={10} />
+                        <span className="font-semibold whitespace-normal break-words text-center sm:text-left">
+                          {item.name}
+                        </span>
+                        <span className="hidden sm:inline-block">
+                          <ChevronDown size={10} />
+                        </span>
                       </Link>
                       
                       {/* Dropdown Menu */}

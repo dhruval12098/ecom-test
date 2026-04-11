@@ -7,14 +7,21 @@ type ConfirmationStepProps = {
   displayTotal: number;
   paymentLabel: string;
   shippingInfo: any;
+  isPickupOnlyOrder?: boolean;
+  storeName?: string | null;
+  storeAddress?: string | null;
 };
 
 export default function ConfirmationStep({
   orderNumber,
   displayTotal,
   paymentLabel,
-  shippingInfo
+  shippingInfo,
+  isPickupOnlyOrder = false,
+  storeName = null,
+  storeAddress = null
 }: ConfirmationStepProps) {
+  const pickupStreet = String(storeAddress || "").trim();
   return (
     <div className="min-h-screen bg-white fade-in">
       <section className="w-full py-12 md:py-20">
@@ -53,14 +60,26 @@ export default function ConfirmationStep({
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="text-sm text-gray-600 mb-1">Delivery Address</div>
+                  <div className="text-sm text-gray-600 mb-1">
+                    {isPickupOnlyOrder ? "Pickup Location" : "Delivery Address"}
+                  </div>
                   <div className="text-sm text-gray-900">
-                    {shippingInfo.street} {shippingInfo.houseNumber}
-                    {shippingInfo.apartment && `, ${shippingInfo.apartment}`}
-                    <br />
-                    {shippingInfo.postalCode} {shippingInfo.city}
-                    <br />
-                    {shippingInfo.country}
+                    {isPickupOnlyOrder ? (
+                      <>
+                        {[storeName, pickupStreet]
+                          .filter((part) => String(part || "").trim().length > 0)
+                          .join(", ") || "Pickup address not configured in admin settings."}
+                      </>
+                    ) : (
+                      <>
+                        {shippingInfo.street} {shippingInfo.houseNumber}
+                        {shippingInfo.apartment && `, ${shippingInfo.apartment}`}
+                        <br />
+                        {shippingInfo.postalCode} {shippingInfo.city}
+                        <br />
+                        {shippingInfo.country}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
