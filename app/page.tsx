@@ -74,6 +74,7 @@ interface HomeCategory {
   slug: string;
   image?: string | null;
   image_url?: string | null;
+  isSpecial?: boolean;
 }
 
 interface HomepageSectionItem {
@@ -143,6 +144,11 @@ export default async function HomePage() {
   );
 
   const shopCategories = (categoriesData || []) as HomeCategory[];
+  const specialCategories = (await ApiService.getSpecialCategories()) as HomeCategory[];
+  const mergedCategories: HomeCategory[] = [
+    ...shopCategories.map((category): HomeCategory => ({ ...category, isSpecial: false })),
+    ...((specialCategories || []).map((category): HomeCategory => ({ ...category, isSpecial: true })))
+  ];
 
   const allProducts: CategoryProduct[] = [];
   (categoriesData || []).forEach((category: any) => {
@@ -307,8 +313,8 @@ export default async function HomePage() {
             Shop By Category
           </h2>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-2.5 sm:gap-1 md:gap-3">
-            {(shopCategories.length > 0
-              ? shopCategories
+            {(mergedCategories.length > 0
+              ? mergedCategories
               : [
                   { id: 1, name: "Vegetables", slug: "vegetables" },
                   { id: 2, name: "Fruits", slug: "fruits" },
@@ -333,12 +339,13 @@ export default async function HomePage() {
               ];
               return (
                 <CategoryCard
-                  key={category.id || category.slug}
+                  key={`${category.isSpecial ? "special" : "category"}-${category.id || category.slug}`}
                   title={category.name}
                   prefix=""
                   bgColor={fallbackColors[index % fallbackColors.length]}
                   icon={fallbackIcons[index % fallbackIcons.length]}
                   slug={category.slug}
+                  href={category.isSpecial ? `/special/${category.slug}` : `/${category.slug}`}
                   imageUrl={
                     (category as any).image ||
                     (category as any).image_url ||

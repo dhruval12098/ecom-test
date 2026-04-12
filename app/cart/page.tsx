@@ -27,13 +27,24 @@ export default function CartPage() {
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const [scheduleMap, setScheduleMap] = useState<Record<string, any>>({});
 
-  const getProductUrl = (item: any) => {
-    const slug = item?.slug ?? item?.id;
-    if (item?.category && item?.subcategory && slug) {
-      return `/${item.category}/${item.subcategory}/${slug}`;
-    }
-    return "#";
-  };
+    const getProductUrl = (item: any) => {
+      const slug = item?.slug ?? item?.id;
+      if (item?.category && item?.subcategory && slug) {
+        const isSpecial = Boolean(item?.isSpecial);
+        if (isSpecial) {
+          if (item.category === "special") {
+            return `/special/${item.subcategory}`;
+          }
+          const categoryPath = String(item.category).startsWith("special/")
+            ? String(item.category)
+            : `special/${item.category}`;
+          return `/${categoryPath}/${item.subcategory}/${slug}`;
+        }
+
+        return `/${item.category}/${item.subcategory}/${slug}`;
+      }
+      return "#";
+    };
 
   const displayItems = useMemo(() => {
     return cartItems.map((item) => {
@@ -486,16 +497,16 @@ export default function CartPage() {
           </div>
         </section>
       ) : (
-        <section className="w-full py-8 md:py-12">
-          <div className="max-w-7xl mx-auto px-4 md:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <section className="w-full py-6 md:py-10">
+          <div className="max-w-[1400px] mx-auto px-5 md:px-10 lg:px-12">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-7">
               {/* Cart Items Column */}
-              <div className="lg:col-span-2 space-y-4 md:space-y-6">
+              <div className="lg:col-span-2 space-y-3 md:space-y-4">
                 {/* Benefits Banner */}
-                <div className="bg-gray-50 border border-black rounded-2xl p-4 md:p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
+                <div className="bg-gray-50 border border-black rounded-2xl p-3 md:p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 md:gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
                         <Truck className="h-5 w-5 text-[#266000]" />
                       </div>
                       <div className="text-left">
@@ -508,8 +519,8 @@ export default function CartPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
                         <Package className="h-5 w-5 text-[#266000]" />
                       </div>
                       <div className="text-left">
@@ -518,8 +529,8 @@ export default function CartPage() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 bg-white border border-black rounded-full flex items-center justify-center shrink-0">
                         <Shield className="h-5 w-5 text-[#266000]" />
                       </div>
                       <div className="text-left">
@@ -578,12 +589,17 @@ export default function CartPage() {
                           <div className="min-w-0 flex-1">
                             <Link
                               href={productUrl}
-                              className="text-sm font-semibold text-gray-900 truncate hover:underline"
+                              className="block text-[12px] font-semibold text-gray-900 leading-5 hover:underline overflow-hidden"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitBoxOrient: "vertical",
+                                WebkitLineClamp: 2
+                              }}
                             >
                               {item.name}
                             </Link>
                             {(item.variantName || item.weight) && (
-                              <div className="text-[11px] text-gray-600 truncate">
+                              <div className="text-[10px] text-gray-600 truncate">
                                 {item.variantName || item.weight}
                               </div>
                             )}
@@ -603,7 +619,7 @@ export default function CartPage() {
                           </button>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
-                          <div className="flex items-center border border-black rounded-lg overflow-hidden">
+                          <div className="flex items-center border border-black rounded-lg overflow-hidden shrink-0">
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
                               disabled={!item.inStock || item.quantity <= 1}
@@ -612,7 +628,7 @@ export default function CartPage() {
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="px-2.5 py-1 text-gray-900 text-xs font-semibold min-w-[32px] text-center border-x border-black">
+                            <span className="px-2.5 py-1 text-gray-900 text-xs font-semibold min-w-[38px] text-center border-x border-black">
                               {item.quantity}
                             </span>
                               <button
@@ -668,24 +684,24 @@ export default function CartPage() {
                     })}
                   </div>
 
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="min-w-full text-sm">
+                  <div className="hidden sm:block overflow-x-hidden">
+                    <table className="w-full table-fixed text-sm">
                       <thead className="bg-gray-50 text-gray-700">
                         <tr>
-                          <th className="px-3 md:px-4 py-3 text-left font-semibold">Item</th>
-                          <th className="px-3 md:px-4 py-3 text-center font-semibold whitespace-nowrap w-20">
+                          <th className="px-3 md:px-4 py-2.5 text-left font-semibold">Item</th>
+                          <th className="px-2.5 md:px-3 py-2.5 text-center font-semibold whitespace-nowrap w-24">
                             Qty
                           </th>
-                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap hidden md:table-cell w-24">
+                          <th className="px-3 md:px-4 py-2.5 text-right font-semibold whitespace-nowrap hidden md:table-cell w-24">
                             Unit
                           </th>
-                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap hidden md:table-cell w-20">
+                          <th className="px-3 md:px-4 py-2.5 text-right font-semibold whitespace-nowrap hidden md:table-cell w-20">
                             VAT
                           </th>
-                          <th className="px-3 md:px-4 py-3 text-right font-semibold whitespace-nowrap w-32">
+                          <th className="px-3 md:px-4 py-2.5 text-right font-semibold whitespace-nowrap w-28">
                             Total
                           </th>
-                          <th className="px-2 md:px-3 py-3 text-right font-semibold whitespace-nowrap w-12">
+                          <th className="px-2 md:px-3 py-2.5 text-right font-semibold whitespace-nowrap w-12">
                             <span className="sr-only">Remove</span>
                           </th>
                         </tr>
@@ -699,13 +715,13 @@ export default function CartPage() {
                               className={!item.inStock ? "opacity-50" : undefined}
                             >
                             <td className="px-3 md:px-4 py-2 align-top">
-                              <div className="flex items-start gap-2">
+                              <div className="flex items-start gap-3 min-w-0">
                                 <Link
                                   href={productUrl}
-                                  className="w-12 h-12 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0 relative"
+                                  className="w-10 h-10 md:w-11 md:h-11 rounded-lg overflow-hidden border border-black bg-gray-50 shrink-0 relative"
                                 >
                                   {Boolean(item.isSpecial) && (
-                                    <span className="absolute top-0 left-0 bg-black/85 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-br-md">
+                                    <span className="absolute top-0 left-0 bg-black/85 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-br-md">
                                       Meals
                                     </span>
                                   )}
@@ -725,15 +741,20 @@ export default function CartPage() {
                                     </div>
                                   )}
                                 </Link>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <Link
                                     href={productUrl}
-                                    className="font-semibold text-gray-900 text-sm truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px] hover:underline"
+                                    className="block font-semibold text-gray-900 text-[12px] md:text-sm leading-5 md:leading-6 hover:underline overflow-hidden"
+                                    style={{
+                                      display: "-webkit-box",
+                                      WebkitBoxOrient: "vertical",
+                                      WebkitLineClamp: 2
+                                    }}
                                   >
                                     {item.name}
                                   </Link>
                                     {(item.variantName || item.weight) && (
-                                      <div className="text-[11px] text-gray-600 mt-0.5 truncate max-w-[220px] md:max-w-[320px] lg:max-w-[360px]">
+                                      <div className="text-[10px] md:text-[11px] text-gray-600 mt-0.5 truncate">
                                         {item.variantName || item.weight}
                                       </div>
                                     )}
@@ -742,24 +763,24 @@ export default function CartPage() {
                                         Out of Stock
                                       </div>
                                     )}
-                                    <div className="md:hidden text-xs text-gray-600 mt-2">
+                                    <div className="md:hidden text-[11px] text-gray-600 mt-2">
                                       Unit: <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
                                     </div>
                                   </div>
                               </div>
                             </td>
-                              <td className="px-3 md:px-4 py-2 align-top">
+                              <td className="px-2.5 md:px-3 py-2 align-top">
                                 <div className="flex items-center justify-center">
-                                  <div className="flex items-center border border-black rounded-lg overflow-hidden">
+                                  <div className="flex items-center border border-black rounded-lg overflow-hidden shrink-0">
                                     <button
                                       onClick={() => updateQuantity(item.id, item.quantity - 1, item.variantId)}
                                       disabled={!item.inStock || item.quantity <= 1}
                                       className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                       aria-label="Decrease quantity"
                                     >
-                                      <Minus className="w-4 h-4" />
+                                      <Minus className="w-3.5 h-3.5" />
                                     </button>
-                                    <span className="px-2.5 py-1 text-gray-900 text-sm font-semibold min-w-[36px] text-center border-x border-black">
+                                    <span className="px-2.5 py-1 text-gray-900 text-sm font-semibold min-w-[40px] text-center border-x border-black">
                                       {item.quantity}
                                     </span>
                                       <button
@@ -796,7 +817,7 @@ export default function CartPage() {
                                         className="px-2 py-1 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                         aria-label="Increase quantity"
                                       >
-                                      <Plus className="w-4 h-4" />
+                                      <Plus className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 </div>
@@ -823,7 +844,7 @@ export default function CartPage() {
                                     {formatCurrency(item.originalPrice * item.quantity)}
                                   </div>
                                 )}
-                                <div className="text-base font-bold text-gray-900">
+                                <div className="text-sm md:text-base font-bold text-gray-900">
                                   {formatCurrency(item.price * item.quantity)}
                                 </div>
                                 {item.originalPrice && (
@@ -862,7 +883,7 @@ export default function CartPage() {
               
               {/* Order Summary Column */}
               <div className="lg:col-span-1 hidden sm:block">
-                <div className="bg-white border border-black rounded-2xl p-4 lg:p-5 lg:sticky lg:top-6">
+                  <div className="bg-white border border-black rounded-2xl p-5 lg:p-6 lg:sticky lg:top-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-3">Order Summary</h2>
 
                   <div className="bg-gray-50 border border-black rounded-xl p-3 mb-4">

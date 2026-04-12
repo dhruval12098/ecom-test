@@ -114,6 +114,7 @@ function CheckoutPageContent() {
   const [isEditingSelectedAddress, setIsEditingSelectedAddress] = useState(false);
   const [liveMap, setLiveMap] = useState<Record<number, any>>({});
   const [scheduleMap, setScheduleMap] = useState<Record<string, any>>({});
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState("");
@@ -746,6 +747,7 @@ function CheckoutPageContent() {
 
   const validateStep = (currentStep: number) => {
     let invalidPhone = false;
+    let invalidEmail = false;
     if (currentStep === 1) {
       const personal = ['firstName', 'lastName', 'email', 'phone'] as const;
       const delivery = ['street', 'postalCode', 'city', 'country'] as const;
@@ -755,6 +757,10 @@ function CheckoutPageContent() {
           : fulfillment.isPickupOnlyOrder
             ? [...personal]
             : [...personal, ...delivery];
+      const emailValue = shippingInfo.email?.trim() || "";
+      if (emailValue && !emailPattern.test(emailValue)) {
+        invalidEmail = true;
+      }
       const missing: string[] = required.filter((field) => !shippingInfo[field as keyof typeof shippingInfo]);
       if (shippingStep === 1) {
         const phoneValue = shippingInfo.phone?.trim() || "";
@@ -765,9 +771,9 @@ function CheckoutPageContent() {
       if (shippingStep === 2 && !shippingInfo.termsAccepted) {
         missing.push('termsAccepted');
       }
-      return { valid: missing.length === 0 && !invalidPhone, missing, invalidPhone };
+      return { valid: missing.length === 0 && !invalidPhone && !invalidEmail, missing, invalidPhone, invalidEmail };
     }
-    return { valid: true, missing: [] as string[], invalidPhone: false };
+    return { valid: true, missing: [] as string[], invalidPhone: false, invalidEmail: false };
   };
 
   const fieldLabels: Record<string, string> = {
@@ -790,6 +796,12 @@ function CheckoutPageContent() {
       if (validation.invalidPhone) {
         toast.error("Invalid phone number", {
           description: "Use +32 4xx-xxx-xxx for Belgium, or 2-digit country code + 10 digits."
+        });
+        return;
+      }
+      if (validation.invalidEmail) {
+        toast.error("Invalid email address", {
+          description: "Enter a valid email like name@example.com."
         });
         return;
       }

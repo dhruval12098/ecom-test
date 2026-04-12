@@ -7,7 +7,8 @@ export default function CategoryCard({
   bgColor = "#9ca308",
   icon = null,
   slug,
-  imageUrl
+  imageUrl,
+  href
 }: {
   title?: string;
   prefix?: string;
@@ -15,11 +16,13 @@ export default function CategoryCard({
   icon?: ReactNode | null;
   slug?: string;
   imageUrl?: string | null;
+  href?: string;
 }) {
   const categorySlug = slug || title.toLowerCase().replace(/\s+/g, '-');
+  const cardHref = href || `/${categorySlug}`;
   
   return (
-    <Link href={`/${categorySlug}`} className="w-full max-w-[185px] mx-auto h-32 sm:h-44 md:h-56 bg-gray-200 rounded-md overflow-hidden flex flex-col">
+    <Link href={cardHref} className="w-full max-w-[185px] mx-auto h-32 sm:h-44 md:h-56 bg-gray-200 rounded-md overflow-hidden flex flex-col">
       {/* Card Image/Color Area */}
       <div 
         className="w-full flex-1 rounded-md flex items-center justify-center min-h-[70%] overflow-hidden"

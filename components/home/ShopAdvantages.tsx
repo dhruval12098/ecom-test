@@ -1,24 +1,29 @@
-// components/ShopAdvantages.tsx
 import { FaLeaf, FaTruck, FaTags } from 'react-icons/fa';
 
 const advantages = [
   {
     id: 1,
     icon: <FaLeaf className="text-green-800 text-3xl" />,
-    title: 'Authentic Indian Products',
-    description: 'Over 200 products in stock',
+    title: 'Fresh & authentic Indian groceries',
+    description: 'High-quality products from trusted brands',
   },
   {
     id: 2,
     icon: <FaTruck className="text-green-800 text-3xl" />,
-    title: 'Free delivery from €50 (selected areas)',
-    description: 'Available in selected delivery zones',
+    title: 'Fast delivery in Ghent',
+    description: 'Same-day or next-day delivery available',
   },
   {
     id: 3,
     icon: <FaTags className="text-green-800 text-3xl" />,
-    title: 'Great deals across our range',
-    description: 'Enjoy regular discounts',
+    title: 'Weekly deals & special offers',
+    description: 'Save more on your favorite products',
+  },
+  {
+    id: 4,
+    icon: <FaLeaf className="text-green-800 text-3xl" />,
+    title: 'Fresh homemade meals (Tulsi Rasoi)',
+    description: 'Ready-to-eat authentic Indian dishes',
   },
 ];
 
@@ -26,13 +31,12 @@ const ShopAdvantages = () => {
   return (
     <div className="w-[95%] mx-auto border border-black rounded-3xl my-12 bg-white">
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left side: Heading + Points */}
         <div className="flex-1 p-10">
           <h2 className="text-4xl font-bold text-gray-800 mb-3">
-            Discover the advantages of our shop
+            Why shop at Tulsi Grocery?
           </h2>
           <p className="text-gray-600 mb-8 pb-8 border-b-2 border-gray-200">
-            Bring the taste of India to your kitchen
+            Authentic Indian groceries delivered fast in Ghent
           </p>
 
           <div className="space-y-6">
@@ -50,12 +54,11 @@ const ShopAdvantages = () => {
           </div>
         </div>
 
-        {/* Right side: Image Box with minimal padding */}
         <div className="flex-1 p-[10px] pr-[10px] pt-[10px] pb-[10px]">
           <div className="rounded-2xl w-full overflow-hidden bg-gray-100 aspect-[4/3] sm:aspect-auto sm:min-h-[300px]">
-            <img 
-              src="https://i.pinimg.com/736x/b6/d3/ed/b6d3ed14e86fa601c03ec89e054d8811.jpg" 
-              alt="Indian spices and ingredients"
+            <img
+              src="/brands/discover.JPEG"
+              alt="Indian grocery store and fresh products"
               className="w-full h-full object-cover"
             />
           </div>
@@ -66,4 +69,3 @@ const ShopAdvantages = () => {
 };
 
 export default ShopAdvantages;
-
