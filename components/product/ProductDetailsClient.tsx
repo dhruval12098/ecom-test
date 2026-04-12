@@ -203,11 +203,21 @@ export default function ProductDetailsClient({
       if (meridiem === "AM" && hour === 12) hour = 0;
       return { hour, minute };
     }
+    const hmsMatch = raw.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (hmsMatch) {
+      return { hour: Number(hmsMatch[1]), minute: Number(hmsMatch[2]) };
+    }
     const clockMatch = raw.match(/^(\d{1,2}):(\d{2})$/);
     if (clockMatch) {
       return { hour: Number(clockMatch[1]), minute: Number(clockMatch[2]) };
     }
     return null;
+  };
+
+  const parseDateTime = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   };
 
   const availabilityState = useMemo(() => {
@@ -219,6 +229,7 @@ export default function ProductDetailsClient({
       : [];
     const now = availabilityNow;
     const cutoff = parseCutoffTime(product.cutoff_time ?? product.cutoffTime ?? null);
+    const scheduleEnd = parseDateTime(activeSchedule?.end_at ?? activeSchedule?.endAt ?? null);
     const dayIndex = now.getDay();
     const currentDayName = dayNames[dayIndex].toLowerCase();
     const currentShortDay = shortDayNames[dayIndex].toLowerCase();
@@ -228,11 +239,16 @@ export default function ProductDetailsClient({
       availableDays.includes(currentShortDay);
     const cutoffDate = cutoff
       ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), cutoff.hour, cutoff.minute, 0, 0)
-      : null;
+      : scheduleEnd;
     const isOrderOpen = todayAllowed && (!cutoffDate || now.getTime() <= cutoffDate.getTime());
     const diffMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : 0;
-    const hoursLeft = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
-    const minutesLeft = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
+    const safeDiffMs = Math.max(0, diffMs);
+    const hoursLeft = Math.floor(safeDiffMs / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((safeDiffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const secondsLeft = Math.floor((safeDiffMs % (1000 * 60)) / 1000);
+    const countdownText = cutoffDate
+      ? `${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`
+      : null;
     let nextLabel = "soon";
     for (let offset = 0; offset < 8; offset++) {
       const candidate = new Date(now);
@@ -247,10 +263,10 @@ export default function ProductDetailsClient({
     }
     return {
       isOrderOpen,
-      countdownLabel: cutoffDate ? `Order within ${hoursLeft}h ${minutesLeft}m for today pickup` : null,
+      countdownLabel: cutoffDate ? `Order within ${countdownText} for today pickup` : null,
       closedLabel: `Ordering closed for today – Next available: ${nextLabel}`
     };
-  }, [availabilityNow, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time]);
+  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time]);
 
   const canAddToCart = displayInStock && availabilityState.isOrderOpen && !bulkQtyInvalid;
 
@@ -445,8 +461,11 @@ export default function ProductDetailsClient({
           <div className="space-y-4">
             <div className={`rounded-xl border px-4 py-3 text-sm ${availabilityState.isOrderOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
               <div className="font-semibold">
+                {availabilityState.isOrderOpen ? "Ordering open now" : availabilityState.closedLabel}
+              </div>
+              <div className="mt-1 font-medium">
                 {availabilityState.isOrderOpen
-                  ? (availabilityState.countdownLabel || "Ordering open now")
+                  ? (availabilityState.countdownLabel || "No cutoff time set")
                   : availabilityState.closedLabel}
               </div>
               {(product.available_days?.length || product.availableDays?.length) ? (
