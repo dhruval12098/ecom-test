@@ -46,8 +46,14 @@ export interface ProductDetails {
   bulkOrderLimit?: number | null;
   preorder_only?: boolean | null;
   preorderOnly?: boolean | null;
+  order_start_date?: string | null;
+  order_end_date?: string | null;
+  orderStartDate?: string | null;
+  orderEndDate?: string | null;
   pickup_day?: string | null;
   pickupDay?: string | null;
+  order_before_day?: string | null;
+  orderBeforeDay?: string | null;
   pickup_time?: string | null;
   pickupTime?: string | null;
   cutoff_time?: string | null;
@@ -229,6 +235,13 @@ export default function ProductDetailsClient({
     return Number.isNaN(date.getTime()) ? null : date;
   };
 
+  const formatShortDate = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).trim();
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+
   const formatClockTime = (value?: string | null) => {
     if (!value) return null;
     const parsed = parseCutoffTime(value);
@@ -239,14 +252,8 @@ export default function ProductDetailsClient({
     return `${hour12}:${minute} ${meridiem}`;
   };
 
-  const getPreviousDay = (value?: string | null) => {
-    if (!value) return null;
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const normalized = String(value).trim().toLowerCase();
-    const index = days.findIndex((day) => day.toLowerCase() === normalized);
-    if (index < 0) return String(value).trim();
-    return days[(index + 6) % 7];
-  };
+  const pickupDayLabel = (day?: string | null, time?: string | null) =>
+    day ? `Pickup: ${day}${time ? ` after ${time}` : ""}` : null;
 
   const availabilityState = useMemo(() => {
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -258,9 +265,11 @@ export default function ProductDetailsClient({
     const now = availabilityNow;
     const cutoff = parseCutoffTime(product.cutoff_time ?? product.cutoffTime ?? null);
     const scheduleEnd = parseDateTime(activeSchedule?.end_at ?? activeSchedule?.endAt ?? null);
+    const orderStartDate = formatShortDate(product.order_start_date ?? product.orderStartDate ?? null);
+    const orderEndDate = formatShortDate(product.order_end_date ?? product.orderEndDate ?? null);
     const pickupDay = product.pickup_day ?? product.pickupDay ?? null;
+    const orderBeforeDay = product.order_before_day ?? product.orderBeforeDay ?? null;
     const pickupTime = formatClockTime(product.pickup_time ?? product.pickupTime ?? null);
-    const deadlineDay = getPreviousDay(pickupDay);
     const dayIndex = now.getDay();
     const currentDayName = dayNames[dayIndex].toLowerCase();
     const currentShortDay = shortDayNames[dayIndex].toLowerCase();
@@ -294,9 +303,9 @@ export default function ProductDetailsClient({
     }
     return {
       isOrderOpen,
-      pickupLabel: pickupDay ? `Pickup: ${pickupDay}${pickupTime ? ` after ${pickupTime}` : ""}` : null,
+      pickupLabel: pickupDayLabel(pickupDay, pickupTime),
       deadlineLabel: cutoffDate
-        ? `Order before: ${deadlineDay ?? "Pickup day"} ${new Date(cutoffDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        ? `Order before: ${orderBeforeDay ?? "Pickup day"} ${new Date(cutoffDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
         : null,
       countdownLabel: cutoffDate ? countdownText : null,
       availableDaysLabel:
@@ -306,7 +315,7 @@ export default function ProductDetailsClient({
       statusLabel: isOrderOpen ? "Ordering open now" : "Ordering closed",
       closedLabel: `Ordering closed for today – Next available: ${nextLabel}`
     };
-  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time, product.pickupDay, product.pickup_day, product.pickupTime, product.pickup_time]);
+  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time, product.orderStartDate, product.order_start_date, product.orderEndDate, product.order_end_date, product.pickupDay, product.pickup_day, product.orderBeforeDay, product.order_before_day, product.pickupTime, product.pickup_time]);
 
   const canAddToCart = displayInStock && availabilityState.isOrderOpen && !bulkQtyInvalid;
 
@@ -508,9 +517,9 @@ export default function ProductDetailsClient({
                   <div className="mt-1 text-xs opacity-80">
                     {availabilityState.availableDaysLabel}
                   </div>
-                  {availabilityState.pickupLabel ? (
-                    <div className="mt-1 text-xs opacity-80">{availabilityState.pickupLabel}</div>
-                  ) : null}
+                    {availabilityState.pickupLabel ? (
+                      <div className="mt-1 text-xs opacity-80">{availabilityState.pickupLabel}</div>
+                    ) : null}
                 </div>
                 <div className="text-right">
                   <span className="inline-flex rounded-full border border-current/20 bg-white/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
@@ -742,6 +751,8 @@ export default function ProductDetailsClient({
     </div>
   );
 }
+
+
 
 
 
