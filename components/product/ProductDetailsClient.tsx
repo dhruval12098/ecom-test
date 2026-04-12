@@ -460,19 +460,28 @@ export default function ProductDetailsClient({
           {/* Right Column - Product Info */}
           <div className="space-y-4">
             <div className={`rounded-xl border px-4 py-3 text-sm ${availabilityState.isOrderOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
-              <div className="font-semibold">
-                {availabilityState.isOrderOpen ? "Ordering open now" : availabilityState.closedLabel}
-              </div>
-              <div className="mt-1 font-medium">
-                {availabilityState.isOrderOpen
-                  ? (availabilityState.countdownLabel || "No cutoff time set")
-                  : availabilityState.closedLabel}
-              </div>
-              {(product.available_days?.length || product.availableDays?.length) ? (
-                <div className="mt-1 text-xs opacity-80">
-                  Available days: {(product.available_days ?? product.availableDays ?? []).join(", ")}
+              <div className="flex items-start justify-between gap-4">
+                <div className="text-left">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-emerald-900/80">
+                    Ordering open now
+                  </div>
+                  {(product.available_days?.length || product.availableDays?.length) ? (
+                    <div className="mt-1 text-xs opacity-80">
+                      Available days: {(product.available_days ?? product.availableDays ?? []).join(", ")}
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+                <div className="text-right">
+                  <span className="inline-flex rounded-full border border-current/20 bg-white/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                    Order within
+                  </span>
+                  <div className="mt-1 text-sm font-semibold">
+                    {availabilityState.isOrderOpen
+                      ? (availabilityState.countdownLabel ? availabilityState.countdownLabel.replace(/^Order within\s*/, '').replace(/\sfor today pickup$/, '') : "No cutoff time set")
+                      : "Closed"}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Discount Badge */}
