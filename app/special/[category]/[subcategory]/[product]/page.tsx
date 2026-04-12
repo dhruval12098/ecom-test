@@ -3,7 +3,8 @@ import { Home, ChevronRight } from "lucide-react";
 import ApiService from "@/lib/api";
 import ProductDetailsClient, { ProductDetails } from "@/components/product/ProductDetailsClient";
 
-export const revalidate = 300;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 type PageParams = {
   category: string;
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
     ? productSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
     : "";
 
-  const categories = await ApiService.getSpecialCategoriesTree();
+  const categories = await ApiService.getSpecialCategoriesTree({ bypassCache: true });
   const foundCategory = categories.find((cat: any) => cat.slug === category) || null;
   const allProducts = [
     ...(foundCategory?.category_products || []),
@@ -99,7 +100,7 @@ export default async function SpecialProductDetailsPage({
     );
   }
 
-  const categories = await ApiService.getSpecialCategoriesTree();
+  const categories = await ApiService.getSpecialCategoriesTree({ bypassCache: true });
   const foundCategory =
     categories.find((cat: any) => cat.slug === categoryParam) || null;
 

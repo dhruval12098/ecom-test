@@ -46,6 +46,10 @@ export interface ProductDetails {
   bulkOrderLimit?: number | null;
   preorder_only?: boolean | null;
   preorderOnly?: boolean | null;
+  pickup_day?: string | null;
+  pickupDay?: string | null;
+  pickup_time?: string | null;
+  pickupTime?: string | null;
   cutoff_time?: string | null;
   cutoffTime?: string | null;
   available_days?: string[] | null;
@@ -85,9 +89,14 @@ export default function ProductDetailsClient({
   const [useBulkOrder, setUseBulkOrder] = useState(false);
   const [customBulkQty, setCustomBulkQty] = useState("");
   const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
+  const [hasMounted, setHasMounted] = useState(false);
   const [reviewSummary] = useState<ReviewSummary>(
     initialReviewSummary || { count: 0, avg_rating: 0 }
   );
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => setAvailabilityNow(new Date()), 1000);
@@ -220,6 +229,25 @@ export default function ProductDetailsClient({
     return Number.isNaN(date.getTime()) ? null : date;
   };
 
+  const formatClockTime = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = parseCutoffTime(value);
+    if (!parsed) return String(value).trim();
+    const hour12 = parsed.hour % 12 || 12;
+    const minute = String(parsed.minute).padStart(2, "0");
+    const meridiem = parsed.hour >= 12 ? "PM" : "AM";
+    return `${hour12}:${minute} ${meridiem}`;
+  };
+
+  const getPreviousDay = (value?: string | null) => {
+    if (!value) return null;
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const normalized = String(value).trim().toLowerCase();
+    const index = days.findIndex((day) => day.toLowerCase() === normalized);
+    if (index < 0) return String(value).trim();
+    return days[(index + 6) % 7];
+  };
+
   const availabilityState = useMemo(() => {
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -230,6 +258,9 @@ export default function ProductDetailsClient({
     const now = availabilityNow;
     const cutoff = parseCutoffTime(product.cutoff_time ?? product.cutoffTime ?? null);
     const scheduleEnd = parseDateTime(activeSchedule?.end_at ?? activeSchedule?.endAt ?? null);
+    const pickupDay = product.pickup_day ?? product.pickupDay ?? null;
+    const pickupTime = formatClockTime(product.pickup_time ?? product.pickupTime ?? null);
+    const deadlineDay = getPreviousDay(pickupDay);
     const dayIndex = now.getDay();
     const currentDayName = dayNames[dayIndex].toLowerCase();
     const currentShortDay = shortDayNames[dayIndex].toLowerCase();
@@ -263,10 +294,19 @@ export default function ProductDetailsClient({
     }
     return {
       isOrderOpen,
-      countdownLabel: cutoffDate ? `Order within ${countdownText} for today pickup` : null,
+      pickupLabel: pickupDay ? `Pickup: ${pickupDay}${pickupTime ? ` after ${pickupTime}` : ""}` : null,
+      deadlineLabel: cutoffDate
+        ? `Order before: ${deadlineDay ?? "Pickup day"} ${new Date(cutoffDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        : null,
+      countdownLabel: cutoffDate ? countdownText : null,
+      availableDaysLabel:
+        availableDays.length > 0
+          ? `Order days: ${availableDays.map((day) => day.charAt(0).toUpperCase() + day.slice(1)).join(", ")}`
+          : "Order days: Any day",
+      statusLabel: isOrderOpen ? "Ordering open now" : "Ordering closed",
       closedLabel: `Ordering closed for today – Next available: ${nextLabel}`
     };
-  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time]);
+  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time, product.pickupDay, product.pickup_day, product.pickupTime, product.pickup_time]);
 
   const canAddToCart = displayInStock && availabilityState.isOrderOpen && !bulkQtyInvalid;
 
@@ -462,24 +502,28 @@ export default function ProductDetailsClient({
             <div className={`rounded-xl border px-4 py-3 text-sm ${availabilityState.isOrderOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="text-left">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-emerald-900/80">
-                    Ordering open now
+                  <div className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                    {availabilityState.statusLabel}
                   </div>
-                  {(product.available_days?.length || product.availableDays?.length) ? (
-                    <div className="mt-1 text-xs opacity-80">
-                      Available days: {(product.available_days ?? product.availableDays ?? []).join(", ")}
-                    </div>
+                  <div className="mt-1 text-xs opacity-80">
+                    {availabilityState.availableDaysLabel}
+                  </div>
+                  {availabilityState.pickupLabel ? (
+                    <div className="mt-1 text-xs opacity-80">{availabilityState.pickupLabel}</div>
                   ) : null}
                 </div>
                 <div className="text-right">
                   <span className="inline-flex rounded-full border border-current/20 bg-white/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
                     Order within
                   </span>
-                  <div className="mt-1 text-sm font-semibold">
-                    {availabilityState.isOrderOpen
-                      ? (availabilityState.countdownLabel ? availabilityState.countdownLabel.replace(/^Order within\s*/, '').replace(/\sfor today pickup$/, '') : "No cutoff time set")
-                      : "Closed"}
-                  </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {hasMounted
+                        ? (availabilityState.isOrderOpen ? (availabilityState.countdownLabel || "No cutoff time set") : "Closed")
+                        : "—"}
+                    </div>
+                  {availabilityState.deadlineLabel ? (
+                    <div className="mt-1 text-xs opacity-80">{availabilityState.deadlineLabel}</div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -698,3 +742,8 @@ export default function ProductDetailsClient({
     </div>
   );
 }
+
+
+
+
+
