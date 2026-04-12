@@ -84,9 +84,15 @@ export default function ProductDetailsClient({
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [useBulkOrder, setUseBulkOrder] = useState(false);
   const [customBulkQty, setCustomBulkQty] = useState("");
+  const [availabilityNow, setAvailabilityNow] = useState(() => new Date());
   const [reviewSummary] = useState<ReviewSummary>(
     initialReviewSummary || { count: 0, avg_rating: 0 }
   );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setAvailabilityNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const variantParam = searchParams.get("variant");
@@ -185,7 +191,76 @@ export default function ProductDetailsClient({
   const bulkQtyInvalid =
     useBulkOrder && (bulkQty <= 0 || (limit !== null && bulkQty > limit));
 
+  const parseCutoffTime = (value?: string | null) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    const ampmMatch = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+    if (ampmMatch) {
+      let hour = Number(ampmMatch[1]);
+      const minute = Number(ampmMatch[2] || 0);
+      const meridiem = ampmMatch[3].toUpperCase();
+      if (meridiem === "PM" && hour < 12) hour += 12;
+      if (meridiem === "AM" && hour === 12) hour = 0;
+      return { hour, minute };
+    }
+    const clockMatch = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (clockMatch) {
+      return { hour: Number(clockMatch[1]), minute: Number(clockMatch[2]) };
+    }
+    return null;
+  };
+
+  const availabilityState = useMemo(() => {
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const rawDays = product.available_days ?? product.availableDays ?? [];
+    const availableDays = Array.isArray(rawDays)
+      ? rawDays.map((day) => String(day).trim().toLowerCase())
+      : [];
+    const now = availabilityNow;
+    const cutoff = parseCutoffTime(product.cutoff_time ?? product.cutoffTime ?? null);
+    const dayIndex = now.getDay();
+    const currentDayName = dayNames[dayIndex].toLowerCase();
+    const currentShortDay = shortDayNames[dayIndex].toLowerCase();
+    const todayAllowed =
+      availableDays.length === 0 ||
+      availableDays.includes(currentDayName) ||
+      availableDays.includes(currentShortDay);
+    const cutoffDate = cutoff
+      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), cutoff.hour, cutoff.minute, 0, 0)
+      : null;
+    const isOrderOpen = todayAllowed && (!cutoffDate || now.getTime() <= cutoffDate.getTime());
+    const diffMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : 0;
+    const hoursLeft = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
+    const minutesLeft = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
+    let nextLabel = "soon";
+    for (let offset = 0; offset < 8; offset++) {
+      const candidate = new Date(now);
+      candidate.setDate(now.getDate() + offset);
+      const idx = candidate.getDay();
+      const candidateName = dayNames[idx].toLowerCase();
+      const candidateShort = shortDayNames[idx].toLowerCase();
+      if (availableDays.length === 0 || availableDays.includes(candidateName) || availableDays.includes(candidateShort)) {
+        nextLabel = candidate.toLocaleDateString(undefined, { weekday: "long" });
+        break;
+      }
+    }
+    return {
+      isOrderOpen,
+      countdownLabel: cutoffDate ? `Order within ${hoursLeft}h ${minutesLeft}m for today pickup` : null,
+      closedLabel: `Ordering closed for today – Next available: ${nextLabel}`
+    };
+  }, [availabilityNow, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time]);
+
+  const canAddToCart = displayInStock && availabilityState.isOrderOpen && !bulkQtyInvalid;
+
   const handleAddToCart = () => {
+    if (!availabilityState.isOrderOpen) {
+      toast.error("Ordering is closed", {
+        description: availabilityState.closedLabel
+      });
+      return;
+    }
     const limitRaw = product.bulk_order_limit ?? product.bulkOrderLimit ?? null;
     const limit =
       Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
@@ -236,6 +311,12 @@ export default function ProductDetailsClient({
   };
 
   const handleBuyNow = () => {
+    if (!availabilityState.isOrderOpen) {
+      toast.error("Ordering is closed", {
+        description: availabilityState.closedLabel
+      });
+      return;
+    }
     const limitRaw = product.bulk_order_limit ?? product.bulkOrderLimit ?? null;
     const limit =
       Number.isFinite(Number(limitRaw)) && Number(limitRaw) > 0 ? Number(limitRaw) : null;
@@ -362,6 +443,19 @@ export default function ProductDetailsClient({
 
           {/* Right Column - Product Info */}
           <div className="space-y-4">
+            <div className={`rounded-xl border px-4 py-3 text-sm ${availabilityState.isOrderOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              <div className="font-semibold">
+                {availabilityState.isOrderOpen
+                  ? (availabilityState.countdownLabel || "Ordering open now")
+                  : availabilityState.closedLabel}
+              </div>
+              {(product.available_days?.length || product.availableDays?.length) ? (
+                <div className="mt-1 text-xs opacity-80">
+                  Available days: {(product.available_days ?? product.availableDays ?? []).join(", ")}
+                </div>
+              ) : null}
+            </div>
+
             {/* Discount Badge */}
             {(effectiveDiscountPercentage ||
               activeSchedule?.discount_percent != null ||
@@ -557,14 +651,14 @@ export default function ProductDetailsClient({
             <div className="space-y-2 pt-2">
               <button
                 onClick={handleAddToCart}
-                disabled={bulkQtyInvalid}
+                disabled={!canAddToCart}
                 className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-yellow-500"
               >
                 Add to cart
               </button>
               <button
                 onClick={handleBuyNow}
-                disabled={!displayInStock || bulkQtyInvalid}
+                disabled={!displayInStock || bulkQtyInvalid || !availabilityState.isOrderOpen}
                 className="w-full bg-black hover:bg-gray-800 text-white py-3 px-6 rounded-lg font-bold text-base transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-black"
               >
                 Buy Now

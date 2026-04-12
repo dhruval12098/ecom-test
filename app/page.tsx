@@ -144,7 +144,7 @@ export default async function HomePage() {
   );
 
   const shopCategories = (categoriesData || []) as HomeCategory[];
-  const specialCategories = (await ApiService.getSpecialCategories()) as HomeCategory[];
+  const specialCategories = (await ApiService.getSpecialCategories({ bypassCache: bypassHomeCache })) as HomeCategory[];
   const mergedCategories: HomeCategory[] = [
     ...shopCategories.map((category): HomeCategory => ({ ...category, isSpecial: false })),
     ...((specialCategories || []).map((category): HomeCategory => ({ ...category, isSpecial: true })))
