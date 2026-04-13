@@ -58,8 +58,6 @@ export interface ProductDetails {
   pickupTime?: string | null;
   cutoff_time?: string | null;
   cutoffTime?: string | null;
-  available_days?: string[] | null;
-  availableDays?: string[] | null;
 }
 
 type ReviewSummary = { count: number; avg_rating: number };
@@ -252,70 +250,70 @@ export default function ProductDetailsClient({
     return `${hour12}:${minute} ${meridiem}`;
   };
 
-  const pickupDayLabel = (day?: string | null, time?: string | null) =>
-    day ? `Pickup: ${day}${time ? ` after ${time}` : ""}` : null;
+  const addDays = (value: Date, days: number) => {
+    const next = new Date(value);
+    next.setDate(next.getDate() + days);
+    return next;
+  };
+
+  const buildDateAtTime = (date: Date, time?: { hour: number; minute: number } | null) => {
+    const candidate = new Date(date);
+    if (time) {
+      candidate.setHours(time.hour, time.minute, 0, 0);
+    } else {
+      candidate.setHours(23, 59, 59, 999);
+    }
+    return candidate;
+  };
+
+  const formatRangeDate = (value?: string | null) => {
+    const date = parseDateTime(value);
+    if (!date) return null;
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  };
 
   const availabilityState = useMemo(() => {
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const rawDays = product.available_days ?? product.availableDays ?? [];
-    const availableDays = Array.isArray(rawDays)
-      ? rawDays.map((day) => String(day).trim().toLowerCase())
-      : [];
     const now = availabilityNow;
     const cutoff = parseCutoffTime(product.cutoff_time ?? product.cutoffTime ?? null);
-    const scheduleEnd = parseDateTime(activeSchedule?.end_at ?? activeSchedule?.endAt ?? null);
-    const orderStartDate = formatShortDate(product.order_start_date ?? product.orderStartDate ?? null);
-    const orderEndDate = formatShortDate(product.order_end_date ?? product.orderEndDate ?? null);
-    const pickupDay = product.pickup_day ?? product.pickupDay ?? null;
-    const orderBeforeDay = product.order_before_day ?? product.orderBeforeDay ?? null;
-    const pickupTime = formatClockTime(product.pickup_time ?? product.pickupTime ?? null);
-    const dayIndex = now.getDay();
-    const currentDayName = dayNames[dayIndex].toLowerCase();
-    const currentShortDay = shortDayNames[dayIndex].toLowerCase();
-    const todayAllowed =
-      availableDays.length === 0 ||
-      availableDays.includes(currentDayName) ||
-      availableDays.includes(currentShortDay);
-    const cutoffDate = cutoff
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate(), cutoff.hour, cutoff.minute, 0, 0)
-      : scheduleEnd;
-    const isOrderOpen = todayAllowed && (!cutoffDate || now.getTime() <= cutoffDate.getTime());
-    const diffMs = cutoffDate ? cutoffDate.getTime() - now.getTime() : 0;
+    const orderStart = parseDateTime(product.order_start_date ?? product.orderStartDate ?? null);
+    const orderEnd = parseDateTime(product.order_end_date ?? product.orderEndDate ?? null);
+    const pickupDateRaw = product.pickup_day ?? product.pickupDay ?? null;
+    const pickupDateValue = parseDateTime(pickupDateRaw);
+    const pickupTimeRaw = product.pickup_time ?? product.pickupTime ?? null;
+    const pickupTime = formatClockTime(pickupTimeRaw);
+    const pickupTimeParsed = parseCutoffTime(pickupTimeRaw);
+    const orderStartAt = orderStart ? buildDateAtTime(orderStart, null) : null;
+    const orderDeadlineAt = orderEnd ? buildDateAtTime(orderEnd, cutoff) : null;
+    const pickupDate = pickupDateValue ?? (orderEnd ? addDays(orderEnd, 1) : null);
+    const pickupAt = pickupDate ? buildDateAtTime(pickupDate, pickupTimeParsed) : null;
+    const hasStarted = !orderStartAt || now.getTime() >= orderStartAt.getTime();
+    const hasEnded = !!orderDeadlineAt && now.getTime() > orderDeadlineAt.getTime();
+    const isOrderOpen = hasStarted && !hasEnded;
+    const activeCountdownTarget = !hasStarted ? orderStartAt : orderDeadlineAt;
+    const diffMs = activeCountdownTarget ? activeCountdownTarget.getTime() - now.getTime() : 0;
     const safeDiffMs = Math.max(0, diffMs);
-    const hoursLeft = Math.floor(safeDiffMs / (1000 * 60 * 60));
+    const daysLeft = Math.floor(safeDiffMs / (1000 * 60 * 60 * 24));
+    const hoursLeft = Math.floor((safeDiffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutesLeft = Math.floor((safeDiffMs % (1000 * 60 * 60)) / (1000 * 60));
     const secondsLeft = Math.floor((safeDiffMs % (1000 * 60)) / 1000);
-    const countdownText = cutoffDate
-      ? `${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`
+    const countdownText = activeCountdownTarget
+      ? `${daysLeft}d ${hoursLeft}h ${minutesLeft}m ${secondsLeft}s left`
       : null;
-    let nextLabel = "soon";
-    for (let offset = 0; offset < 8; offset++) {
-      const candidate = new Date(now);
-      candidate.setDate(now.getDate() + offset);
-      const idx = candidate.getDay();
-      const candidateName = dayNames[idx].toLowerCase();
-      const candidateShort = shortDayNames[idx].toLowerCase();
-      if (availableDays.length === 0 || availableDays.includes(candidateName) || availableDays.includes(candidateShort)) {
-        nextLabel = candidate.toLocaleDateString(undefined, { weekday: "long" });
-        break;
-      }
-    }
     return {
       isOrderOpen,
-      pickupLabel: pickupDayLabel(pickupDay, pickupTime),
-      deadlineLabel: cutoffDate
-        ? `Order before: ${orderBeforeDay ?? "Pickup day"} ${new Date(cutoffDate).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+      pickupLabel: pickupAt
+        ? `Pickup: ${pickupAt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}${pickupTime ? ` after ${pickupTime}` : ""}`
         : null,
-      countdownLabel: cutoffDate ? countdownText : null,
-      availableDaysLabel:
-        availableDays.length > 0
-          ? `Order days: ${availableDays.map((day) => day.charAt(0).toUpperCase() + day.slice(1)).join(", ")}`
-          : "Order days: Any day",
-      statusLabel: isOrderOpen ? "Ordering open now" : "Ordering closed",
-      closedLabel: `Ordering closed for today – Next available: ${nextLabel}`
+      deadlineLabel: orderDeadlineAt
+        ? `Order before: ${orderDeadlineAt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })} ${orderDeadlineAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+        : null,
+      countdownLabel: activeCountdownTarget ? countdownText : null,
+      statusLabel: !hasStarted ? "Ordering opens soon" : isOrderOpen ? "Ordering open now" : "Ordering closed",
+      closedLabel: !hasStarted
+        ? `Ordering opens on ${formatRangeDate(product.order_start_date ?? product.orderStartDate ?? null) || "the start date"}`
+        : `Ordering closed after ${orderDeadlineAt?.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) || "the deadline"}`
     };
-  }, [availabilityNow, activeSchedule, product.availableDays, product.available_days, product.cutoffTime, product.cutoff_time, product.orderStartDate, product.order_start_date, product.orderEndDate, product.order_end_date, product.pickupDay, product.pickup_day, product.orderBeforeDay, product.order_before_day, product.pickupTime, product.pickup_time]);
+  }, [availabilityNow, product.cutoffTime, product.cutoff_time, product.order_start_date, product.order_end_date, product.orderStartDate, product.orderEndDate, product.pickupDay, product.pickup_day, product.pickupTime, product.pickup_time]);
 
   const canAddToCart = displayInStock && availabilityState.isOrderOpen && !bulkQtyInvalid;
 
@@ -364,8 +362,10 @@ export default function ProductDetailsClient({
       isSpecial: Boolean(product.isSpecial),
       bulkOrderLimit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
       preorderOnly: product.preorder_only ?? product.preorderOnly ?? null,
+      orderStartDate: product.order_start_date ?? product.orderStartDate ?? null,
+      orderEndDate: product.order_end_date ?? product.orderEndDate ?? null,
       cutoffTime: product.cutoff_time ?? product.cutoffTime ?? null,
-      availableDays: product.available_days ?? product.availableDays ?? null
+      pickupTime: product.pickup_time ?? product.pickupTime ?? null,
     };
 
     for (let i = 0; i < cappedQuantity; i++) {
@@ -422,7 +422,6 @@ export default function ProductDetailsClient({
       bulkOrderLimit: product.bulk_order_limit ?? product.bulkOrderLimit ?? null,
       preorderOnly: product.preorder_only ?? product.preorderOnly ?? null,
       cutoffTime: product.cutoff_time ?? product.cutoffTime ?? null,
-      availableDays: product.available_days ?? product.availableDays ?? null
     };
 
     if (typeof window !== "undefined") {
@@ -514,20 +513,17 @@ export default function ProductDetailsClient({
                   <div className="text-xs font-semibold uppercase tracking-wide opacity-80">
                     {availabilityState.statusLabel}
                   </div>
-                  <div className="mt-1 text-xs opacity-80">
-                    {availabilityState.availableDaysLabel}
-                  </div>
                     {availabilityState.pickupLabel ? (
                       <div className="mt-1 text-xs opacity-80">{availabilityState.pickupLabel}</div>
                     ) : null}
                 </div>
                 <div className="text-right">
                   <span className="inline-flex rounded-full border border-current/20 bg-white/70 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
-                    Order within
+                    {availabilityState.isOrderOpen ? "Order within" : availabilityState.statusLabel === "Ordering opens soon" ? "Opens in" : "Order window"}
                   </span>
                     <div className="mt-1 text-sm font-semibold">
                       {hasMounted
-                        ? (availabilityState.isOrderOpen ? (availabilityState.countdownLabel || "No cutoff time set") : "Closed")
+                        ? (availabilityState.countdownLabel || (availabilityState.isOrderOpen ? "No cutoff time set" : "Closed"))
                         : "—"}
                     </div>
                   {availabilityState.deadlineLabel ? (
@@ -751,6 +747,9 @@ export default function ProductDetailsClient({
     </div>
   );
 }
+
+
+
 
 
 

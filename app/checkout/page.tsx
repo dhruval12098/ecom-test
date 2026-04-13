@@ -43,6 +43,8 @@ type CheckoutItem = {
   isSpecial?: boolean;
   bulkOrderLimit?: number | null;
   preorderOnly?: boolean | null;
+  orderStartDate?: string | null;
+  orderEndDate?: string | null;
   cutoffTime?: string | null;
   availableDays?: string[] | null;
 };
@@ -156,6 +158,12 @@ function CheckoutPageContent() {
     return hours * 60 + minutes;
   };
 
+  const parseDateOnly = (dateValue?: string | null) => {
+    if (!dateValue) return null;
+    const parsed = new Date(dateValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
   const getSpecialValidationError = (items: CheckoutItem[]) => {
     const todayKey = getTodayKey();
     const now = new Date();
@@ -172,6 +180,17 @@ function CheckoutPageContent() {
         const normalized = allowedDays.map((d) => String(d).trim().slice(0, 3).toLowerCase());
         if (!normalized.includes(todayKey.toLowerCase())) {
           return `${item.name} is not available today.`;
+        }
+      }
+      const orderStart = parseDateOnly(item.orderStartDate ?? null);
+      if (orderStart && now < new Date(orderStart.getFullYear(), orderStart.getMonth(), orderStart.getDate())) {
+        return `${item.name} ordering has not started yet.`;
+      }
+      const orderEnd = parseDateOnly(item.orderEndDate ?? null);
+      if (orderEnd) {
+        const endAt = new Date(orderEnd.getFullYear(), orderEnd.getMonth(), orderEnd.getDate(), 23, 59, 59, 999);
+        if (now > endAt) {
+          return `${item.name} ordering has closed for this cycle.`;
         }
       }
       if (item.preorderOnly && item.cutoffTime) {

@@ -3,7 +3,8 @@ import { Home, ChevronRight, Truck } from "lucide-react";
 import ProductCard from "@/components/common/ProductCard";
 import ApiService from "@/lib/api";
 
-export const revalidate = 300;
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 interface Product {
   id: number;
@@ -78,7 +79,7 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
   const normalizedSlug = rawSlug
     ? rawSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
     : "";
-  const categories: Category[] = await ApiService.getSpecialCategoriesTree();
+  const categories: Category[] = await ApiService.getSpecialCategoriesTree({ bypassCache: true });
   const foundCategory =
     categories.find((cat) => cat.slug === rawSlug) ||
     (normalizedSlug ? categories.find((cat) => cat.slug === normalizedSlug) : null);
@@ -117,7 +118,7 @@ export default async function SpecialCategoryPage({ params }: { params: Promise<
     ? categoryParam.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
     : "";
 
-  const categories: Category[] = await ApiService.getSpecialCategoriesTree();
+  const categories: Category[] = await ApiService.getSpecialCategoriesTree({ bypassCache: true });
   const foundCategory =
     categories.find((cat) => cat.slug === categoryParam) ||
     (normalizedSlug ? categories.find((cat) => cat.slug === normalizedSlug) : null);

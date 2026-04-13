@@ -246,7 +246,10 @@ export default function ProductCard({
       isSpecial: Boolean(product?.isSpecial),
       bulkOrderLimit: product?.bulk_order_limit ?? product?.bulkOrderLimit ?? null,
       preorderOnly: product?.preorder_only ?? product?.preorderOnly ?? null,
+      orderStartDate: product?.order_start_date ?? product?.orderStartDate ?? null,
+      orderEndDate: product?.order_end_date ?? product?.orderEndDate ?? null,
       cutoffTime: product?.cutoff_time ?? product?.cutoffTime ?? null,
+      pickupTime: product?.pickup_time ?? product?.pickupTime ?? null,
       availableDays: product?.available_days ?? product?.availableDays ?? null
     };
     
