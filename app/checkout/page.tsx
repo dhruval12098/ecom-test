@@ -164,6 +164,11 @@ function CheckoutPageContent() {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
+  const isSameCalendarDate = (left: Date, right: Date) =>
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+
   const getSpecialValidationError = (items: CheckoutItem[]) => {
     const todayKey = getTodayKey();
     const now = new Date();
@@ -193,10 +198,10 @@ function CheckoutPageContent() {
           return `${item.name} ordering has closed for this cycle.`;
         }
       }
-      if (item.preorderOnly && item.cutoffTime) {
+      if (item.preorderOnly && item.cutoffTime && orderEnd && isSameCalendarDate(now, orderEnd)) {
         const cutoffMinutes = parseTimeToMinutes(item.cutoffTime);
         if (cutoffMinutes !== null && nowMinutes > cutoffMinutes) {
-          return `${item.name} is past the order-by time for today.`;
+          return `${item.name} is past the order-by time for this cycle.`;
         }
       }
     }
