@@ -43,6 +43,12 @@ interface Product {
   bulkOrderLimit?: number | null;
   preorder_only?: boolean | null;
   preorderOnly?: boolean | null;
+  order_start_date?: string | null;
+  orderStartDate?: string | null;
+  order_end_date?: string | null;
+  orderEndDate?: string | null;
+  pickup_time?: string | null;
+  pickupTime?: string | null;
   cutoff_time?: string | null;
   cutoffTime?: string | null;
   available_days?: string[] | null;
