@@ -507,6 +507,7 @@ export default function ProductDetailsClient({
 
           {/* Right Column - Product Info */}
           <div className="space-y-4">
+            {Boolean(product.isSpecial) && (
             <div className={`rounded-xl border px-4 py-3 text-sm ${availabilityState.isOrderOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="text-left">
@@ -532,6 +533,7 @@ export default function ProductDetailsClient({
                 </div>
               </div>
             </div>
+            )}
 
             {/* Discount Badge */}
             {(effectiveDiscountPercentage ||
